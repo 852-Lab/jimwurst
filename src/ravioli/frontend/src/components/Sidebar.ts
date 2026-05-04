@@ -102,6 +102,7 @@ export function renderSidebar() {
   // Brand header listener
   container.querySelector('#brand-header')?.addEventListener('click', () => {
     store.setCurrentView('insights');
+    store.setActiveAnalysisId(undefined);
   });
 
   // Navigation listeners

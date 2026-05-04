@@ -129,10 +129,30 @@ function startIngestionPollingIfNeeded() {
 let pollInterval: any;
 store.subscribe(() => {
   const activeId = store.getActiveAnalysisId();
+  const currentUser = store.getCurrentUser();
   
   // Clear previous interval
   if (pollInterval) clearInterval(pollInterval);
   
+  // If we just logged in but have no data, fetch it
+  if (currentUser && store.getAnalyses().length === 0) {
+    const fetchData = async () => {
+      try {
+        const [analyses, sources, pages] = await Promise.all([
+          api.listAnalyses(),
+          api.listFiles(),
+          api.listKnowledgePages()
+        ]);
+        store.setAnalyses(analyses);
+        store.setDataSources(sources);
+        store.setKnowledgePages(pages);
+      } catch (err) {
+        console.error('Failed to fetch initial data after login', err);
+      }
+    };
+    fetchData();
+  }
+
   if (activeId) {
     const fetchLogs = async () => {
       try {
