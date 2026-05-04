@@ -79,6 +79,8 @@ def _migrate_columns():
         "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS limitations TEXT",
         "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS insight_metadata JSONB",
         "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS owner UUID REFERENCES app.user_groups(id)",
+        "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS owner_id UUID",
+        "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS owner_type TEXT DEFAULT 'user'",
         "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES app.users(id)",
         "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES app.users(id)",
 
@@ -87,15 +89,20 @@ def _migrate_columns():
         "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS properties JSONB",
         "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES app.knowledge_pages(id)",
         "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS owner UUID REFERENCES app.user_groups(id)",
+        "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS owner_id TEXT",
+        "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS owner_type TEXT DEFAULT 'user'",
         "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES app.users(id)",
         "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES app.users(id)",
 
-        "ALTER TABLE app.data_sources ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES app.users(id)",
+        "ALTER TABLE app.data_sources ADD COLUMN IF NOT EXISTS owner_id UUID",
+        "ALTER TABLE app.data_sources ADD COLUMN IF NOT EXISTS owner_type TEXT DEFAULT 'user'",
         "ALTER TABLE app.data_sources ADD COLUMN IF NOT EXISTS owner UUID REFERENCES app.user_groups(id)",
         "ALTER TABLE app.data_sources ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES app.users(id)",
         "ALTER TABLE app.data_sources ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES app.users(id)",
 
         "ALTER TABLE app.analyses ADD COLUMN IF NOT EXISTS owner UUID REFERENCES app.user_groups(id)",
+        "ALTER TABLE app.analyses ADD COLUMN IF NOT EXISTS owner_id UUID",
+        "ALTER TABLE app.analyses ADD COLUMN IF NOT EXISTS owner_type TEXT DEFAULT 'user'",
         "ALTER TABLE app.analyses ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES app.users(id)",
         "ALTER TABLE app.analyses ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES app.users(id)",
 
