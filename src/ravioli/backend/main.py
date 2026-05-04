@@ -99,8 +99,11 @@ def _migrate_columns():
         "ALTER TABLE app.analyses ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES app.users(id)",
         "ALTER TABLE app.analyses ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES app.users(id)",
 
+        "ALTER TABLE app.user_groups ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES app.users(id)",
         "ALTER TABLE app.user_groups ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES app.users(id)",
         "ALTER TABLE app.user_groups ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES app.users(id)",
+        "ALTER TABLE app.user_groups ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
+        "ALTER TABLE app.user_groups ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
 
         "ALTER TABLE app.users ADD COLUMN IF NOT EXISTS hashed_password TEXT",
         "ALTER TABLE app.users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'Viewer'",
