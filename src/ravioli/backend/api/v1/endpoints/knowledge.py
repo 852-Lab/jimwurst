@@ -5,6 +5,7 @@ from uuid import UUID
 
 from ravioli.backend.core import models, schemas
 from ravioli.backend.core.database import get_db
+from ravioli.backend.api.v1.endpoints.data import get_current_user
 
 router = APIRouter()
 
@@ -14,9 +15,17 @@ def list_knowledge_pages(db: Session = Depends(get_db)):
     return db.query(models.KnowledgePage).order_by(models.KnowledgePage.updated_at.desc()).all()
 
 @router.post("/", response_model=schemas.KnowledgePage, status_code=status.HTTP_201_CREATED)
-def create_knowledge_page(page: schemas.KnowledgePageCreate, db: Session = Depends(get_db)):
+def create_knowledge_page(
+    page: schemas.KnowledgePageCreate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     """Create a new knowledge page."""
-    db_page = models.KnowledgePage(**page.model_dump())
+    db_page = models.KnowledgePage(
+        **page.model_dump(),
+        created_by=current_user.id,
+        updated_by=current_user.id
+    )
     db.add(db_page)
     db.commit()
     db.refresh(db_page)
@@ -31,7 +40,12 @@ def get_knowledge_page(page_id: UUID, db: Session = Depends(get_db)):
     return page
 
 @router.patch("/{page_id}", response_model=schemas.KnowledgePage)
-def update_knowledge_page(page_id: UUID, page_update: schemas.KnowledgePageUpdate, db: Session = Depends(get_db)):
+def update_knowledge_page(
+    page_id: UUID, 
+    page_update: schemas.KnowledgePageUpdate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     """Update a knowledge page."""
     db_page = db.query(models.KnowledgePage).filter(models.KnowledgePage.id == page_id).first()
     if not db_page:
@@ -41,6 +55,7 @@ def update_knowledge_page(page_id: UUID, page_update: schemas.KnowledgePageUpdat
     for key, value in update_data.items():
         setattr(db_page, key, value)
     
+    db_page.updated_by = current_user.id
     db.commit()
     db.refresh(db_page)
     return db_page

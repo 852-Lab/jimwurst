@@ -28,6 +28,7 @@ class AnalysisBase(BaseModel):
     description: Optional[str] = None
     analysis_metadata: Optional[dict] = None
     notebook: Optional[dict] = None
+    owner: Optional[UUID] = None
     owner_id: Optional[UUID] = None
     owner_type: Optional[str] = None
 
@@ -50,6 +51,8 @@ class Analysis(AnalysisBase):
     status: str
     created_at: datetime
     updated_at: datetime
+    created_by: Optional[UUID] = None
+    updated_by: Optional[UUID] = None
     result: Optional[str] = None
     
     # Optionally include logs in the response
@@ -77,6 +80,7 @@ class InsightBase(BaseModel):
     assumptions: Optional[str] = None
     limitations: Optional[str] = None
     insight_metadata: Optional[dict] = None
+    owner: Optional[UUID] = None
     owner_id: Optional[UUID] = None
     owner_type: Optional[str] = None
 
@@ -87,6 +91,8 @@ class Insight(InsightBase):
     is_published: bool
     created_at: datetime
     updated_at: datetime
+    created_by: Optional[UUID] = None
+    updated_by: Optional[UUID] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -131,7 +137,9 @@ class User(UserBase):
 class UserGroupBase(BaseModel):
     name: str
     description: Optional[str] = None
-    owner_id: Optional[UUID] = None
+    owner_id: Optional[UUID] = None # Group owner user (legacy field name, but user specified 'owner' for groups elsewhere)
+    created_by: Optional[UUID] = None
+    updated_by: Optional[UUID] = None
 
 class UserGroupCreate(UserGroupBase):
     pass
@@ -160,6 +168,7 @@ class DataSourceBase(BaseModel):
     source_type: str = "file"
     source_url: Optional[str] = None
     has_pii: bool = False
+    owner: Optional[UUID] = None
     owner_id: Optional[UUID] = None
     owner_type: str = "user"
 
@@ -167,6 +176,8 @@ class DataSource(DataSourceBase):
     id: UUID
     created_at: datetime
     updated_at: datetime
+    created_by: Optional[UUID] = None
+    updated_by: Optional[UUID] = None
     is_duplicate: bool = False
     
     # Optional nested owner for detail views
@@ -212,6 +223,7 @@ class KnowledgePageBase(BaseModel):
     content: Optional[List[dict]] = None
     icon: Optional[dict] = None
     cover: Optional[dict] = None
+    owner: Optional[UUID] = None
     owner_type: str = "user"
     owner_id: Optional[str] = None
     parent_id: Optional[UUID] = None
@@ -250,5 +262,7 @@ class KnowledgePage(KnowledgePageBase):
     id: UUID
     created_at: datetime
     updated_at: datetime
+    created_by: Optional[UUID] = None
+    updated_by: Optional[UUID] = None
 
     model_config = ConfigDict(from_attributes=True)

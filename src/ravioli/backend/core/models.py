@@ -30,7 +30,12 @@ class Analysis(Base):
     # Notebook content (storing ipynb as JSON)
     notebook: Mapped[Optional[dict]] = mapped_column(JSON)
 
-    # Ownership
+    # Ownership & Audit
+    owner: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.user_groups.id"))
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
+    updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
+
+    # Legacy Polymorphic Ownership
     owner_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True))
     owner_type: Mapped[Optional[str]] = mapped_column(String(50)) # 'user' or 'group'
 
@@ -141,6 +146,12 @@ class DataSource(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
     
+    # Ownership & Audit
+    owner: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.user_groups.id"))
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
+    updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
+    
+    # Legacy Polymorphic Ownership
     owner_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True))
     owner_type: Mapped[Optional[str]] = mapped_column(String(50), default="user") # 'user' or 'group'
     
@@ -166,7 +177,12 @@ class Insight(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
-    # Ownership
+    # Ownership & Audit
+    owner: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.user_groups.id"))
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
+    updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
+
+    # Legacy Polymorphic Ownership
     owner_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True))
     owner_type: Mapped[Optional[str]] = mapped_column(String(50)) # 'user' or 'group'
 
@@ -212,7 +228,12 @@ class KnowledgePage(Base):
     # Each block: {"type": "paragraph", "paragraph": {...}, ...}
     content: Mapped[Optional[List[dict]]] = mapped_column(JSON)
     
-    # Meta
+    # Ownership & Audit
+    owner: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.user_groups.id"))
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
+    updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
+
+    # Legacy Polymorphic Ownership
     owner_type: Mapped[str] = mapped_column(String(50), default="user") # 'user' or 'group'
     owner_id: Mapped[Optional[str]] = mapped_column(String(255)) 
     
@@ -242,7 +263,11 @@ class UserGroup(Base):
     
     # Group Owner (typically a Steward)
     owner_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
-    owner: Mapped[Optional["User"]] = relationship("User", foreign_keys=[owner_id])
+    owner_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[owner_id])
+    
+    # Audit
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
+    updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
 
     # Relationships
     members: Mapped[List["User"]] = relationship(

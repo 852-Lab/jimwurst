@@ -61,6 +61,8 @@ def test_create_group_with_owner(test_client, db_session):
     data = response.json()
     assert data["name"] == "Test Group"
     assert data["owner_id"] == str(owner.id)
+    assert data["created_by"] is not None
+    assert data["updated_by"] is not None
 
 def test_add_group_member(test_client, db_session):
     group = models.UserGroup(id=uuid.uuid4(), name="Test Group")
@@ -83,6 +85,7 @@ def test_analysis_ownership_api(test_client, db_session):
     analysis_data = {
         "title": "Group Analysis",
         "description": "Analysis owned by a group",
+        "owner": group_id,
         "owner_id": group_id,
         "owner_type": "group"
     }
@@ -92,6 +95,7 @@ def test_analysis_ownership_api(test_client, db_session):
     assert response.status_code == 201
     data = response.json()
     assert data["title"] == "Group Analysis"
-    assert data["owner_id"] == group_id
-    assert data["owner_type"] == "group"
+    assert data["owner"] == group_id
+    assert data["created_by"] is not None
+    assert data["updated_by"] is not None
     assert data["created_at"] is not None

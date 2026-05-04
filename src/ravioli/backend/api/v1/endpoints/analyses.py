@@ -20,13 +20,18 @@ from ravioli.ai.skills import communication as skill_comm
 from ravioli.ai.skills import analysis as skill_analysis
 from ravioli.backend.data.olap.duckdb_manager import duckdb_manager
 from ydata_profiling import ProfileReport
+from ravioli.backend.api.v1.endpoints.data import get_current_user
 
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 @router.post("/", response_model=schemas.Analysis, status_code=status.HTTP_201_CREATED)
-def create_analysis(analysis_in: schemas.AnalysisCreate, db: Session = Depends(get_db)):
+def create_analysis(
+    analysis_in: schemas.AnalysisCreate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     """
     Create a new analysis.
     """
@@ -44,8 +49,11 @@ def create_analysis(analysis_in: schemas.AnalysisCreate, db: Session = Depends(g
         description=analysis_in.description,
         analysis_metadata=analysis_in.analysis_metadata,
         notebook=notebook,
+        owner=analysis_in.owner,
         owner_id=analysis_in.owner_id,
-        owner_type=analysis_in.owner_type
+        owner_type=analysis_in.owner_type,
+        created_by=current_user.id,
+        updated_by=current_user.id
     )
     db.add(db_analysis)
     db.commit()
@@ -564,7 +572,8 @@ async def generate_summary(db: Session, filename: str, row_count: int, col_count
 async def create_quick_insight(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
 ):
     """
     Upload a CSV or XLSX and get a quick mock insight.
@@ -600,6 +609,8 @@ async def create_quick_insight(
         description=f"Quick insight generated from {file.filename}",
         status="completed",
         result=summary,
+        created_by=current_user.id,
+        updated_by=current_user.id,
         analysis_metadata={
             "type": "quick_insight", 
             "filename": file.filename, 
@@ -625,7 +636,8 @@ async def create_quick_insight(
 async def create_quick_insight_existing(
     background_tasks: BackgroundTasks,
     request: schemas.QuickInsightExistingRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
 ):
     """
     Generate quick insight from an already uploaded file.
@@ -666,6 +678,8 @@ async def create_quick_insight_existing(
         description=f"Quick insight generated from {db_source.original_filename}",
         status="completed",
         result=summary,
+        created_by=current_user.id,
+        updated_by=current_user.id,
         analysis_metadata={
             "type": "quick_insight", 
             "file_id": str(db_source.id), 

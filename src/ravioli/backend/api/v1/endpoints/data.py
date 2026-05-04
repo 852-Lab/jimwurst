@@ -81,7 +81,8 @@ async def upload_file(
     current_user: models.User = Depends(get_current_user),
     file_path: Optional[Path] = None,
     owner_id: Optional[uuid.UUID] = None,
-    owner_type: str = "user"
+    owner_type: str = "user",
+    owner: Optional[uuid.UUID] = None
 ):
     extension = Path(file.filename).suffix.lower()
     allowed_extensions = ['.csv', '.xlsx', '.xml', '.gpx']
@@ -133,8 +134,11 @@ async def upload_file(
             file_hash=file_hash,
             status="pending",
             has_pii=False,
+            owner=owner,
             owner_id=owner_id or current_user.id,
-            owner_type=owner_type
+            owner_type=owner_type,
+            created_by=current_user.id,
+            updated_by=current_user.id
         )
         db.add(db_source)
         # Use to_thread for DB commit if it's slow, but here it's mostly for consistency
@@ -216,8 +220,11 @@ async def upload_file(
                             status="completed",
                             row_count=other["row_count"],
                             has_pii=False,
+                            owner=owner,
                             owner_id=owner_id or current_user.id,
-                            owner_type=owner_type
+                            owner_type=owner_type,
+                            created_by=current_user.id,
+                            updated_by=current_user.id
                         )
                         # PII Scan for other
                         try:
@@ -282,8 +289,11 @@ async def upload_file(
                             status="completed",
                             row_count=other["row_count"],
                             has_pii=False,
+                            owner=owner,
                             owner_id=owner_id or current_user.id,
-                            owner_type=owner_type
+                            owner_type=owner_type,
+                            created_by=current_user.id,
+                            updated_by=current_user.id
                         )
                         # PII Scan for other
                         try:
@@ -558,7 +568,8 @@ async def ingest_wfs_layer(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
     owner_id: Optional[uuid.UUID] = None,
-    owner_type: str = "user"
+    owner_type: str = "user",
+    owner: Optional[uuid.UUID] = None
 ):
     # Derive placeholder names from the URL; the background task will update
     # them once the real layer name is known (if layer was not provided).
@@ -587,8 +598,11 @@ async def ingest_wfs_layer(
         source_type="wfs",
         source_url=request.url,
         status="pending",
+        owner=owner,
         owner_id=owner_id or current_user.id,
-        owner_type=owner_type
+        owner_type=owner_type,
+        created_by=current_user.id,
+        updated_by=current_user.id
     )
     db.add(db_source)
     db.commit()
@@ -616,7 +630,8 @@ async def upload_file_stream(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
     owner_id: Optional[uuid.UUID] = None,
-    owner_type: str = "user"
+    owner_type: str = "user",
+    owner: Optional[uuid.UUID] = None
 ):
     log_queue = asyncio.Queue()
     loop = asyncio.get_running_loop()
@@ -654,7 +669,7 @@ async def upload_file_stream(
             logging.info(f"[SYSTEM] File saved to {temp_path.name}. Starting ingestion...")
             
             # Start the ingestion task
-            ingestion_task = asyncio.create_task(upload_file(file, context, db, current_user, file_path=temp_path, owner_id=owner_id, owner_type=owner_type))
+            ingestion_task = asyncio.create_task(upload_file(file, context, db, current_user, file_path=temp_path, owner_id=owner_id, owner_type=owner_type, owner=owner))
             
             # While the task is running, yield logs
             while not ingestion_task.done():

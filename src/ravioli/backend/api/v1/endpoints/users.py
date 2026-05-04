@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from ravioli.backend.core import models, schemas
 from ravioli.backend.core.database import get_db
 import uuid
+from ravioli.backend.api.v1.endpoints.data import get_current_user
 
 router = APIRouter()
 
@@ -35,7 +36,11 @@ def list_groups(db: Session = Depends(get_db)):
     return db.query(models.UserGroup).all()
 
 @router.post("/groups", response_model=schemas.UserGroup)
-def create_group(group_in: schemas.UserGroupBase, db: Session = Depends(get_db)):
+def create_group(
+    group_in: schemas.UserGroupBase, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     # Validate owner if provided
     if group_in.owner_id:
         owner = db.query(models.User).filter(models.User.id == group_in.owner_id).first()
@@ -46,7 +51,9 @@ def create_group(group_in: schemas.UserGroupBase, db: Session = Depends(get_db))
         id=uuid.uuid4(),
         name=group_in.name,
         description=group_in.description,
-        owner_id=group_in.owner_id
+        owner_id=group_in.owner_id,
+        created_by=current_user.id,
+        updated_by=current_user.id
     )
     db.add(new_group)
     db.commit()
