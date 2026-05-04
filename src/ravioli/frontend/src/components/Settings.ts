@@ -403,7 +403,10 @@ export function renderSettings() {
       // The backend returns '••••••••' when a key is stored — track that separately
       apiKeyIsSet = api_key === '••••••••';
       ollamaConfig = { ...ollamaConfig, ...rest, api_key: '' };
-      renderContent();
+      // Don't re-render if the user already opened the configure panel
+      if (!isConfiguringOllama) {
+        renderContent();
+      }
     }
   }).catch(e => console.error('Failed to fetch settings', e));
 
