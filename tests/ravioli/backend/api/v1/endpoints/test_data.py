@@ -18,8 +18,13 @@ def test_list_files(client, session):
         status="completed",
         source_type="file",
         has_pii=False,
+        owner_type="user",
         created_at=datetime.now(UTC),
-        updated_at=datetime.now(UTC)
+        updated_at=datetime.now(UTC),
+        created_by=None,
+        updated_by=None,
+        owner=None,
+        owner_id=None
     )
     
     mock_result = MagicMock()
@@ -57,8 +62,13 @@ def test_delete_file(client, session, mocker):
         status="completed",
         source_type="file",
         has_pii=False,
+        owner_type="user",
         created_at=datetime.now(UTC),
-        updated_at=datetime.now(UTC)
+        updated_at=datetime.now(UTC),
+        created_by=None,
+        updated_by=None,
+        owner=None,
+        owner_id=None
     )
     
     mock_result = MagicMock()
@@ -89,8 +99,13 @@ def test_update_file_pii(client, session):
         status="completed",
         source_type="file",
         has_pii=False,
+        owner_type="user",
         created_at=datetime.now(UTC),
-        updated_at=datetime.now(UTC)
+        updated_at=datetime.now(UTC),
+        created_by=None,
+        updated_by=None,
+        owner=None,
+        owner_id=None
     )
     
     mock_result = MagicMock()
@@ -116,9 +131,14 @@ def test_update_file_description(client, session):
         status="completed",
         source_type="file",
         has_pii=False,
+        owner_type="user",
         description=None,
         created_at=datetime.now(UTC),
-        updated_at=datetime.now(UTC)
+        updated_at=datetime.now(UTC),
+        created_by=None,
+        updated_by=None,
+        owner=None,
+        owner_id=None
     )
     
     mock_result = MagicMock()
@@ -159,8 +179,13 @@ async def test_ingest_wfs_layer(client, session, mocker):
         status="pending",
         source_type="wfs",
         has_pii=False,
+        owner_type="user",
         created_at=datetime.now(UTC),
-        updated_at=datetime.now(UTC)
+        updated_at=datetime.now(UTC),
+        created_by=None,
+        updated_by=None,
+        owner=None,
+        owner_id=None
     )
     mocker.patch("ravioli.backend.api.v1.endpoints.data.DataSource", return_value=mock_file)
 
