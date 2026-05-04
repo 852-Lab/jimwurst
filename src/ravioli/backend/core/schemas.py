@@ -150,7 +150,7 @@ class UserGroupCreate(UserGroupBase):
 class UserGroup(UserGroupBase):
     id: UUID
     created_at: datetime
-    owner: Optional[User] = None
+    # owner: Optional[User] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -184,8 +184,8 @@ class DataSource(DataSourceBase):
     is_duplicate: bool = False
     
     # Optional nested owner for detail views
-    owner: Optional[User] = None
-
+    # owner: Optional[User] = None
+    
     model_config = ConfigDict(from_attributes=True)
 
 class DataSourceUpdate(BaseModel):

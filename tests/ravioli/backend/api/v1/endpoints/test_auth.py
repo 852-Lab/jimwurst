@@ -13,6 +13,9 @@ def test_login_success(client, session):
     mock_user.status = "active"
     mock_user.role = "Viewer"
     mock_user.created_at = datetime.now(UTC)
+    mock_user.updated_at = datetime.now(UTC)
+    mock_user.created_by = None
+    mock_user.updated_by = None
 
     session.query.return_value.filter.return_value.first.return_value = mock_user
 
@@ -81,6 +84,9 @@ def test_signup_new_user(client, session):
         obj.created_at = datetime.now(UTC)
         obj.role = "Viewer"
         obj.status = "active"
+        obj.updated_at = datetime.now(UTC)
+        obj.created_by = None
+        obj.updated_by = None
         return obj
     session.add.side_effect = mock_add
 
@@ -102,6 +108,9 @@ def test_signup_activate_invited_user(client, session):
     mock_user.name = "Invited User"
     mock_user.status = "invited"
     mock_user.created_at = datetime.now(UTC)
+    mock_user.updated_at = datetime.now(UTC)
+    mock_user.created_by = None
+    mock_user.updated_by = None
     mock_user.role = "Viewer"
 
     session.query.return_value.filter.return_value.first.return_value = mock_user

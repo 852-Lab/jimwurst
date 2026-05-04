@@ -10,7 +10,7 @@ def create_mock_page(id=None, title="Test Page", properties=None, content=None):
         content=content or [{"type": "paragraph", "paragraph": {"rich_text": [{"text": {"content": "Hello"}}]}}],
         icon={"type": "emoji", "emoji": "📄"},
         cover={"type": "external", "external": {"url": "https://example.com/cover.jpg"}},
-        ownership_type="individual",
+        owner_type="individual",
         source="manual",
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC)
@@ -48,7 +48,7 @@ def test_create_knowledge_page(client, session):
         "properties": {"tags": ["AI", "Notion"]},
         "content": [{"type": "paragraph", "paragraph": {"rich_text": [{"text": {"content": "Body"}}]}}],
         "icon": {"type": "emoji", "emoji": "🧠"},
-        "ownership_type": "team"
+        "owner_type": "team"
     }
     
     # Mock the return value of create to have timestamps
@@ -60,7 +60,7 @@ def test_create_knowledge_page(client, session):
     assert response.status_code == 201
     data = response.json()
     assert data["title"] == "New Intelligence"
-    assert data["ownership_type"] == "team"
+    assert data["owner_type"] == "team"
     assert session.add.called
     assert session.commit.called
 
