@@ -614,6 +614,9 @@ async def create_quick_insight(
         result=summary,
         created_by=current_user.id,
         updated_by=current_user.id,
+        owner=current_user.id,
+        owner_id=current_user.id,
+        owner_type="user",
         analysis_metadata={
             "type": "quick_insight", 
             "filename": file.filename, 
@@ -683,6 +686,9 @@ async def create_quick_insight_existing(
         result=summary,
         created_by=current_user.id,
         updated_by=current_user.id,
+        owner=current_user.id,
+        owner_id=current_user.id,
+        owner_type="user",
         analysis_metadata={
             "type": "quick_insight", 
             "file_id": str(db_source.id), 
