@@ -43,12 +43,23 @@ def seed_db():
             user = models.User(
                 id=uuid.uuid4(),
                 name="Jimmy Pang",
-                email=email
+                email=email,
+                role="Admin",
+                hashed_password="password123", # Simple default
+                status="active"
             )
             db.add(user)
             db.commit()
             db.refresh(user)
-            print(f"Seeded dummy user: {user.name}")
+            print(f"Seeded dummy user: {user.name} with Admin role")
+        else:
+            # Ensure existing user has Admin role and status
+            if user.role != "Admin":
+                user.role = "Admin"
+                user.status = "active"
+                user.hashed_password = "password123"
+                db.commit()
+                print(f"Updated user {user.name} to Admin role")
         
         # Backfill: Populate owner_id for all existing data sources that are NULL
         updated_count = db.query(models.DataSource).filter(models.DataSource.owner_id.is_(None)).update({models.DataSource.owner_id: user.id})
@@ -72,6 +83,9 @@ def _migrate_columns():
         "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS properties JSONB",
         "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES app.knowledge_pages(id)",
         "ALTER TABLE app.data_sources ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES app.users(id)",
+        "ALTER TABLE app.users ADD COLUMN IF NOT EXISTS hashed_password TEXT",
+        "ALTER TABLE app.users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'Viewer'",
+        "ALTER TABLE app.users ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'",
         # Safe type migration for content: wraps existing text in a paragraph block
         "ALTER TABLE app.knowledge_pages ALTER COLUMN content TYPE JSONB USING CASE WHEN content IS NULL THEN '[]'::JSONB WHEN content::text ~ '^[\\[\\{]' THEN content::JSONB ELSE jsonb_build_array(jsonb_build_object('type', 'paragraph', 'paragraph', jsonb_build_object('rich_text', jsonb_build_array(jsonb_build_object('type', 'text', 'text', jsonb_build_object('content', content)))))) END",
     ]
