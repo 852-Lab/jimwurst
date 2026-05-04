@@ -23,6 +23,7 @@ def create_knowledge_page(
     """Create a new knowledge page."""
     db_page = models.KnowledgePage(
         **page.model_dump(),
+        owner=page.owner or current_user.id,
         created_by=current_user.id,
         updated_by=current_user.id
     )
