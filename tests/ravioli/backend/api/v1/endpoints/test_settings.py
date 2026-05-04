@@ -1,4 +1,5 @@
 import pytest
+import uuid
 from datetime import datetime, UTC
 from unittest.mock import MagicMock, AsyncMock
 from cryptography.fernet import Fernet
@@ -48,6 +49,9 @@ def _make_mock_setting(key="ollama", value=None):
     s.key = key
     s.value = value or {"mode": "default", "base_url": "http://localhost:11434", "api_key": ""}
     s.updated_at = datetime.now(UTC)
+    s.owner = None
+    s.created_by = uuid.uuid4()
+    s.updated_by = uuid.uuid4()
     return s
 
 
@@ -90,6 +94,9 @@ def test_put_setting_creates_new(client, session, mocker):
     def set_updated_at(obj):
         from datetime import datetime, UTC
         obj.updated_at = datetime.now(UTC)
+        obj.owner = None
+        obj.created_by = uuid.uuid4()
+        obj.updated_by = uuid.uuid4()
 
     session.refresh.side_effect = set_updated_at
 
@@ -114,6 +121,9 @@ def test_put_setting_encrypts_api_key(client, session, mocker):
     def set_updated_at(obj):
         from datetime import datetime, UTC
         obj.updated_at = datetime.now(UTC)
+        obj.owner = None
+        obj.created_by = uuid.uuid4()
+        obj.updated_by = uuid.uuid4()
 
     session.add.side_effect = capture_add
     session.refresh.side_effect = set_updated_at
@@ -134,7 +144,13 @@ def test_put_setting_preserves_existing_key_when_redacted(client, session, mocke
     existing_encrypted = encrypt_value("original-key")
     existing = _make_mock_setting(value={"mode": "cloud", "api_key": existing_encrypted})
     session.query.return_value.filter.return_value.first.return_value = existing
-    session.refresh.side_effect = lambda obj: None
+    
+    def mock_refresh(obj):
+        obj.updated_at = datetime.now(UTC)
+        obj.owner = None
+        obj.created_by = uuid.uuid4()
+        obj.updated_by = uuid.uuid4()
+    session.refresh.side_effect = mock_refresh
 
     client.put("/api/v1/settings/ollama", json={
         "key": "ollama",
@@ -149,6 +165,8 @@ def test_put_setting_key_mismatch_returns_400(client, session):
         "key": "different_key",
         "value": {"mode": "default"}
     })
+    assert response.status_code == 400
+
 @pytest.mark.anyio
 async def test_test_ollama_connection_success(client, session, mocker):
     # Mock OllamaClient and its base_url
