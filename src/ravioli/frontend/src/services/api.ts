@@ -1,4 +1,4 @@
-import type { Analysis, AnalysisCreate, AnalysisLog, DataSource, QuickInsightResponse, WFSLayer, Insight, InsightStats, InsightsSummary, KnowledgePage, KnowledgePageCreate, KnowledgePageUpdate } from '../types';
+import type { User, UserRole, UserGroup, Analysis, AnalysisCreate, AnalysisLog, DataSource, QuickInsightResponse, WFSLayer, Insight, InsightStats, InsightsSummary, KnowledgePage, KnowledgePageCreate, KnowledgePageUpdate } from '../types';
 
 const API_BASE = '/api/v1';
 
@@ -330,5 +330,94 @@ export const api = {
       method: 'DELETE',
     });
     if (!response.ok) throw new Error('Failed to delete knowledge page');
+  },
+
+  // --- Auth & User Management ---
+
+  async login(credentials: { email: string, password: string }): Promise<User> {
+    const response = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials),
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.detail || 'Login failed');
+    }
+    const user = await response.json();
+    localStorage.setItem('ravioli_user', JSON.stringify(user));
+    return user;
+  },
+
+  async signup(data: { name: string, email: string, password: string }): Promise<User> {
+    const response = await fetch(`${API_BASE}/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.detail || 'Signup failed');
+    }
+    const user = await response.json();
+    localStorage.setItem('ravioli_user', JSON.stringify(user));
+    return user;
+  },
+
+  async getMe(): Promise<User | null> {
+    const stored = localStorage.getItem('ravioli_user');
+    if (!stored) return null;
+    const user = JSON.parse(stored);
+    try {
+      const response = await fetch(`${API_BASE}/auth/me?email=${encodeURIComponent(user.email)}`);
+      if (!response.ok) {
+        localStorage.removeItem('ravioli_user');
+        return null;
+      }
+      const updated = await response.json();
+      localStorage.setItem('ravioli_user', JSON.stringify(updated));
+      return updated;
+    } catch {
+      return user; // Return cached user if offline
+    }
+  },
+
+  logout() {
+    localStorage.removeItem('ravioli_user');
+  },
+
+  async listUsers(): Promise<User[]> {
+    const response = await fetch(`${API_BASE}/users/`);
+    if (!response.ok) throw new Error('Failed to fetch users');
+    return response.json();
+  },
+
+  async createUser(data: { name: string, email: string, role: UserRole }): Promise<User> {
+    const response = await fetch(`${API_BASE}/users/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.detail || 'Failed to create user');
+    }
+    return response.json();
+  },
+
+  async listGroups(): Promise<UserGroup[]> {
+    const response = await fetch(`${API_BASE}/users/groups`);
+    if (!response.ok) throw new Error('Failed to fetch groups');
+    return response.json();
+  },
+
+  async createGroup(data: { name: string, description?: string }): Promise<UserGroup> {
+    const response = await fetch(`${API_BASE}/users/groups`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) throw new Error('Failed to create group');
+    return response.json();
   }
 };

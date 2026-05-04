@@ -16,6 +16,26 @@ export interface Analysis {
   updated_at: string;
 }
 
+export type AnalysisStatus = 'pending' | 'running' | 'completed' | 'failed';
+export type UserRole = 'Admin' | 'Steward' | 'Contributor' | 'Viewer';
+export type UserStatus = 'active' | 'invited';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  status: UserStatus;
+  created_at: string;
+}
+
+export interface UserGroup {
+  id: string;
+  name: string;
+  description?: string;
+  created_at: string;
+}
+
 export interface AnalysisLog {
   id: string;
   analysis_id: string;
@@ -55,12 +75,6 @@ export interface DataSource {
   owner?: User;
 }
 
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  created_at: string;
-}
 
 export interface WFSLayer {
   name: string;

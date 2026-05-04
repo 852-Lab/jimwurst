@@ -9,6 +9,8 @@ import { renderKnowledge } from './components/Knowledge';
 import { renderData } from './components/Data';
 import { renderSettings } from './components/Settings';
 import { renderGovernance } from './components/Governance';
+import { renderAuth } from './components/Auth';
+import type { User } from './types';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 
@@ -18,10 +20,22 @@ function updateUI() {
   const shell = document.createElement('div');
   shell.className = 'flex w-full h-screen overflow-hidden relative';
   
-  shell.appendChild(renderSidebar());
-  
   const currentView = store.getCurrentView();
   const activeId = store.getActiveAnalysisId();
+  const currentUser = store.getCurrentUser();
+
+  if (!currentUser && currentView !== 'auth') {
+    store.setCurrentView('auth');
+    return;
+  }
+
+  if (currentView === 'auth') {
+    app.appendChild(renderAuth());
+    return;
+  }
+  
+  shell.appendChild(renderSidebar());
+  
   if (currentView === 'create-analysis') {
     shell.appendChild(renderCreateAnalysis());
   } else if (currentView === 'knowledge') {
@@ -43,30 +57,43 @@ function updateUI() {
 
 // Initial Load
 async function init() {
-  try {
-    // Fetch analyses
+    // Fetch current user
     try {
-      const analyses = await api.listAnalyses();
-      console.log(`Fetched ${analyses.length} analyses from API`);
-      store.setAnalyses(analyses);
+      const user = await api.getMe();
+      if (user) {
+        store.setCurrentUser(user);
+      } else {
+        store.setCurrentView('auth');
+      }
     } catch (err) {
-      console.error('Failed to fetch analyses', err);
+      console.error('Failed to fetch current user', err);
+      store.setCurrentView('auth');
     }
 
-    // Fetch data sources
-    try {
-      const sources = await api.listFiles();
-      store.setDataSources(sources);
-    } catch (err) {
-      console.error('Failed to fetch data sources', err);
-    }
+    if (store.getCurrentUser()) {
+      // Fetch analyses
+      try {
+        const analyses = await api.listAnalyses();
+        store.setAnalyses(analyses);
+      } catch (err) {
+        console.error('Failed to fetch analyses', err);
+      }
 
-    // Fetch knowledge pages
-    try {
-      const pages = await api.listKnowledgePages();
-      store.setKnowledgePages(pages);
-    } catch (err) {
-      console.error('Failed to fetch knowledge pages', err);
+      // Fetch data sources
+      try {
+        const sources = await api.listFiles();
+        store.setDataSources(sources);
+      } catch (err) {
+        console.error('Failed to fetch data sources', err);
+      }
+
+      // Fetch knowledge pages
+      try {
+        const pages = await api.listKnowledgePages();
+        store.setKnowledgePages(pages);
+      } catch (err) {
+        console.error('Failed to fetch knowledge pages', err);
+      }
     }
   } catch (err) {
     console.error('Initialization failed', err);

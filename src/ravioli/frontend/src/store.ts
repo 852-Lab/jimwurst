@@ -1,4 +1,4 @@
-import type { Analysis, AnalysisLog, DataSource, KnowledgePage } from './types';
+import type { Analysis, AnalysisLog, DataSource, KnowledgePage, User, UserGroup } from './types';
 
 type Listener = () => void;
 
@@ -8,7 +8,10 @@ class Store {
   private logs: AnalysisLog[] = [];
   private dataSources: DataSource[] = [];
   private knowledgePages: KnowledgePage[] = [];
-  private currentView: 'insights' | 'dashboard' | 'create-analysis' | 'knowledge' | 'data' | 'settings' | 'governance' = 'insights';
+  private currentUser: User | null = null;
+  private users: User[] = [];
+  private groups: UserGroup[] = [];
+  private currentView: 'insights' | 'dashboard' | 'create-analysis' | 'knowledge' | 'data' | 'settings' | 'governance' | 'auth' = 'insights';
   private listeners: Listener[] = [];
 
   subscribe(listener: Listener) {
@@ -44,15 +47,36 @@ class Store {
 
   getActiveAnalysisId() { return this.activeAnalysisId; }
 
-  setCurrentView(view: 'insights' | 'dashboard' | 'create-analysis' | 'knowledge' | 'data' | 'settings' | 'governance') {
+  setCurrentView(view: 'insights' | 'dashboard' | 'create-analysis' | 'knowledge' | 'data' | 'settings' | 'governance' | 'auth') {
     this.currentView = view;
-    if (view === 'insights' || view === 'create-analysis' || view === 'data' || view === 'knowledge' || view === 'settings' || view === 'governance') {
+    if (view !== 'dashboard' && view !== 'auth') {
       this.activeAnalysisId = undefined;
     }
     this.notify();
   }
 
   getCurrentView() { return this.currentView; }
+
+  setCurrentUser(user: User | null) {
+    this.currentUser = user;
+    this.notify();
+  }
+
+  getCurrentUser() { return this.currentUser; }
+
+  setUsers(users: User[]) {
+    this.users = users;
+    this.notify();
+  }
+
+  getUsers() { return this.users; }
+
+  setGroups(groups: UserGroup[]) {
+    this.groups = groups;
+    this.notify();
+  }
+
+  getGroups() { return this.groups; }
 
   setLogs(logs: AnalysisLog[]) {
     this.logs = logs;
