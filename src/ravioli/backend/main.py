@@ -105,6 +105,10 @@ def _migrate_columns():
         "ALTER TABLE app.user_groups ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
         "ALTER TABLE app.user_groups ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
 
+        "ALTER TABLE app.system_settings ADD COLUMN IF NOT EXISTS owner UUID REFERENCES app.user_groups(id)",
+        "ALTER TABLE app.system_settings ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES app.users(id)",
+        "ALTER TABLE app.system_settings ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES app.users(id)",
+
         "ALTER TABLE app.users ADD COLUMN IF NOT EXISTS hashed_password TEXT",
         "ALTER TABLE app.users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'Viewer'",
         "ALTER TABLE app.users ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'",

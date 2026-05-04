@@ -208,9 +208,12 @@ class WFSInjestRequest(BaseModel):
 class SystemSettingBase(BaseModel):
     key: str
     value: dict
+    owner: Optional[UUID] = None
 
 class SystemSetting(SystemSettingBase):
     updated_at: Optional[datetime] = None
+    created_by: Optional[UUID] = None
+    updated_by: Optional[UUID] = None
     
     model_config = ConfigDict(from_attributes=True)
 
