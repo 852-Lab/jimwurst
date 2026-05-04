@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, Cookie
 from sqlalchemy.orm import Session
 from ravioli.backend.core import models, schemas
-from ravioli.backend.core.database import SessionLocal, get_db
+from ravioli.backend.core.database import get_db
 import uuid
 
 router = APIRouter()
