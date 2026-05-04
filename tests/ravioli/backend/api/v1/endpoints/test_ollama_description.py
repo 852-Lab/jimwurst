@@ -21,9 +21,14 @@ async def test_generate_file_description(client, session, mocker):
         schema_name="main",
         source_type="file",
         has_pii=False,
+        owner_type="user",
         status="completed",
         created_at=datetime.now(UTC),
-        updated_at=datetime.now(UTC)
+        updated_at=datetime.now(UTC),
+        created_by=None,
+        updated_by=None,
+        owner=None,
+        owner_id=None
     )
     
     # Mock session.execute().scalar_one_or_none()

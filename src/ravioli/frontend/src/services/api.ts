@@ -466,5 +466,47 @@ export const api = {
     });
     if (!response.ok) throw new Error('Failed to create group');
     return response.json();
+  },
+
+  async updateGroup(id: string, data: { name?: string, description?: string }): Promise<UserGroup> {
+    const response = await fetch(`${API_BASE}/users/groups/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Failed to update group');
+    return response.json();
+  },
+
+  async deleteGroup(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE}/users/groups/${id}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Failed to delete group');
+  },
+
+  async listGroupMembers(groupId: string): Promise<User[]> {
+    const response = await fetch(`${API_BASE}/users/groups/${groupId}/members`, { credentials: 'include' });
+    if (!response.ok) throw new Error('Failed to fetch group members');
+    return response.json();
+  },
+
+  async addGroupMember(groupId: string, userId: string): Promise<void> {
+    const response = await fetch(`${API_BASE}/users/groups/${groupId}/members/${userId}`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Failed to add member to group');
+  },
+
+  async removeGroupMember(groupId: string, userId: string): Promise<void> {
+    const response = await fetch(`${API_BASE}/users/groups/${groupId}/members/${userId}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Failed to remove member from group');
   }
 };
+

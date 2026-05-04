@@ -20,13 +20,18 @@ from ravioli.ai.skills import communication as skill_comm
 from ravioli.ai.skills import analysis as skill_analysis
 from ravioli.backend.data.olap.duckdb_manager import duckdb_manager
 from ydata_profiling import ProfileReport
+from ravioli.backend.api.v1.endpoints.data import get_current_user
 
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 @router.post("/", response_model=schemas.Analysis, status_code=status.HTTP_201_CREATED)
-def create_analysis(analysis_in: schemas.AnalysisCreate, db: Session = Depends(get_db)):
+def create_analysis(
+    analysis_in: schemas.AnalysisCreate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     """
     Create a new analysis.
     """
@@ -43,7 +48,12 @@ def create_analysis(analysis_in: schemas.AnalysisCreate, db: Session = Depends(g
         title=analysis_in.title,
         description=analysis_in.description,
         analysis_metadata=analysis_in.analysis_metadata,
-        notebook=notebook
+        notebook=notebook,
+        owner=analysis_in.owner or current_user.id,
+        owner_id=analysis_in.owner_id or current_user.id,
+        owner_type=analysis_in.owner_type or "user",
+        created_by=current_user.id,
+        updated_by=current_user.id
     )
     db.add(db_analysis)
     db.commit()
@@ -155,6 +165,10 @@ async def extract_and_store_insights(analysis_id: str, result_markdown: str, tit
     db = SessionLocal()
     try:
         analysis_uuid = UUID(analysis_id)
+        analysis = db.query(models.Analysis).filter(models.Analysis.id == analysis_uuid).first()
+        if not analysis:
+            return
+            
         # Skip if insights already extracted for this analysis
         if db.query(models.Insight).filter(models.Insight.analysis_id == analysis_uuid).first():
             return
@@ -175,9 +189,14 @@ async def extract_and_store_insights(analysis_id: str, result_markdown: str, tit
                     source_label=title,
                     assumptions=assumptions or None,
                     limitations=limitations or None,
-                    metadata=metadata if any(metadata.values()) else None,
+                    insight_metadata=metadata if any(metadata.values()) else None, # Note: corrected from 'metadata' to 'insight_metadata' to match models.py
                     is_verified=False,
                     is_published=False,
+                    owner=analysis.owner or analysis.created_by,
+                    owner_id=analysis.owner_id,
+                    owner_type=analysis.owner_type,
+                    created_by=analysis.created_by,
+                    updated_by=analysis.created_by
                 ))
         db.commit()
         logger.info("Extracted %d insights from analysis %s", len(bullets), analysis_id)
@@ -556,7 +575,8 @@ async def generate_summary(db: Session, filename: str, row_count: int, col_count
 async def create_quick_insight(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
 ):
     """
     Upload a CSV or XLSX and get a quick mock insight.
@@ -592,6 +612,8 @@ async def create_quick_insight(
         description=f"Quick insight generated from {file.filename}",
         status="completed",
         result=summary,
+        created_by=current_user.id,
+        updated_by=current_user.id,
         analysis_metadata={
             "type": "quick_insight", 
             "filename": file.filename, 
@@ -617,7 +639,8 @@ async def create_quick_insight(
 async def create_quick_insight_existing(
     background_tasks: BackgroundTasks,
     request: schemas.QuickInsightExistingRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
 ):
     """
     Generate quick insight from an already uploaded file.
@@ -658,6 +681,8 @@ async def create_quick_insight_existing(
         description=f"Quick insight generated from {db_source.original_filename}",
         status="completed",
         result=summary,
+        created_by=current_user.id,
+        updated_by=current_user.id,
         analysis_metadata={
             "type": "quick_insight", 
             "file_id": str(db_source.id), 

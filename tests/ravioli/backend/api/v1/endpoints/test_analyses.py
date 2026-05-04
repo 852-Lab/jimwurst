@@ -19,6 +19,9 @@ def test_create_analysis(client, session):
         obj.status = "pending"
         obj.created_at = datetime.now(UTC)
         obj.updated_at = datetime.now(UTC)
+        obj.owner = None
+        obj.created_by = None
+        obj.updated_by = None
 
     session.refresh.side_effect = mock_refresh
 
@@ -45,6 +48,9 @@ def test_list_analyses(client, session):
             self.updated_at = datetime.now(UTC)
             self.result = None
             self.analysis_metadata = {}
+            self.owner = None
+            self.created_by = None
+            self.updated_by = None
             self.logs = []
     
     mock_analysis = MockAnalysis(analysis_id, "Test Analysis")
@@ -96,6 +102,9 @@ def test_create_analysis_with_notebook(client, session):
         obj.status = "pending"
         obj.created_at = datetime.now(UTC)
         obj.updated_at = datetime.now(UTC)
+        obj.owner = None
+        obj.created_by = None
+        obj.updated_by = None
         obj.notebook = notebook_content
 
     session.refresh.side_effect = mock_refresh
@@ -119,6 +128,9 @@ def test_get_suggested_prompts(client, session, mocker):
             self.id = analysis_id
             self.result = "Sample summary"
             self.analysis_metadata = {"filename": "test.csv"}
+            self.owner = None
+            self.created_by = None
+            self.updated_by = None
             
     session.query().filter().first.return_value = MockAnalysis()
     session.query().filter().order_by().limit().all.return_value = []

@@ -28,6 +28,9 @@ class AnalysisBase(BaseModel):
     description: Optional[str] = None
     analysis_metadata: Optional[dict] = None
     notebook: Optional[dict] = None
+    owner: Optional[UUID] = None
+    owner_id: Optional[UUID] = None
+    owner_type: Optional[str] = None
 
 class AnalysisCreate(AnalysisBase):
     pass
@@ -48,6 +51,8 @@ class Analysis(AnalysisBase):
     status: str
     created_at: datetime
     updated_at: datetime
+    created_by: Optional[UUID] = None
+    updated_by: Optional[UUID] = None
     result: Optional[str] = None
     
     # Optionally include logs in the response
@@ -75,6 +80,9 @@ class InsightBase(BaseModel):
     assumptions: Optional[str] = None
     limitations: Optional[str] = None
     insight_metadata: Optional[dict] = None
+    owner: Optional[UUID] = None
+    owner_id: Optional[UUID] = None
+    owner_type: Optional[str] = None
 
 class Insight(InsightBase):
     id: UUID
@@ -83,6 +91,8 @@ class Insight(InsightBase):
     is_published: bool
     created_at: datetime
     updated_at: datetime
+    created_by: Optional[UUID] = None
+    updated_by: Optional[UUID] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -119,6 +129,9 @@ class UserUpdate(BaseModel):
 class User(UserBase):
     id: UUID
     created_at: datetime
+    updated_at: Optional[datetime] = None
+    created_by: Optional[UUID] = None
+    updated_by: Optional[UUID] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -127,13 +140,23 @@ class User(UserBase):
 class UserGroupBase(BaseModel):
     name: str
     description: Optional[str] = None
+    owner_id: Optional[UUID] = None # Group owner user (legacy field name, but user specified 'owner' for groups elsewhere)
+    created_by: Optional[UUID] = None
+    updated_by: Optional[UUID] = None
 
 class UserGroupCreate(UserGroupBase):
     pass
 
+class UserGroupUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    owner_id: Optional[UUID] = None
+
+
 class UserGroup(UserGroupBase):
     id: UUID
     created_at: datetime
+    # owner: Optional[User] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -154,17 +177,21 @@ class DataSourceBase(BaseModel):
     source_type: str = "file"
     source_url: Optional[str] = None
     has_pii: bool = False
+    owner: Optional[UUID] = None
     owner_id: Optional[UUID] = None
+    owner_type: str = "user"
 
 class DataSource(DataSourceBase):
     id: UUID
     created_at: datetime
     updated_at: datetime
+    created_by: Optional[UUID] = None
+    updated_by: Optional[UUID] = None
     is_duplicate: bool = False
     
     # Optional nested owner for detail views
-    owner: Optional[User] = None
-
+    # owner: Optional[User] = None
+    
     model_config = ConfigDict(from_attributes=True)
 
 class DataSourceUpdate(BaseModel):
@@ -190,9 +217,12 @@ class WFSInjestRequest(BaseModel):
 class SystemSettingBase(BaseModel):
     key: str
     value: dict
+    owner: Optional[UUID] = None
 
 class SystemSetting(SystemSettingBase):
     updated_at: Optional[datetime] = None
+    created_by: Optional[UUID] = None
+    updated_by: Optional[UUID] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -205,7 +235,8 @@ class KnowledgePageBase(BaseModel):
     content: Optional[List[dict]] = None
     icon: Optional[dict] = None
     cover: Optional[dict] = None
-    ownership_type: str = "individual"
+    owner: Optional[UUID] = None
+    owner_type: str = "user"
     owner_id: Optional[str] = None
     parent_id: Optional[UUID] = None
     source: str = "manual"
@@ -235,7 +266,7 @@ class KnowledgePageUpdate(BaseModel):
     content: Optional[List[dict]] = None
     icon: Optional[dict] = None
     cover: Optional[dict] = None
-    ownership_type: Optional[str] = None
+    owner_type: Optional[str] = None
     owner_id: Optional[str] = None
     parent_id: Optional[UUID] = None
 
@@ -243,5 +274,7 @@ class KnowledgePage(KnowledgePageBase):
     id: UUID
     created_at: datetime
     updated_at: datetime
+    created_by: Optional[UUID] = None
+    updated_by: Optional[UUID] = None
 
     model_config = ConfigDict(from_attributes=True)

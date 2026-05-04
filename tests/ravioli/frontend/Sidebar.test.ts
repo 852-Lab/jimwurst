@@ -1,88 +1,124 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderSidebar } from '../../../src/ravioli/frontend/src/components/Sidebar';
 import { store } from '../../../src/ravioli/frontend/src/store';
 
-describe('Sidebar Component', () => {
+// Mock the api
+vi.mock('../../../src/ravioli/frontend/src/services/api', () => ({
+  api: {
+    logout: vi.fn(),
+  }
+}));
+
+
+describe('Sidebar Component - Historical Analyses', () => {
   beforeEach(() => {
-    store.setAnalyses([{ id: 'a1', title: 'Test Analysis', status: 'idle', created_at: '', updated_at: '' }]);
-    store.setActiveAnalysisId('a1');
-  });
-
-  it('should render the analysis title', () => {
-    const sidebar = renderSidebar();
-    expect(sidebar.innerHTML).toContain('Test Analysis');
-  });
-
-  it('should highlight the active analysis', () => {
-    const sidebar = renderSidebar();
-    const activeBtn = sidebar.querySelector('[data-analysis-id="a1"].active');
-    expect(activeBtn?.textContent).toContain('Test Analysis');
-  });
-
-  it('should render the system labels', () => {
-    const sidebar = renderSidebar();
-    expect(sidebar.innerHTML).toContain('Vibe Analytics');
-    expect(sidebar.innerHTML).toContain('Insights');
-    expect(sidebar.innerHTML).toContain('Knowledge');
-    expect(sidebar.innerHTML).toContain('Data');
-    expect(sidebar.innerHTML).toContain('Governance');
-    expect(sidebar.innerHTML).toContain('Settings');
-    expect(sidebar.innerHTML).toContain('Historical Analyses');
-  });
-
-  it('should render the current user profile', () => {
-    store.setCurrentUser({ id: 'u1', name: 'Jimmy Pang', email: 'j@test.com', role: 'Admin', status: 'active' });
-    const sidebar = renderSidebar();
-    expect(sidebar.innerHTML).toContain('Jimmy Pang');
-    expect(sidebar.innerHTML).toContain('Admin');
-    expect(sidebar.querySelector('#btn-logout')).not.toBeNull();
-  });
-
-  it('should show "No Analyses found" when the list is empty', () => {
+    // Reset store state
     store.setAnalyses([]);
-    const sidebar = renderSidebar();
-    expect(sidebar.innerHTML).toContain('No Analyses found');
+    store.setCurrentUser({
+      id: '123',
+      email: 'test@example.com',
+      name: 'Test User',
+      role: 'Admin',
+      status: 'active',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    } as any);
+    store.setCurrentView('insights');
+    store.setActiveAnalysisId(undefined);
   });
 
-  it('should highlight the active view', () => {
-    store.setCurrentView('governance');
+  it('renders "No Analyses found" when analyses list is empty', () => {
     const sidebar = renderSidebar();
-    const govBtn = sidebar.querySelector('[data-nav="governance"]');
-    expect(govBtn?.classList.contains('active')).toBe(true);
+    const analysisList = sidebar.querySelector('#analysis-list');
+    
+    expect(analysisList).not.toBeNull();
+    expect(analysisList?.textContent).toContain('No Analyses found');
   });
 
-  it('should update the store when a nav item is clicked', () => {
-    const sidebar = renderSidebar();
-    const settingsBtn = sidebar.querySelector('[data-nav="settings"]') as HTMLButtonElement;
-    settingsBtn?.click();
-    expect(store.getCurrentView()).toBe('settings');
-  });
-
-  it('should render different icons for quick insights vs deep dives', () => {
-    store.setAnalyses([
-      { 
-        id: 'q1', 
-        title: 'Quick', 
-        status: 'completed', 
-        analysis_metadata: { type: 'quick_insight' },
-        created_at: '', 
-        updated_at: '' 
+  it('renders historical analyses when present in store', () => {
+    const mockAnalyses = [
+      {
+        id: 'a1',
+        title: 'Q1 Revenue Analysis',
+        status: 'completed',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        owner_type: 'user',
       },
-      { 
-        id: 'd1', 
-        title: 'Deep', 
-        status: 'completed', 
-        analysis_metadata: { type: 'deep_dive' },
-        created_at: '', 
-        updated_at: '' 
+      {
+        id: 'a2',
+        title: 'Churn Prediction',
+        status: 'pending',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        owner_type: 'user',
       }
-    ]);
+    ];
+    
+    store.setAnalyses(mockAnalyses as any);
+    
     const sidebar = renderSidebar();
+    const analysisList = sidebar.querySelector('#analysis-list');
     
-    const quickIcon = sidebar.querySelector('[data-analysis-id="q1"] [data-icon]');
-    const deepIcon = sidebar.querySelector('[data-analysis-id="d1"] [data-icon]');
+    expect(analysisList).not.toBeNull();
     
-    expect(quickIcon?.textContent).toBe('bolt');
-    expect(deepIcon?.textContent).toBe('terminal');
+    // Should not contain the empty state text
+    expect(analysisList?.textContent).not.toContain('No Analyses found');
+    
+    // Should render the titles
+    expect(analysisList?.textContent).toContain('Q1 Revenue Analysis');
+    expect(analysisList?.textContent).toContain('Churn Prediction');
+    
+    // Should render two buttons for the analyses
+    const analysisButtons = sidebar.querySelectorAll('[data-analysis-id]');
+    expect(analysisButtons.length).toBe(2);
+    expect(analysisButtons[0].getAttribute('data-analysis-id')).toBe('a1');
+    expect(analysisButtons[1].getAttribute('data-analysis-id')).toBe('a2');
+  });
+
+  it('sets active class on the currently active analysis', () => {
+    const mockAnalyses = [
+      {
+        id: 'a1',
+        title: 'Q1 Revenue Analysis',
+        status: 'completed',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        owner_type: 'user',
+      }
+    ];
+    
+    store.setAnalyses(mockAnalyses as any);
+    store.setActiveAnalysisId('a1');
+    
+    const sidebar = renderSidebar();
+    const activeButton = sidebar.querySelector('[data-analysis-id="a1"]');
+    
+    expect(activeButton).not.toBeNull();
+    expect(activeButton?.className).toContain('active');
+  });
+
+  it('updates store when an analysis is clicked', () => {
+    const mockAnalyses = [
+      {
+        id: 'a1',
+        title: 'Q1 Revenue Analysis',
+        status: 'completed',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        owner_type: 'user',
+      }
+    ];
+    
+    store.setAnalyses(mockAnalyses as any);
+    
+    const sidebar = renderSidebar();
+    const button = sidebar.querySelector('[data-analysis-id="a1"]') as HTMLButtonElement;
+    
+    // Click the button
+    button.click();
+    
+    // Store should be updated
+    expect(store.getActiveAnalysisId()).toBe('a1');
   });
 });

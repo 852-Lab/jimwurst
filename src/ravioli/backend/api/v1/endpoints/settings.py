@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ravioli.backend.core.database import get_db
+from ravioli.backend.api.v1.endpoints.data import get_current_user
+from ravioli.backend.core import models
 from ravioli.backend.core.models import SystemSetting as SystemSettingModel
 from ravioli.backend.core.schemas import SystemSetting as SystemSettingSchema, SystemSettingBase
 from ravioli.backend.core.encryption import encrypt_value
@@ -49,17 +51,33 @@ def _redact_sensitive(value: dict) -> dict:
 
 
 @router.get("/{key}", response_model=SystemSettingSchema)
-def get_setting(key: str, db: Session = Depends(get_db)):
+def get_setting(
+    key: str, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     setting = db.query(SystemSettingModel).filter(SystemSettingModel.key == key).first()
     if not setting:
         raise HTTPException(status_code=404, detail="Setting not found")
     # Return a copy with sensitive fields redacted — never expose raw ciphertext or plaintext to the frontend
     redacted_value = _redact_sensitive(setting.value)
-    return SystemSettingSchema(key=setting.key, value=redacted_value, updated_at=setting.updated_at)
+    return SystemSettingSchema(
+        key=setting.key, 
+        value=redacted_value, 
+        updated_at=setting.updated_at,
+        owner=setting.owner,
+        created_by=setting.created_by,
+        updated_by=setting.updated_by
+    )
 
 
 @router.put("/{key}", response_model=SystemSettingSchema)
-def update_setting(key: str, setting_in: SystemSettingBase, db: Session = Depends(get_db)):
+def update_setting(
+    key: str, 
+    setting_in: SystemSettingBase, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     if key != setting_in.key:
         raise HTTPException(status_code=400, detail="Key in path does not match key in body")
 
@@ -82,8 +100,17 @@ def update_setting(key: str, setting_in: SystemSettingBase, db: Session = Depend
 
     if existing:
         existing.value = incoming
+        existing.updated_by = current_user.id
+        if setting_in.owner:
+            existing.owner = setting_in.owner
     else:
-        existing = SystemSettingModel(key=key, value=incoming)
+        existing = SystemSettingModel(
+            key=key, 
+            value=incoming,
+            owner=setting_in.owner or current_user.id,
+            created_by=current_user.id,
+            updated_by=current_user.id
+        )
         db.add(existing)
 
     db.commit()
@@ -91,4 +118,11 @@ def update_setting(key: str, setting_in: SystemSettingBase, db: Session = Depend
 
     # Return redacted response
     redacted_value = _redact_sensitive(existing.value)
-    return SystemSettingSchema(key=existing.key, value=redacted_value, updated_at=existing.updated_at)
+    return SystemSettingSchema(
+        key=existing.key, 
+        value=redacted_value, 
+        updated_at=existing.updated_at,
+        owner=existing.owner,
+        created_by=existing.created_by,
+        updated_by=existing.updated_by
+    )

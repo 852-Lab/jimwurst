@@ -12,6 +12,9 @@ def test_list_users(client, session):
     mock_user_1.role = "Admin"
     mock_user_1.status = "active"
     mock_user_1.created_at = datetime.now(UTC)
+    mock_user_1.updated_at = datetime.now(UTC)
+    mock_user_1.created_by = None
+    mock_user_1.updated_by = None
 
     mock_user_2 = MagicMock(spec=models.User)
     mock_user_2.id = uuid.uuid4()
@@ -20,6 +23,9 @@ def test_list_users(client, session):
     mock_user_2.role = "Viewer"
     mock_user_2.status = "active"
     mock_user_2.created_at = datetime.now(UTC)
+    mock_user_2.updated_at = datetime.now(UTC)
+    mock_user_2.created_by = None
+    mock_user_2.updated_by = None
 
     session.query.return_value.all.return_value = [mock_user_1, mock_user_2]
 
@@ -36,6 +42,9 @@ def test_create_user_admin(client, session):
     def mock_add(obj):
         obj.id = uuid.uuid4()
         obj.created_at = datetime.now(UTC)
+        obj.updated_at = datetime.now(UTC)
+        obj.created_by = None
+        obj.updated_by = None
         return obj
     session.add.side_effect = mock_add
 
@@ -70,6 +79,10 @@ def test_list_groups(client, session):
     mock_group.name = "Data Scientists"
     mock_group.description = "Core analysis team"
     mock_group.created_at = datetime.now(UTC)
+    mock_group.updated_at = datetime.now(UTC)
+    mock_group.created_by = None
+    mock_group.updated_by = None
+    mock_group.owner_id = None
 
     session.query.return_value.all.return_value = [mock_group]
 
@@ -84,6 +97,10 @@ def test_create_group(client, session):
     def mock_add(obj):
         obj.id = uuid.uuid4()
         obj.created_at = datetime.now(UTC)
+        obj.updated_at = datetime.now(UTC)
+        obj.created_by = None
+        obj.updated_by = None
+        obj.owner_id = None
         return obj
     session.add.side_effect = mock_add
 
@@ -108,6 +125,9 @@ def test_update_user(client, session):
     mock_user.email = "test@example.com"
     mock_user.status = "active"
     mock_user.created_at = datetime.now(UTC)
+    mock_user.updated_at = datetime.now(UTC)
+    mock_user.created_by = None
+    mock_user.updated_by = None
 
     session.query.return_value.filter.return_value.first.return_value = mock_user
 
