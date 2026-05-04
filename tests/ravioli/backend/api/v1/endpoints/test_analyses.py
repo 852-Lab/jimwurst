@@ -1,7 +1,6 @@
 import uuid
 from unittest.mock import AsyncMock
 from datetime import datetime, UTC
-from ravioli.backend.core import models
 
 def test_create_analysis(client, session):
     # Prepare mock data

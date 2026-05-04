@@ -2,7 +2,6 @@ import pytest
 import uuid
 from datetime import datetime, UTC
 from fastapi.testclient import TestClient
-from unittest.mock import MagicMock
 
 from ravioli.backend.main import app
 from ravioli.backend.core.database import get_db
