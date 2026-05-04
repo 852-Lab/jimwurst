@@ -190,7 +190,7 @@ async function renderGroupsSection(container: HTMLElement) {
   hydrateGroups(container);
   
   container.querySelector('#btn-create-group')?.addEventListener('click', () => {
-    alert('Group creation coming soon');
+    showCreateGroupModal();
   });
 }
 
@@ -319,7 +319,7 @@ async function hydrateGroups(container: HTMLElement) {
       return;
     }
     grid.innerHTML = groups.map(group => `
-      <div class="p-8 glass-card rounded-[2.5rem] border-white/5 hover:border-secondary/30 transition-all cursor-pointer group">
+      <div class="p-8 glass-card rounded-[2.5rem] border-white/5 hover:border-secondary/30 transition-all cursor-pointer group group-card" data-group-id="${group.id}">
         <div class="flex items-center gap-4 mb-4">
           <div class="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center border border-secondary/20">
             <span class="material-symbols-outlined text-secondary" data-icon="hub">hub</span>
@@ -331,10 +331,18 @@ async function hydrateGroups(container: HTMLElement) {
         </div>
         <p class="text-sm text-outline opacity-60 line-clamp-2 mb-6 h-10 font-body-md">${group.description || 'No description provided.'}</p>
         <div class="pt-6 border-t border-white/5 flex items-center justify-between">
-          <span class="text-[10px] uppercase tracking-widest font-bold text-secondary opacity-0 group-hover:opacity-100 transition-all">Manage Members →</span>
+          <span class="text-[10px] uppercase tracking-widest font-bold text-secondary opacity-0 group-hover:opacity-100 transition-all">Edit Group Details →</span>
         </div>
       </div>
     `).join('');
+
+    grid.querySelectorAll('.group-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const id = card.getAttribute('data-group-id');
+        const group = groups.find(g => g.id === id);
+        if (group) showCreateGroupModal(group);
+      });
+    });
   } catch {
     grid.innerHTML = `<p class="col-span-full p-12 text-center text-error opacity-60">Error loading groups.</p>`;
   }
@@ -414,6 +422,85 @@ function showCreateUserModal(userToEdit?: User) {
       modal.remove();
       // Store ensures re-render with 'users' tab active
       store.setGovernanceTab('users');
+    } catch (err: any) {
+      alert(err.message);
+    }
+  });
+}
+
+function showCreateGroupModal(groupToEdit?: UserGroup) {
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-xl animate-reveal';
+  modal.innerHTML = `
+    <div class="w-full max-w-md p-10 glass-card rounded-[3rem] border-white/10 shadow-2xl space-y-8">
+      <div class="flex items-center justify-between">
+        <div class="space-y-2">
+          <h2 class="text-2xl font-display-lg tracking-tight text-on-surface">
+            ${groupToEdit ? 'Edit Group' : 'Provision New Group'}
+          </h2>
+          <p class="text-xs text-outline opacity-60">
+            ${groupToEdit ? 'Updating group details.' : 'Create a new decentralized team.'}
+          </p>
+        </div>
+        ${groupToEdit ? `
+          <button type="button" id="btn-delete-group" class="p-3 rounded-xl bg-error/10 text-error hover:bg-error hover:text-white transition-all group/del">
+            <span class="material-symbols-outlined text-sm" data-icon="delete">delete</span>
+          </button>
+        ` : ''}
+      </div>
+
+      <form id="create-group-form" class="space-y-6">
+        <div class="space-y-2">
+          <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-outline opacity-40 ml-4">Group Name</label>
+          <input type="text" id="new-group-name" required value="${groupToEdit?.name || ''}" class="w-full px-6 py-4 rounded-2xl bg-white/5 border border-white/5 focus:border-secondary/50 outline-none text-on-surface" placeholder="e.g. Analytics Team">
+        </div>
+        
+        <div class="space-y-2">
+          <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-outline opacity-40 ml-4">Description</label>
+          <textarea id="new-group-desc" class="w-full px-6 py-4 rounded-2xl bg-white/5 border border-white/5 focus:border-secondary/50 outline-none text-on-surface resize-none h-24" placeholder="Brief description of the group's purpose...">${groupToEdit?.description || ''}</textarea>
+        </div>
+
+        <div class="flex gap-4 pt-4">
+          <button type="button" id="btn-cancel-group" class="flex-1 py-4 rounded-2xl border border-white/5 text-[10px] uppercase tracking-[0.2em] font-bold hover:bg-white/5 transition-all">Cancel</button>
+          <button type="submit" class="flex-1 py-4 rounded-2xl bg-secondary text-on-secondary text-[10px] uppercase tracking-[0.2em] font-bold shadow-lg shadow-secondary/20 hover:scale-105 transition-all">
+            ${groupToEdit ? 'Save Changes' : 'Create Group'}
+          </button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal.querySelector('#btn-cancel-group')?.addEventListener('click', () => modal.remove());
+  
+  if (groupToEdit) {
+    modal.querySelector('#btn-delete-group')?.addEventListener('click', async () => {
+      if (confirm('Are you sure you want to delete this group? This action cannot be undone.')) {
+        try {
+          await api.deleteGroup(groupToEdit.id);
+          modal.remove();
+          store.setGovernanceTab('groups');
+        } catch (err: any) {
+          alert(err.message);
+        }
+      }
+    });
+  }
+
+  modal.querySelector('#create-group-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = (modal.querySelector('#new-group-name') as HTMLInputElement).value;
+    const description = (modal.querySelector('#new-group-desc') as HTMLTextAreaElement).value;
+    
+    try {
+      if (groupToEdit) {
+        await api.updateGroup(groupToEdit.id, { name, description });
+      } else {
+        await api.createGroup({ name, description });
+      }
+      modal.remove();
+      store.setGovernanceTab('groups');
     } catch (err: any) {
       alert(err.message);
     }
