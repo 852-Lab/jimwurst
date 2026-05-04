@@ -42,6 +42,9 @@ def test_create_user_admin(client, session):
     def mock_add(obj):
         obj.id = uuid.uuid4()
         obj.created_at = datetime.now(UTC)
+        obj.updated_at = datetime.now(UTC)
+        obj.created_by = None
+        obj.updated_by = None
         return obj
     session.add.side_effect = mock_add
 
@@ -94,6 +97,10 @@ def test_create_group(client, session):
     def mock_add(obj):
         obj.id = uuid.uuid4()
         obj.created_at = datetime.now(UTC)
+        obj.updated_at = datetime.now(UTC)
+        obj.created_by = None
+        obj.updated_by = None
+        obj.owner_id = None
         return obj
     session.add.side_effect = mock_add
 
