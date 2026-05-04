@@ -73,9 +73,10 @@ export function renderGovernance() {
     container.querySelectorAll('.gov-tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const tab = btn.getAttribute('data-tab');
-        if (tab) {
+        if (tab && tab !== activeTab) {
+          activeTab = tab;
           store.setGovernanceTab(tab);
-          // activeTab will be updated on next render via store notify
+          updateUI();
         }
       });
     });
