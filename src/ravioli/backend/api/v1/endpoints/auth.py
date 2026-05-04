@@ -1,17 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Response, Cookie
 from sqlalchemy.orm import Session
 from ravioli.backend.core import models, schemas
-from ravioli.backend.core.database import SessionLocal
+from ravioli.backend.core.database import SessionLocal, get_db
 import uuid
 
 router = APIRouter()
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 @router.post("/login", response_model=schemas.User)
 def login(credentials: schemas.UserLogin, response: Response, db: Session = Depends(get_db)):

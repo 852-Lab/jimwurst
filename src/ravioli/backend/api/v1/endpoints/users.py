@@ -2,17 +2,10 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ravioli.backend.core import models, schemas
-from ravioli.backend.core.database import SessionLocal
+from ravioli.backend.core.database import SessionLocal, get_db
 import uuid
 
 router = APIRouter()
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 @router.get("/", response_model=List[schemas.User])
 def list_users(db: Session = Depends(get_db)):
