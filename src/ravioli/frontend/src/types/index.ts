@@ -33,6 +33,9 @@ export interface UserGroup {
   id: string;
   name: string;
   description?: string;
+  owner?: string;
+  created_by?: string;
+  updated_by?: string;
   created_at: string;
 }
 
