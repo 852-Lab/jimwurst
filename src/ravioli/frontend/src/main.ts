@@ -14,12 +14,15 @@ import type { User } from './types';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 
+// Cache for views with internal state that must survive store updates
+let cachedViewEl: { view: string; el: HTMLElement } | null = null;
+
 function updateUI() {
   app.innerHTML = '';
-  
+
   const shell = document.createElement('div');
   shell.className = 'flex w-full h-screen overflow-hidden relative';
-  
+
   const currentView = store.getCurrentView();
   const activeId = store.getActiveAnalysisId();
   const currentUser = store.getCurrentUser();
@@ -37,28 +40,44 @@ function updateUI() {
   }
 
   if (currentView === 'auth') {
+    cachedViewEl = null;
     app.appendChild(renderAuth());
     return;
   }
-  
+
   shell.appendChild(renderSidebar());
-  
-  if (currentView === 'create-analysis') {
-    shell.appendChild(renderCreateAnalysis());
-  } else if (currentView === 'knowledge') {
-    shell.appendChild(renderKnowledge());
-  } else if (currentView === 'data') {
-    shell.appendChild(renderData());
-  } else if (currentView === 'settings') {
-    shell.appendChild(renderSettings());
-  } else if (currentView === 'governance') {
-    shell.appendChild(renderGovernance());
-  } else if (currentView === 'insights' && !activeId) {
-    shell.appendChild(renderInsights());
+
+  // Views with internal state get cached so store updates don't reset them
+  const STATEFUL_VIEWS = ['settings', 'data', 'knowledge', 'governance'];
+
+  let viewEl: HTMLElement;
+  if (STATEFUL_VIEWS.includes(currentView) && cachedViewEl?.view === currentView) {
+    viewEl = cachedViewEl.el;
   } else {
-    shell.appendChild(renderNotebook());
+    if (currentView === 'create-analysis') {
+      viewEl = renderCreateAnalysis();
+    } else if (currentView === 'knowledge') {
+      viewEl = renderKnowledge();
+    } else if (currentView === 'data') {
+      viewEl = renderData();
+    } else if (currentView === 'settings') {
+      viewEl = renderSettings();
+    } else if (currentView === 'governance') {
+      viewEl = renderGovernance();
+    } else if (currentView === 'insights' && !activeId) {
+      viewEl = renderInsights();
+    } else {
+      viewEl = renderNotebook();
+    }
+
+    if (STATEFUL_VIEWS.includes(currentView)) {
+      cachedViewEl = { view: currentView, el: viewEl };
+    } else {
+      cachedViewEl = null;
+    }
   }
-  
+
+  shell.appendChild(viewEl);
   app.appendChild(shell);
 }
 
