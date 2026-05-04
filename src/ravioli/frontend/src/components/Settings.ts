@@ -65,12 +65,6 @@ export function renderSettings() {
               </div>
             ` : ''}
             
-            ${ollamaConfig.mode !== 'default' ? `
-              <div>
-                <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Default Model</label>
-                <input id="ollama-default-model" type="text" class="w-full bg-surface-container-highest border border-outline-variant/50 rounded-lg px-4 py-3 text-sm text-neutral-100 focus:outline-none focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim transition-colors" placeholder="e.g. gemma3:4b" />
-              </div>
-            ` : ''}
             
             ${ollamaConfig.mode === 'cloud' ? `
               <div>
@@ -253,9 +247,6 @@ export function renderSettings() {
     const baseUrlInput = container.querySelector('#ollama-base-url') as HTMLInputElement | null;
     if (baseUrlInput) baseUrlInput.value = ollamaConfig.base_url;
 
-    const defaultModelInput = container.querySelector('#ollama-default-model') as HTMLInputElement | null;
-    if (defaultModelInput) defaultModelInput.value = ollamaConfig.default_model;
-
     // Attach listeners
     const configureBtn = container.querySelector('#btn-configure-ollama');
     if (configureBtn) {
@@ -299,9 +290,7 @@ export function renderSettings() {
           const REDACTED = '••••••••';
           const urlInput = container.querySelector('#ollama-base-url') as HTMLInputElement;
           if (urlInput) ollamaConfig.base_url = urlInput.value;
-          const modelInput = container.querySelector('#ollama-default-model') as HTMLInputElement;
-          if (modelInput) ollamaConfig.default_model = modelInput.value;
-          
+
           const keyInput = container.querySelector('#ollama-api-key') as HTMLInputElement;
           if (keyInput && keyInput.value && keyInput.value !== REDACTED) {
             ollamaConfig.api_key = keyInput.value;
@@ -343,9 +332,6 @@ export function renderSettings() {
         const urlInput = container.querySelector('#ollama-base-url') as HTMLInputElement;
         if (urlInput) ollamaConfig.base_url = urlInput.value;
         
-        const modelInput = container.querySelector('#ollama-default-model') as HTMLInputElement;
-        if (modelInput) ollamaConfig.default_model = modelInput.value;
-        
         const REDACTED = '••••••••';
         const keyInput = container.querySelector('#ollama-api-key') as HTMLInputElement;
         if (keyInput && keyInput.value && keyInput.value !== REDACTED) {
@@ -358,24 +344,23 @@ export function renderSettings() {
           ollamaConfig.api_key = '';
         }
         
-        // If mode is default, force the values back to defaults just in case
-        if (ollamaConfig.mode === 'default') {
-          ollamaConfig.base_url = 'http://localhost:11434';
-          ollamaConfig.default_model = 'gemma3:4b';
-          ollamaConfig.api_key = '';
-        }
-
         const btn = saveBtn as HTMLButtonElement;
         btn.disabled = true;
         btn.classList.add('opacity-50');
 
         try {
-          await api.updateSetting('ollama', {
-            mode: ollamaConfig.mode,
-            base_url: ollamaConfig.base_url,
-            default_model: ollamaConfig.default_model,
-            api_key: ollamaConfig.api_key
-          });
+          if (ollamaConfig.mode === 'default') {
+            await api.deleteSetting('ollama').catch(() => {});
+            apiKeyIsSet = false;
+            ollamaConfig = { mode: 'default', base_url: 'http://localhost:11434', default_model: 'gemma3:4b', api_key: '' };
+          } else {
+            await api.updateSetting('ollama', {
+              mode: ollamaConfig.mode,
+              base_url: ollamaConfig.base_url,
+              default_model: ollamaConfig.default_model,
+              api_key: ollamaConfig.api_key
+            });
+          }
           
           const status = container.querySelector('#save-status');
           if (status) {

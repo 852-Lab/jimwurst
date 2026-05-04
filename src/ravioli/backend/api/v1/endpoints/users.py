@@ -48,9 +48,10 @@ def create_group(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    # Validate owner if provided
-    if group_in.owner_id:
-        owner = db.query(models.User).filter(models.User.id == group_in.owner_id).first()
+    # Validate owner if provided, otherwise default to creator
+    resolved_owner = group_in.owner or current_user.id
+    if group_in.owner:
+        owner = db.query(models.User).filter(models.User.id == group_in.owner).first()
         if not owner:
             raise HTTPException(status_code=404, detail="Owner user not found")
 
@@ -58,7 +59,7 @@ def create_group(
         id=uuid.uuid4(),
         name=group_in.name,
         description=group_in.description,
-        owner_id=group_in.owner_id,
+        owner=resolved_owner,
         created_by=current_user.id,
         updated_by=current_user.id
     )
@@ -78,8 +79,8 @@ def update_group(
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
     
-    if group_in.owner_id is not None:
-        owner = db.query(models.User).filter(models.User.id == group_in.owner_id).first()
+    if group_in.owner is not None:
+        owner = db.query(models.User).filter(models.User.id == group_in.owner).first()
         if not owner:
             raise HTTPException(status_code=404, detail="Owner user not found")
             

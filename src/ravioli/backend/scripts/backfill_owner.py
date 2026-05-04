@@ -17,7 +17,7 @@ def backfill_owner():
         group_exists = conn.execute(text(f"SELECT EXISTS(SELECT 1 FROM app.user_groups WHERE id = '{user_id}')")).scalar()
         if not group_exists:
             print(f"Creating personal group for user {user_id}")
-            conn.execute(text(f"INSERT INTO app.user_groups (id, name, description, owner_id, created_at, updated_at) VALUES ('{user_id}', 'Personal Group', 'Automatically created personal group', '{user_id}', '{now}', '{now}')"))
+            conn.execute(text(f"INSERT INTO app.user_groups (id, name, description, owner, created_at, updated_at) VALUES ('{user_id}', 'Personal Group', 'Automatically created personal group', '{user_id}', '{now}', '{now}')"))
         
         # 3. Update all assets to have owner = created_by
         tables = [

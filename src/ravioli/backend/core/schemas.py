@@ -136,7 +136,7 @@ class User(UserBase):
 class UserGroupBase(BaseModel):
     name: str
     description: Optional[str] = None
-    owner_id: Optional[UUID] = None # Group owner user (legacy field name, but user specified 'owner' for groups elsewhere)
+    owner: Optional[UUID] = None
     created_by: Optional[UUID] = None
     updated_by: Optional[UUID] = None
 
@@ -146,7 +146,7 @@ class UserGroupCreate(UserGroupBase):
 class UserGroupUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
-    owner_id: Optional[UUID] = None
+    owner: Optional[UUID] = None
 
 
 class UserGroup(UserGroupBase):

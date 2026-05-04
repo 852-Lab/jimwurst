@@ -121,6 +121,11 @@ def _migrate_columns():
         "ALTER TABLE app.user_groups ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES app.users(id)",
         "ALTER TABLE app.user_groups ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
         "ALTER TABLE app.user_groups ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
+        # Rename owner_id -> owner and backfill from created_by
+        "ALTER TABLE app.user_groups ADD COLUMN IF NOT EXISTS owner UUID REFERENCES app.users(id)",
+        "UPDATE app.user_groups SET owner = owner_id WHERE owner IS NULL AND owner_id IS NOT NULL",
+        "UPDATE app.user_groups SET owner = created_by WHERE owner IS NULL AND created_by IS NOT NULL",
+        "ALTER TABLE app.user_groups DROP COLUMN IF EXISTS owner_id",
 
         "ALTER TABLE app.system_settings ADD COLUMN IF NOT EXISTS owner UUID REFERENCES app.user_groups(id)",
         "ALTER TABLE app.system_settings ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES app.users(id)",

@@ -266,8 +266,8 @@ class UserGroup(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
     
     # Group Owner (typically a Steward)
-    owner_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
-    owner_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[owner_id])
+    owner: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
+    owner_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[owner])
     
     # Audit
     created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
