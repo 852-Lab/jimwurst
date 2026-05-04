@@ -319,7 +319,7 @@ async function hydrateGroups(container: HTMLElement) {
       return;
     }
     grid.innerHTML = groups.map(group => `
-      <div class="p-8 glass-card rounded-[2.5rem] border-white/5 hover:border-secondary/30 transition-all cursor-pointer group group-card" data-group-id="${group.id}">
+      <div class="p-8 glass-card rounded-[2.5rem] border-white/5 hover:border-secondary/30 transition-all group">
         <div class="flex items-center gap-4 mb-4">
           <div class="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center border border-secondary/20">
             <span class="material-symbols-outlined text-secondary" data-icon="hub">hub</span>
@@ -331,18 +331,30 @@ async function hydrateGroups(container: HTMLElement) {
         </div>
         <p class="text-sm text-outline opacity-60 line-clamp-2 mb-6 h-10 font-body-md">${group.description || 'No description provided.'}</p>
         <div class="pt-6 border-t border-white/5 flex items-center justify-between">
-          <span class="text-[10px] uppercase tracking-widest font-bold text-secondary opacity-0 group-hover:opacity-100 transition-all">Edit Group Details →</span>
+          <button class="btn-edit-group text-[10px] uppercase tracking-widest font-bold text-outline hover:text-secondary opacity-0 group-hover:opacity-100 transition-all" data-group-id="${group.id}">Edit Details</button>
+          <button class="btn-manage-members text-[10px] uppercase tracking-widest font-bold text-secondary opacity-0 group-hover:opacity-100 transition-all" data-group-id="${group.id}">Manage Members →</button>
         </div>
       </div>
     `).join('');
 
-    grid.querySelectorAll('.group-card').forEach(card => {
-      card.addEventListener('click', () => {
-        const id = card.getAttribute('data-group-id');
+    grid.querySelectorAll('.btn-edit-group').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-group-id');
         const group = groups.find(g => g.id === id);
         if (group) showCreateGroupModal(group);
       });
     });
+
+    grid.querySelectorAll('.btn-manage-members').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-group-id');
+        const group = groups.find(g => g.id === id);
+        if (group) showManageGroupMembersModal(group);
+      });
+    });
+
   } catch {
     grid.innerHTML = `<p class="col-span-full p-12 text-center text-error opacity-60">Error loading groups.</p>`;
   }
@@ -505,6 +517,130 @@ function showCreateGroupModal(groupToEdit?: UserGroup) {
       alert(err.message);
     }
   });
+}
+
+async function showManageGroupMembersModal(group: UserGroup) {
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-xl animate-reveal';
+  
+  // Show loading state initially
+  modal.innerHTML = `
+    <div class="w-full max-w-lg p-10 glass-card rounded-[3rem] border-white/10 shadow-2xl space-y-8 flex items-center justify-center h-64">
+      <div class="w-8 h-8 rounded-full border-2 border-secondary border-t-transparent animate-spin"></div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  try {
+    const [allUsers, members] = await Promise.all([
+      api.listUsers(),
+      api.listGroupMembers(group.id)
+    ]);
+    
+    const nonMembers = allUsers.filter(u => !members.find(m => m.id === u.id));
+
+    const renderContent = () => `
+      <div class="w-full max-w-lg p-10 glass-card rounded-[3rem] border-white/10 shadow-2xl space-y-8" id="manage-members-content">
+        <div class="flex items-center justify-between">
+          <div class="space-y-2">
+            <h2 class="text-2xl font-display-lg tracking-tight text-on-surface">Manage Members</h2>
+            <p class="text-xs text-outline opacity-60">Assign or remove users from ${group.name}</p>
+          </div>
+          <button type="button" id="btn-close-members" class="p-3 rounded-xl hover:bg-white/5 text-outline hover:text-white transition-all">
+            <span class="material-symbols-outlined text-sm" data-icon="close">close</span>
+          </button>
+        </div>
+
+        <div class="space-y-4">
+          <h3 class="text-[10px] uppercase tracking-[0.2em] font-bold text-outline opacity-40 ml-4">Current Members</h3>
+          <div class="max-h-48 overflow-y-auto pr-2 custom-scrollbar space-y-2">
+            ${members.length === 0 ? '<p class="text-sm text-outline opacity-40 p-4 text-center">No members assigned yet.</p>' : ''}
+            ${members.map(m => `
+              <div class="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                    ${m.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p class="text-sm font-bold text-on-surface">${m.name}</p>
+                    <p class="text-[10px] text-outline opacity-60">${m.role}</p>
+                  </div>
+                </div>
+                <button class="btn-remove-member p-2 rounded-lg text-outline hover:text-error hover:bg-error/10 transition-all" data-user-id="${m.id}">
+                  <span class="material-symbols-outlined text-sm" data-icon="person_remove">person_remove</span>
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="space-y-4 pt-4 border-t border-white/5">
+          <h3 class="text-[10px] uppercase tracking-[0.2em] font-bold text-outline opacity-40 ml-4">Add Member</h3>
+          <div class="flex gap-2">
+            <select id="new-member-select" class="flex-1 px-6 py-4 rounded-2xl bg-white/5 border border-white/5 focus:border-secondary/50 outline-none text-on-surface appearance-none text-sm">
+              <option value="" disabled selected>Select a user to add...</option>
+              ${nonMembers.map(u => `<option value="${u.id}">${u.name} (${u.role})</option>`).join('')}
+            </select>
+            <button id="btn-add-member" class="px-6 rounded-2xl bg-secondary text-on-secondary text-[10px] uppercase tracking-[0.2em] font-bold shadow-lg shadow-secondary/20 hover:scale-105 transition-all disabled:opacity-50 disabled:pointer-events-none">
+              Add
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    modal.innerHTML = renderContent();
+
+    const bindEvents = () => {
+      modal.querySelector('#btn-close-members')?.addEventListener('click', () => modal.remove());
+      
+      modal.querySelectorAll('.btn-remove-member').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const userId = btn.getAttribute('data-user-id');
+          if (!userId) return;
+          try {
+            await api.removeGroupMember(group.id, userId);
+            const userIndex = members.findIndex(m => m.id === userId);
+            if (userIndex > -1) {
+              nonMembers.push(members[userIndex]);
+              members.splice(userIndex, 1);
+              modal.innerHTML = renderContent();
+              bindEvents();
+            }
+          } catch (err: any) {
+            alert(err.message);
+          }
+        });
+      });
+
+      modal.querySelector('#btn-add-member')?.addEventListener('click', async () => {
+        const select = modal.querySelector('#new-member-select') as HTMLSelectElement;
+        const userId = select.value;
+        if (!userId) return;
+        try {
+          await api.addGroupMember(group.id, userId);
+          const userIndex = nonMembers.findIndex(u => u.id === userId);
+          if (userIndex > -1) {
+            members.push(nonMembers[userIndex]);
+            nonMembers.splice(userIndex, 1);
+            modal.innerHTML = renderContent();
+            bindEvents();
+          }
+        } catch (err: any) {
+          alert(err.message);
+        }
+      });
+    };
+
+    bindEvents();
+  } catch (err: any) {
+    modal.innerHTML = `
+      <div class="w-full max-w-lg p-10 glass-card rounded-[3rem] border-white/10 shadow-2xl text-center space-y-4">
+        <p class="text-error">Failed to load members.</p>
+        <button class="px-6 py-3 rounded-2xl bg-white/5 border border-white/5 text-[10px] uppercase tracking-[0.2em] font-bold hover:bg-white/10 transition-all" onclick="this.closest('.fixed').remove()">Close</button>
+      </div>
+    `;
+  }
 }
 
 function insightReviewCard(insight: Insight) {
