@@ -1,9 +1,11 @@
 import { store } from '../store';
+import { api } from '../services/api';
 
 export function renderSidebar() {
   const analyses = store.getAnalyses() || [];
   const activeId = store.getActiveAnalysisId();
   const currentView = store.getCurrentView();
+  const user = store.getCurrentUser();
 
   const container = document.createElement('aside');
   container.className = 'fixed left-0 top-0 flex flex-col h-full py-8 w-64 bg-surface-container-low font-display-lg text-sm tracking-tight z-50';
@@ -81,13 +83,18 @@ export function renderSidebar() {
     </nav>
 
     <!-- User Context -->
-    <div class="px-8 mt-auto flex items-center gap-3">
-      <div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container-highest">
-        <img alt="User profile" class="w-full h-full object-cover grayscale opacity-80" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBm9rkjsFpTTuHvUhgdWXqOVy5TEU6WU0Zmn9L54MAL7rqO9xlW28xICQZTib_IPC3Vni4JRBxl4-Gppy19CJdOHiEcBlPQbvt0gCCA-6kf_AKQm6zQKwMOCZ3IKPJEhInarqydnCUGYEs1zu15jSFIpuA23IZYc2x9_iPo_nEmpEwwPJrLucmJKE2TBrQmAWUvQcXay_vsZJuJE1ijeaMEisbmWS_uXDIJ1QCYQnlPXn6CEQazi2-HIVXCt8NqmI9sueKY83dOles"/>
-      </div>
-      <div class="flex flex-col">
-        <span class="text-[10px] font-label-sm text-on-surface-variant uppercase tracking-widest font-bold">OPERATOR</span>
-        <span class="text-[12px] font-medium text-neutral-100">Studio Noir</span>
+    <div class="px-8 mt-auto group relative">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center border border-primary/20">
+          <span class="material-symbols-outlined text-primary text-sm" data-icon="person">person</span>
+        </div>
+        <div class="flex flex-col min-w-0">
+          <span class="text-[9px] font-label-sm text-primary opacity-60 uppercase tracking-[0.2em] font-bold">${user?.role || 'Guest'}</span>
+          <span class="text-[12px] font-medium text-neutral-100 truncate">${user?.name || 'Anonymous'}</span>
+        </div>
+        <button id="btn-logout" class="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-2 hover:text-error">
+          <span class="material-symbols-outlined text-sm" data-icon="logout">logout</span>
+        </button>
       </div>
     </div>
   `;
@@ -95,6 +102,7 @@ export function renderSidebar() {
   // Brand header listener
   container.querySelector('#brand-header')?.addEventListener('click', () => {
     store.setCurrentView('insights');
+    store.setActiveAnalysisId(undefined);
   });
 
   // Navigation listeners
@@ -121,6 +129,13 @@ export function renderSidebar() {
   // New analysis listener
   container.querySelector('#btn-new-analysis')?.addEventListener('click', () => {
     store.setCurrentView('create-analysis');
+  });
+
+  // Logout listener
+  container.querySelector('#btn-logout')?.addEventListener('click', () => {
+    api.logout();
+    store.setCurrentUser(null);
+    store.setCurrentView('auth');
   });
 
   return container;
