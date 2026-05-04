@@ -23,6 +23,13 @@ function updateUI() {
   const currentView = store.getCurrentView();
   const activeId = store.getActiveAnalysisId();
   const currentUser = store.getCurrentUser();
+  const isInitializing = store.getInitializing();
+
+  // Show nothing or a loading state while initializing
+  if (isInitializing) {
+    app.innerHTML = '<div class="flex items-center justify-center w-full h-screen bg-[#0F1117] text-white">Initializing Ravioli...</div>';
+    return;
+  }
 
   if (!currentUser && currentView !== 'auth') {
     store.setCurrentView('auth');
@@ -63,12 +70,18 @@ async function init() {
       const user = await api.getMe();
       if (user) {
         store.setCurrentUser(user);
+        // If we found a user and were on the auth screen, move to insights
+        if (store.getCurrentView() === 'auth') {
+          store.setCurrentView('insights');
+        }
       } else {
         store.setCurrentView('auth');
       }
     } catch (err) {
       console.error('Failed to fetch current user', err);
       store.setCurrentView('auth');
+    } finally {
+      store.setInitializing(false);
     }
 
     if (store.getCurrentUser()) {

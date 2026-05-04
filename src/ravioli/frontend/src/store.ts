@@ -13,6 +13,7 @@ class Store {
   private groups: UserGroup[] = [];
   private currentView: 'insights' | 'dashboard' | 'create-analysis' | 'knowledge' | 'data' | 'settings' | 'governance' | 'auth' = 'insights';
   private activeGovTab: string | null = null;
+  private isInitializing: boolean = true;
   private listeners: Listener[] = [];
 
   subscribe(listener: Listener) {
@@ -108,6 +109,13 @@ class Store {
   }
 
   getGovernanceTab() { return this.activeGovTab; }
+
+  setInitializing(initializing: boolean) {
+    this.isInitializing = initializing;
+    this.notify();
+  }
+
+  getInitializing() { return this.isInitializing; }
 }
 
 export const store = new Store();

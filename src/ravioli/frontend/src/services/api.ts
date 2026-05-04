@@ -4,7 +4,7 @@ const API_BASE = '/api/v1';
 
 export const api = {
   async listAnalyses(): Promise<Analysis[]> {
-    const response = await fetch(`${API_BASE}/analyses/`);
+    const response = await fetch(`${API_BASE}/analyses/`, { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch analyses');
     return response.json();
   },
@@ -14,6 +14,7 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+      credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to create analysis');
     return response.json();
@@ -22,6 +23,7 @@ export const api = {
   async approveAnalysis(id: string): Promise<Analysis> {
     const response = await fetch(`${API_BASE}/analyses/${id}/approve`, {
       method: 'POST',
+      credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to approve analysis');
     return response.json();
@@ -30,12 +32,13 @@ export const api = {
   async deleteAnalysis(id: string): Promise<void> {
     const response = await fetch(`${API_BASE}/analyses/${id}`, {
       method: 'DELETE',
+      credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to delete analysis');
   },
 
   async listLogs(analysisId: string): Promise<AnalysisLog[]> {
-    const response = await fetch(`${API_BASE}/analysis-logs/analysis/${analysisId}`);
+    const response = await fetch(`${API_BASE}/analysis-logs/analysis/${analysisId}`, { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch logs');
     return response.json();
   },
@@ -45,6 +48,7 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question }),
+      credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to ask question');
   },
@@ -71,7 +75,7 @@ export const api = {
   },
   
   async getSuggestedPrompts(analysisId: string): Promise<string[]> {
-    const response = await fetch(`${API_BASE}/analyses/${analysisId}/suggested-prompts`);
+    const response = await fetch(`${API_BASE}/analyses/${analysisId}/suggested-prompts`, { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch suggested prompts');
     return response.json();
   },
@@ -84,6 +88,7 @@ export const api = {
     const response = await fetch(`${API_BASE}/analyses/quick-insight`, {
       method: 'POST',
       body: formData,
+      credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to generate quick insight');
     return response.json();
@@ -94,13 +99,14 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ file_id: fileId }),
+      credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to generate quick insight');
     return response.json();
   },
 
   async listFiles(): Promise<DataSource[]> {
-    const response = await fetch(`${API_BASE}/data/files`);
+    const response = await fetch(`${API_BASE}/data/files`, { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch files');
     return response.json();
   },
@@ -113,6 +119,7 @@ export const api = {
     const response = await fetch(`${API_BASE}/data/upload`, {
       method: 'POST',
       body: formData,
+      credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to upload file');
     return response.json();
@@ -127,6 +134,7 @@ export const api = {
       fetch(`${API_BASE}/data/upload-stream`, {
         method: 'POST',
         body: formData,
+        credentials: 'include'
       }).then(async (response) => {
         if (!response.ok) throw new Error('Upload failed');
         const reader = response.body?.getReader();
@@ -167,7 +175,7 @@ export const api = {
   },
 
   async getPreview(tableName: string): Promise<any[]> {
-    const response = await fetch(`${API_BASE}/data/preview/${tableName}`);
+    const response = await fetch(`${API_BASE}/data/preview/${tableName}`, { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch preview');
     return response.json();
   },
@@ -175,6 +183,7 @@ export const api = {
   async deleteFile(fileId: string): Promise<void> {
     const response = await fetch(`${API_BASE}/data/files/${fileId}`, {
       method: 'DELETE',
+      credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to delete file');
   },
@@ -184,6 +193,7 @@ export const api = {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ description }),
+      credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to update file description');
     return response.json();
@@ -194,6 +204,7 @@ export const api = {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ has_pii: hasPII }),
+      credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to update PII status');
     return response.json();
@@ -202,6 +213,7 @@ export const api = {
   async generateFileDescription(fileId: string): Promise<DataSource> {
     const response = await fetch(`${API_BASE}/data/files/${fileId}/generate-description`, {
       method: 'POST',
+      credentials: 'include'
     });
     if (!response.ok) {
       let detail: string;
@@ -217,7 +229,7 @@ export const api = {
   },
 
   async getSetting(key: string): Promise<any> {
-    const response = await fetch(`${API_BASE}/settings/${key}`);
+    const response = await fetch(`${API_BASE}/settings/${key}`, { credentials: 'include' });
     if (response.status === 404) return { key, value: {} };
     if (!response.ok) throw new Error('Failed to fetch setting');
     return response.json();
@@ -228,13 +240,14 @@ export const api = {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key, value }),
+      credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to update setting');
     return response.json();
   },
 
   async testOllamaConnection(): Promise<{status: string, message: string, models?: string[]}> {
-    const response = await fetch(`${API_BASE}/settings/ollama/test`);
+    const response = await fetch(`${API_BASE}/settings/ollama/test`, { credentials: 'include' });
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.detail || 'Connection test failed');
@@ -243,42 +256,42 @@ export const api = {
   },
 
   async getInsightStats(): Promise<InsightStats> {
-    const response = await fetch(`${API_BASE}/insights/stats`);
+    const response = await fetch(`${API_BASE}/insights/stats`, { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch insight stats');
     return response.json();
   },
 
   async getInsightsSummary(days: number): Promise<InsightsSummary> {
-    const response = await fetch(`${API_BASE}/insights/summary?days=${days}`);
+    const response = await fetch(`${API_BASE}/insights/summary?days=${days}`, { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch insights summary');
     return response.json();
   },
 
   async getReviewQueue(): Promise<Insight[]> {
-    const response = await fetch(`${API_BASE}/insights/review-queue`);
+    const response = await fetch(`${API_BASE}/insights/review-queue`, { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch review queue');
     return response.json();
   },
 
   async getInsightsFeed(days: number = 30): Promise<Insight[]> {
-    const response = await fetch(`${API_BASE}/insights/feed?days=${days}`);
+    const response = await fetch(`${API_BASE}/insights/feed?days=${days}`, { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch insights feed');
     return response.json();
   },
 
   async verifyInsight(id: string): Promise<Insight> {
-    const response = await fetch(`${API_BASE}/insights/${id}/verify`, { method: 'PATCH' });
+    const response = await fetch(`${API_BASE}/insights/${id}/verify`, { method: 'PATCH', credentials: 'include' });
     if (!response.ok) throw new Error('Failed to verify insight');
     return response.json();
   },
 
   async rejectInsight(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE}/insights/${id}/reject`, { method: 'PATCH' });
+    const response = await fetch(`${API_BASE}/insights/${id}/reject`, { method: 'PATCH', credentials: 'include' });
     if (!response.ok) throw new Error('Failed to reject insight');
   },
 
   async getWFSLayers(url: string): Promise<WFSLayer[]> {
-    const response = await fetch(`${API_BASE}/data/wfs/layers?url=${encodeURIComponent(url)}`);
+    const response = await fetch(`${API_BASE}/data/wfs/layers?url=${encodeURIComponent(url)}`, { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch WFS layers');
     return response.json();
   },
@@ -288,19 +301,20 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url, ...(layer ? { layer } : {}) }),
+      credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to ingest WFS layer');
     return response.json();
   },
   
   async listKnowledgePages(): Promise<KnowledgePage[]> {
-    const response = await fetch(`${API_BASE}/knowledge/`);
+    const response = await fetch(`${API_BASE}/knowledge/`, { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch knowledge pages');
     return response.json();
   },
 
   async getKnowledgePage(id: string): Promise<KnowledgePage> {
-    const response = await fetch(`${API_BASE}/knowledge/${id}`);
+    const response = await fetch(`${API_BASE}/knowledge/${id}`, { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch knowledge page');
     return response.json();
   },
@@ -310,6 +324,7 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+      credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to create knowledge page');
     return response.json();
@@ -320,6 +335,7 @@ export const api = {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+      credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to update knowledge page');
     return response.json();
@@ -328,6 +344,7 @@ export const api = {
   async deleteKnowledgePage(id: string): Promise<void> {
     const response = await fetch(`${API_BASE}/knowledge/${id}`, {
       method: 'DELETE',
+      credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to delete knowledge page');
   },
@@ -339,6 +356,7 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials),
+      credentials: 'include'
     });
     if (!response.ok) {
       const err = await response.json();
@@ -354,6 +372,7 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+      credentials: 'include'
     });
     if (!response.ok) {
       const err = await response.json();
@@ -375,7 +394,7 @@ export const api = {
         ? `${API_BASE}/auth/me?email=${encodeURIComponent(cachedUser.email)}`
         : `${API_BASE}/auth/me`;
         
-      const response = await fetch(url);
+      const response = await fetch(url, { credentials: 'include' });
       if (!response.ok) {
         if (response.status === 401) {
           localStorage.removeItem('ravioli_user');
@@ -399,7 +418,7 @@ export const api = {
   },
 
   async listUsers(): Promise<User[]> {
-    const response = await fetch(`${API_BASE}/users/`);
+    const response = await fetch(`${API_BASE}/users/`, { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch users');
     return response.json();
   },
@@ -409,6 +428,7 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+      credentials: 'include'
     });
     if (!response.ok) {
       const err = await response.json();
@@ -422,6 +442,7 @@ export const api = {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+      credentials: 'include'
     });
     if (!response.ok) {
       const err = await response.json();
@@ -431,7 +452,7 @@ export const api = {
   },
 
   async listGroups(): Promise<UserGroup[]> {
-    const response = await fetch(`${API_BASE}/users/groups`);
+    const response = await fetch(`${API_BASE}/users/groups`, { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch groups');
     return response.json();
   },
@@ -441,6 +462,7 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+      credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to create group');
     return response.json();
