@@ -82,7 +82,7 @@ def test_list_groups(client, session):
     mock_group.updated_at = datetime.now(UTC)
     mock_group.created_by = None
     mock_group.updated_by = None
-    mock_group.owner_id = None
+    mock_group.owner = None
 
     session.query.return_value.all.return_value = [mock_group]
 
@@ -100,7 +100,7 @@ def test_create_group(client, session):
         obj.updated_at = datetime.now(UTC)
         obj.created_by = None
         obj.updated_by = None
-        obj.owner_id = None
+        obj.owner = None
         return obj
     session.add.side_effect = mock_add
 

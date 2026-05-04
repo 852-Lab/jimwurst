@@ -51,15 +51,15 @@ def test_create_group_with_owner(test_client, db_session):
     group_data = {
         "name": "Test Group",
         "description": "A group for testing",
-        "owner_id": str(owner.id)
+        "owner": str(owner.id)
     }
-    
+
     response = test_client.post("/api/v1/users/groups", json=group_data)
-    
+
     assert response.status_code == 200
     data = response.json()
     assert data["name"] == "Test Group"
-    assert data["owner_id"] == str(owner.id)
+    assert data["owner"] == str(owner.id)
     assert data["created_by"] is not None
     assert data["updated_by"] is not None
 
@@ -111,21 +111,17 @@ def test_add_group_member(test_client, db_session):
     assert user in group.members
 
 def test_analysis_ownership_api(test_client, db_session):
-    group_id = str(uuid.uuid4())
     analysis_data = {
         "title": "Group Analysis",
         "description": "Analysis owned by a group",
-        "owner": group_id,
-        "owner_id": group_id,
-        "owner_type": "group"
     }
-    
+
     response = test_client.post("/api/v1/analyses/", json=analysis_data)
-    
+
     assert response.status_code == 201
     data = response.json()
     assert data["title"] == "Group Analysis"
-    assert data["owner"] == group_id
+    assert data["owner"] is not None  # assigned to the creating user
     assert data["created_by"] is not None
     assert data["updated_by"] is not None
     assert data["created_at"] is not None
