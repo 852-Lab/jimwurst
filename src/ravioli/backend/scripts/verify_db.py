@@ -1,6 +1,5 @@
 from ravioli.backend.core.database import engine
 from sqlalchemy import text
-import sys
 
 def verify():
     with engine.connect() as conn:

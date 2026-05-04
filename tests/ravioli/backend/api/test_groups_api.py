@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 import uuid
-from datetime import datetime, UTC
+from datetime import UTC
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from ravioli.backend.main import app

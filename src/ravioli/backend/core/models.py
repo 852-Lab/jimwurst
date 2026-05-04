@@ -3,7 +3,7 @@ from datetime import datetime, UTC
 from typing import Optional, List
 from sqlalchemy import String, DateTime, JSON, ForeignKey, Text, Boolean
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship, Mapped, mapped_column, foreign
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 from ravioli.backend.core.database import Base
 
 class Analysis(Base):
