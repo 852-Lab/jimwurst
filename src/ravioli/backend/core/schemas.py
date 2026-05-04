@@ -129,6 +129,9 @@ class UserUpdate(BaseModel):
 class User(UserBase):
     id: UUID
     created_at: datetime
+    updated_at: Optional[datetime] = None
+    created_by: Optional[UUID] = None
+    updated_by: Optional[UUID] = None
     
     model_config = ConfigDict(from_attributes=True)
 

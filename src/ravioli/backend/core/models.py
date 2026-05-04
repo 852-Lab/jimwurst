@@ -86,6 +86,11 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(50), default="Viewer") # Admin, Steward, Contributor, Viewer
     status: Mapped[str] = mapped_column(String(50), default="active") # active, invited
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+
+    # Audit
+    created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
+    updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
 
     # Relationships
     data_sources: Mapped[List["DataSource"]] = relationship(

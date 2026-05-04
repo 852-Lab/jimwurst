@@ -13,18 +13,25 @@ def list_users(db: Session = Depends(get_db)):
     return db.query(models.User).all()
 
 @router.post("/", response_model=schemas.User)
-def create_user(user_in: schemas.UserCreate, db: Session = Depends(get_db)):
+def create_user(
+    user_in: schemas.UserCreate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     existing = db.query(models.User).filter(models.User.email == user_in.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="User already exists")
     
+    new_user_id = uuid.uuid4()
     new_user = models.User(
-        id=uuid.uuid4(),
+        id=new_user_id,
         name=user_in.name,
         email=user_in.email,
         role=user_in.role,
         status="invited", # Created by admin, needs activation
-        hashed_password=None # Password set during activation
+        hashed_password=None, # Password set during activation
+        created_by=current_user.id if current_user else new_user_id,
+        updated_by=current_user.id if current_user else new_user_id
     )
     db.add(new_user)
     db.commit()
@@ -102,7 +109,12 @@ def remove_group_member(group_id: uuid.UUID, user_id: uuid.UUID, db: Session = D
     return {"message": "User removed from group"}
 
 @router.patch("/{user_id}", response_model=schemas.User)
-def update_user(user_id: uuid.UUID, user_in: schemas.UserUpdate, db: Session = Depends(get_db)):
+def update_user(
+    user_id: uuid.UUID, 
+    user_in: schemas.UserUpdate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -111,6 +123,7 @@ def update_user(user_id: uuid.UUID, user_in: schemas.UserUpdate, db: Session = D
     for field, value in update_data.items():
         setattr(user, field, value)
     
+    user.updated_by = current_user.id
     db.add(user)
     db.commit()
     db.refresh(user)
