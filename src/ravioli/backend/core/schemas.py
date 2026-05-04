@@ -96,11 +96,42 @@ class InsightStats(BaseModel):
 class UserBase(BaseModel):
     name: str
     email: str
+    role: str = "Viewer"
+    status: str = "active"
 
 class UserCreate(UserBase):
-    pass
+    password: Optional[str] = None
+
+class UserSignup(BaseModel):
+    name: str
+    email: str
+    password: str
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    status: Optional[str] = None
 
 class User(UserBase):
+    id: UUID
+    created_at: datetime
+    
+    model_config = ConfigDict(from_attributes=True)
+
+# --- Group Schemas ---
+
+class UserGroupBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+class UserGroupCreate(UserGroupBase):
+    pass
+
+class UserGroup(UserGroupBase):
     id: UUID
     created_at: datetime
     

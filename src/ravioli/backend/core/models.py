@@ -73,10 +73,18 @@ class User(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    hashed_password: Mapped[Optional[str]] = mapped_column(String(255))
+    role: Mapped[str] = mapped_column(String(50), default="Viewer") # Admin, Steward, Contributor, Viewer
+    status: Mapped[str] = mapped_column(String(50), default="active") # active, invited
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
 
     # Relationships
     data_sources: Mapped[List["DataSource"]] = relationship("DataSource", back_populates="owner")
+    groups: Mapped[List["UserGroup"]] = relationship(
+        "UserGroup",
+        secondary="app.user_group_members",
+        back_populates="members"
+    )
 
 class DataSource(Base):
     """
@@ -192,3 +200,37 @@ class KnowledgePage(Base):
     
     created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+
+
+class UserGroup(Base):
+    """
+    Represents a group of users.
+    Stored in the 'app' schema.
+    """
+    __tablename__ = "user_groups"
+    __table_args__ = {"schema": "app"}
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+
+    # Relationships
+    members: Mapped[List["User"]] = relationship(
+        "User",
+        secondary="app.user_group_members",
+        back_populates="groups"
+    )
+
+
+class UserGroupMember(Base):
+    """
+    Association table for many-to-many relationship between Users and Groups.
+    """
+    __tablename__ = "user_group_members"
+    __table_args__ = {"schema": "app"}
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"), primary_key=True)
+    group_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("app.user_groups.id"), primary_key=True)
+    role_in_group: Mapped[Optional[str]] = mapped_column(String(50)) # e.g., 'Lead', 'Member'
+    joined_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))

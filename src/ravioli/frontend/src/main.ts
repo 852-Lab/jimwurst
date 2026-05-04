@@ -9,6 +9,8 @@ import { renderKnowledge } from './components/Knowledge';
 import { renderData } from './components/Data';
 import { renderSettings } from './components/Settings';
 import { renderGovernance } from './components/Governance';
+import { renderAuth } from './components/Auth';
+import type { User } from './types';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 
@@ -18,10 +20,29 @@ function updateUI() {
   const shell = document.createElement('div');
   shell.className = 'flex w-full h-screen overflow-hidden relative';
   
-  shell.appendChild(renderSidebar());
-  
   const currentView = store.getCurrentView();
   const activeId = store.getActiveAnalysisId();
+  const currentUser = store.getCurrentUser();
+  const isInitializing = store.getInitializing();
+
+  // Show nothing or a loading state while initializing
+  if (isInitializing) {
+    app.innerHTML = '<div class="flex items-center justify-center w-full h-screen bg-[#0F1117] text-white">Initializing Ravioli...</div>';
+    return;
+  }
+
+  if (!currentUser && currentView !== 'auth') {
+    store.setCurrentView('auth');
+    return;
+  }
+
+  if (currentView === 'auth') {
+    app.appendChild(renderAuth());
+    return;
+  }
+  
+  shell.appendChild(renderSidebar());
+  
   if (currentView === 'create-analysis') {
     shell.appendChild(renderCreateAnalysis());
   } else if (currentView === 'knowledge') {
@@ -44,29 +65,49 @@ function updateUI() {
 // Initial Load
 async function init() {
   try {
-    // Fetch analyses
+    // Fetch current user
     try {
-      const analyses = await api.listAnalyses();
-      console.log(`Fetched ${analyses.length} analyses from API`);
-      store.setAnalyses(analyses);
+      const user = await api.getMe();
+      if (user) {
+        store.setCurrentUser(user);
+        // If we found a user and were on the auth screen, move to insights
+        if (store.getCurrentView() === 'auth') {
+          store.setCurrentView('insights');
+        }
+      } else {
+        store.setCurrentView('auth');
+      }
     } catch (err) {
-      console.error('Failed to fetch analyses', err);
+      console.error('Failed to fetch current user', err);
+      store.setCurrentView('auth');
+    } finally {
+      store.setInitializing(false);
     }
 
-    // Fetch data sources
-    try {
-      const sources = await api.listFiles();
-      store.setDataSources(sources);
-    } catch (err) {
-      console.error('Failed to fetch data sources', err);
-    }
+    if (store.getCurrentUser()) {
+      // Fetch analyses
+      try {
+        const analyses = await api.listAnalyses();
+        store.setAnalyses(analyses);
+      } catch (err) {
+        console.error('Failed to fetch analyses', err);
+      }
 
-    // Fetch knowledge pages
-    try {
-      const pages = await api.listKnowledgePages();
-      store.setKnowledgePages(pages);
-    } catch (err) {
-      console.error('Failed to fetch knowledge pages', err);
+      // Fetch data sources
+      try {
+        const sources = await api.listFiles();
+        store.setDataSources(sources);
+      } catch (err) {
+        console.error('Failed to fetch data sources', err);
+      }
+
+      // Fetch knowledge pages
+      try {
+        const pages = await api.listKnowledgePages();
+        store.setKnowledgePages(pages);
+      } catch (err) {
+        console.error('Failed to fetch knowledge pages', err);
+      }
     }
   } catch (err) {
     console.error('Initialization failed', err);
@@ -101,10 +142,30 @@ function startIngestionPollingIfNeeded() {
 let pollInterval: any;
 store.subscribe(() => {
   const activeId = store.getActiveAnalysisId();
+  const currentUser = store.getCurrentUser();
   
   // Clear previous interval
   if (pollInterval) clearInterval(pollInterval);
   
+  // If we just logged in but have no data, fetch it
+  if (currentUser && store.getAnalyses().length === 0) {
+    const fetchData = async () => {
+      try {
+        const [analyses, sources, pages] = await Promise.all([
+          api.listAnalyses(),
+          api.listFiles(),
+          api.listKnowledgePages()
+        ]);
+        store.setAnalyses(analyses);
+        store.setDataSources(sources);
+        store.setKnowledgePages(pages);
+      } catch (err) {
+        console.error('Failed to fetch initial data after login', err);
+      }
+    };
+    fetchData();
+  }
+
   if (activeId) {
     const fetchLogs = async () => {
       try {

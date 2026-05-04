@@ -30,6 +30,14 @@ describe('Sidebar Component', () => {
     expect(sidebar.innerHTML).toContain('Historical Analyses');
   });
 
+  it('should render the current user profile', () => {
+    store.setCurrentUser({ id: 'u1', name: 'Jimmy Pang', email: 'j@test.com', role: 'Admin', status: 'active' });
+    const sidebar = renderSidebar();
+    expect(sidebar.innerHTML).toContain('Jimmy Pang');
+    expect(sidebar.innerHTML).toContain('Admin');
+    expect(sidebar.querySelector('#btn-logout')).not.toBeNull();
+  });
+
   it('should show "No Analyses found" when the list is empty', () => {
     store.setAnalyses([]);
     const sidebar = renderSidebar();
