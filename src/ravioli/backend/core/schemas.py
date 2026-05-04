@@ -79,8 +79,6 @@ class InsightBase(BaseModel):
     limitations: Optional[str] = None
     insight_metadata: Optional[dict] = None
     owner: Optional[UUID] = None
-    owner_id: Optional[UUID] = None
-    owner_type: Optional[str] = None
 
 class Insight(InsightBase):
     id: UUID

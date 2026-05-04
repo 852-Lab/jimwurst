@@ -75,14 +75,19 @@ def seed_db():
 def _migrate_columns():
     """Add new columns to existing tables using IF NOT EXISTS (idempotent)."""
     migrations = [
+        # Re-point owner FK to users (drop stale FK constraint if it exists)
+        "ALTER TABLE app.insights DROP CONSTRAINT IF EXISTS insights_owner_fkey",
+        "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS owner UUID REFERENCES app.users(id)",
+        # Drop legacy polymorphic columns
+        "ALTER TABLE app.insights DROP COLUMN IF EXISTS owner_id",
+        "ALTER TABLE app.insights DROP COLUMN IF EXISTS owner_type",
         "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS assumptions TEXT",
         "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS limitations TEXT",
         "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS insight_metadata JSONB",
-        "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS owner UUID REFERENCES app.user_groups(id)",
-        "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS owner_id UUID",
-        "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS owner_type TEXT DEFAULT 'user'",
         "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES app.users(id)",
         "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES app.users(id)",
+        # Backfill owner from created_by for rows where owner is NULL
+        "UPDATE app.insights SET owner = created_by WHERE owner IS NULL AND created_by IS NOT NULL",
 
         "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS icon JSONB",
         "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS cover JSONB",

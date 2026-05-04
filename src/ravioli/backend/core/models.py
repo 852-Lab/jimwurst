@@ -103,7 +103,8 @@ class User(Base):
     )
     insights: Mapped[List["Insight"]] = relationship(
         "Insight",
-        primaryjoin="and_(User.id==foreign(Insight.owner_id), Insight.owner_type=='user')",
+        primaryjoin="User.id==Insight.owner",
+        foreign_keys="Insight.owner",
         viewonly=True
     )
     groups: Mapped[List["UserGroup"]] = relationship(
@@ -180,13 +181,9 @@ class Insight(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
 
     # Ownership & Audit
-    owner: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.user_groups.id"))
+    owner: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
     created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
     updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
-
-    # Legacy Polymorphic Ownership
-    owner_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True))
-    owner_type: Mapped[Optional[str]] = mapped_column(String(50)) # 'user' or 'group'
 
     analysis: Mapped["Analysis"] = relationship("Analysis", back_populates="insights")
 
@@ -287,11 +284,7 @@ class UserGroup(Base):
         primaryjoin="and_(UserGroup.id==foreign(DataSource.owner_id), DataSource.owner_type=='group')",
         viewonly=True
     )
-    insights: Mapped[List["Insight"]] = relationship(
-        "Insight",
-        primaryjoin="and_(UserGroup.id==foreign(Insight.owner_id), Insight.owner_type=='group')",
-        viewonly=True
-    )
+
 
 
 class UserGroupMember(Base):
