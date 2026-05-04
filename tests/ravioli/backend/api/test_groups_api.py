@@ -63,6 +63,37 @@ def test_create_group_with_owner(test_client, db_session):
     assert data["created_by"] is not None
     assert data["updated_by"] is not None
 
+def test_update_group(test_client, db_session):
+    group = models.UserGroup(id=uuid.uuid4(), name="Old Group Name", description="Old description")
+    db_session.add(group)
+    db_session.commit()
+    
+    update_data = {
+        "name": "New Group Name",
+        "description": "New description"
+    }
+    
+    response = test_client.patch(f"/api/v1/users/groups/{group.id}", json=update_data)
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "New Group Name"
+    assert data["description"] == "New description"
+
+def test_delete_group(test_client, db_session):
+    group = models.UserGroup(id=uuid.uuid4(), name="To be deleted")
+    db_session.add(group)
+    db_session.commit()
+    
+    response = test_client.delete(f"/api/v1/users/groups/{group.id}")
+    
+    assert response.status_code == 200
+    assert response.json()["message"] == "Group deleted successfully"
+    
+    # Verify in DB
+    db_group = db_session.query(models.UserGroup).filter(models.UserGroup.id == group.id).first()
+    assert db_group is None
+
 def test_add_group_member(test_client, db_session):
     group = models.UserGroup(id=uuid.uuid4(), name="Test Group")
     user = models.User(id=uuid.uuid4(), name="Member", email="member@test.com")

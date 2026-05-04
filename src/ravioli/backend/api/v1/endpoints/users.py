@@ -67,7 +67,47 @@ def create_group(
     db.refresh(new_group)
     return new_group
 
+@router.patch("/groups/{group_id}", response_model=schemas.UserGroup)
+def update_group(
+    group_id: uuid.UUID,
+    group_in: schemas.UserGroupUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    group = db.query(models.UserGroup).filter(models.UserGroup.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    if group_in.owner_id is not None:
+        owner = db.query(models.User).filter(models.User.id == group_in.owner_id).first()
+        if not owner:
+            raise HTTPException(status_code=404, detail="Owner user not found")
+            
+    update_data = group_in.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(group, field, value)
+        
+    group.updated_by = current_user.id
+    db.commit()
+    db.refresh(group)
+    return group
+
+@router.delete("/groups/{group_id}")
+def delete_group(
+    group_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    group = db.query(models.UserGroup).filter(models.UserGroup.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+        
+    db.delete(group)
+    db.commit()
+    return {"message": "Group deleted successfully"}
+
 @router.get("/groups/{group_id}/members", response_model=List[schemas.User])
+
 def list_group_members(group_id: uuid.UUID, db: Session = Depends(get_db)):
     group = db.query(models.UserGroup).filter(models.UserGroup.id == group_id).first()
     if not group:

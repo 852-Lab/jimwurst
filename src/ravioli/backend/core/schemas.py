@@ -147,6 +147,12 @@ class UserGroupBase(BaseModel):
 class UserGroupCreate(UserGroupBase):
     pass
 
+class UserGroupUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    owner_id: Optional[UUID] = None
+
+
 class UserGroup(UserGroupBase):
     id: UUID
     created_at: datetime
