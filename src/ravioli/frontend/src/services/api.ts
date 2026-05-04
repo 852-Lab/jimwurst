@@ -405,6 +405,19 @@ export const api = {
     return response.json();
   },
 
+  async updateUser(id: string, data: { name?: string, role?: string, status?: string }): Promise<User> {
+    const response = await fetch(`${API_BASE}/users/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.detail || 'Failed to update user');
+    }
+    return response.json();
+  },
+
   async listGroups(): Promise<UserGroup[]> {
     const response = await fetch(`${API_BASE}/users/groups`);
     if (!response.ok) throw new Error('Failed to fetch groups');

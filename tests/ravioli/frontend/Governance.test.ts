@@ -80,9 +80,31 @@ describe('Governance Component', () => {
 
       // Steward case
       store.setCurrentUser({ id: 'u1', name: 'Steward', email: 's@test.com', role: 'Steward', status: 'active' });
-      store.setGovernanceTab('users');
       el = renderGovernance();
+      store.setGovernanceTab('users');
       expect(el.querySelector('#btn-create-user')).toBeNull();
+    });
+
+    it('should open edit modal with pre-filled data', async () => {
+      store.setCurrentUser({ id: 'u1', name: 'Admin', email: 'a@test.com', role: 'Admin', status: 'active' });
+      const targetUser = { id: 'u2', name: 'Jane Doe', email: 'jane@test.com', role: 'Viewer', status: 'active' };
+      (api.listUsers as any).mockResolvedValue([targetUser]);
+      
+      store.setGovernanceTab('users');
+      const el = renderGovernance();
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      const editBtn = el.querySelector('.btn-edit-user') as HTMLButtonElement;
+      editBtn.click();
+      
+      const modal = document.body.querySelector('.fixed.inset-0.z-\\[200\\]');
+      expect(modal).not.toBeNull();
+      expect(modal?.innerHTML).toContain('Edit User Details');
+      expect((modal?.querySelector('#new-name') as HTMLInputElement).value).toBe('Jane Doe');
+      expect((modal?.querySelector('#new-email') as HTMLInputElement).value).toBe('jane@test.com');
+      
+      // Cleanup modal
+      (modal?.querySelector('#btn-cancel') as HTMLButtonElement).click();
     });
   });
 });

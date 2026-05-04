@@ -52,3 +52,18 @@ def create_group(group_in: schemas.UserGroupBase, db: Session = Depends(get_db))
     db.commit()
     db.refresh(new_group)
     return new_group
+
+@router.patch("/{user_id}", response_model=schemas.User)
+def update_user(user_id: uuid.UUID, user_in: schemas.UserUpdate, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    update_data = user_in.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(user, field, value)
+    
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user

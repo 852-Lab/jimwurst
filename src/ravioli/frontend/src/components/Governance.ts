@@ -261,6 +261,8 @@ async function hydrateQueue(container: HTMLElement) {
 async function hydrateUsers(container: HTMLElement) {
   const tbody = container.querySelector('#users-table-body');
   if (!tbody) return;
+  const currentUser = store.getCurrentUser();
+  const isAdmin = currentUser?.role === 'Admin';
   try {
     const users = await api.listUsers();
     tbody.innerHTML = users.map(user => `
@@ -280,8 +282,24 @@ async function hydrateUsers(container: HTMLElement) {
             </span>
           </div>
         </td>
+        <td class="px-8 py-5 text-right">
+          ${isAdmin ? `
+            <button class="btn-edit-user p-2 opacity-0 group-hover:opacity-100 hover:text-primary transition-all" data-id="${user.id}">
+              <span class="material-symbols-outlined text-sm" data-icon="edit">edit</span>
+            </button>
+          ` : ''}
+        </td>
       </tr>
     `).join('');
+
+    // Bind edit buttons
+    tbody.querySelectorAll('.btn-edit-user').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const user = users.find(u => u.id === id);
+        if (user) showCreateUserModal(user);
+      });
+    });
   } catch {
     tbody.innerHTML = `<tr><td colspan="4" class="p-12 text-center text-error opacity-60 text-sm">Error loading users directory.</td></tr>`;
   }
@@ -322,40 +340,56 @@ async function hydrateGroups(container: HTMLElement) {
   }
 }
 
-function showCreateUserModal() {
+function showCreateUserModal(userToEdit?: User) {
   const modal = document.createElement('div');
   modal.className = 'fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-xl animate-reveal';
   modal.innerHTML = `
     <div class="w-full max-w-md p-10 glass-card rounded-[3rem] border-white/10 shadow-2xl space-y-8">
       <div class="space-y-2">
-        <h2 class="text-2xl font-display-lg tracking-tight text-on-surface">Provision New User</h2>
-        <p class="text-xs text-outline opacity-60">This will trigger a signup process for the user.</p>
+        <h2 class="text-2xl font-display-lg tracking-tight text-on-surface">
+          ${userToEdit ? 'Edit User Details' : 'Provision New User'}
+        </h2>
+        <p class="text-xs text-outline opacity-60">
+          ${userToEdit ? `Updating profile for ${userToEdit.email}` : 'This will trigger a signup process for the user.'}
+        </p>
       </div>
 
       <form id="create-user-form" class="space-y-6">
         <div class="space-y-2">
           <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-outline opacity-40 ml-4">Full Name</label>
-          <input type="text" id="new-name" required class="w-full px-6 py-4 rounded-2xl bg-white/5 border border-white/5 focus:border-primary/50 outline-none text-on-surface" placeholder="Jane Smith">
+          <input type="text" id="new-name" required value="${userToEdit?.name || ''}" class="w-full px-6 py-4 rounded-2xl bg-white/5 border border-white/5 focus:border-primary/50 outline-none text-on-surface" placeholder="Jane Smith">
         </div>
         
-        <div class="space-y-2">
+        <div class="space-y-2 ${userToEdit ? 'opacity-50 pointer-events-none' : ''}">
           <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-outline opacity-40 ml-4">Work Email</label>
-          <input type="email" id="new-email" required class="w-full px-6 py-4 rounded-2xl bg-white/5 border border-white/5 focus:border-primary/50 outline-none text-on-surface" placeholder="jane@aipassione.com">
+          <input type="email" id="new-email" required ${userToEdit ? 'readonly' : ''} value="${userToEdit?.email || ''}" class="w-full px-6 py-4 rounded-2xl bg-white/5 border border-white/5 focus:border-primary/50 outline-none text-on-surface" placeholder="jane@aipassione.com">
         </div>
 
         <div class="space-y-2">
           <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-outline opacity-40 ml-4">Platform Role</label>
           <select id="new-role" class="w-full px-6 py-4 rounded-2xl bg-white/5 border border-white/5 focus:border-primary/50 outline-none text-on-surface appearance-none">
-            <option value="Admin">Admin</option>
-            <option value="Steward">Steward</option>
-            <option value="Contributor">Contributor</option>
-            <option value="Viewer" selected>Viewer</option>
+            <option value="Admin" ${userToEdit?.role === 'Admin' ? 'selected' : ''}>Admin</option>
+            <option value="Steward" ${userToEdit?.role === 'Steward' ? 'selected' : ''}>Steward</option>
+            <option value="Contributor" ${userToEdit?.role === 'Contributor' ? 'selected' : ''}>Contributor</option>
+            <option value="Viewer" ${userToEdit?.role === 'Viewer' || !userToEdit ? 'selected' : ''}>Viewer</option>
           </select>
         </div>
 
+        ${userToEdit ? `
+          <div class="space-y-2">
+            <label class="block text-[10px] uppercase tracking-[0.2em] font-bold text-outline opacity-40 ml-4">Account Status</label>
+            <select id="new-status" class="w-full px-6 py-4 rounded-2xl bg-white/5 border border-white/5 focus:border-primary/50 outline-none text-on-surface appearance-none">
+              <option value="active" ${userToEdit.status === 'active' ? 'selected' : ''}>Active</option>
+              <option value="invited" ${userToEdit.status === 'invited' ? 'selected' : ''}>Invited</option>
+            </select>
+          </div>
+        ` : ''}
+
         <div class="flex gap-4 pt-4">
           <button type="button" id="btn-cancel" class="flex-1 py-4 rounded-2xl border border-white/5 text-[10px] uppercase tracking-[0.2em] font-bold hover:bg-white/5 transition-all">Cancel</button>
-          <button type="submit" class="flex-1 py-4 rounded-2xl bg-primary text-on-primary text-[10px] uppercase tracking-[0.2em] font-bold shadow-lg shadow-primary/20 hover:scale-105 transition-all">Create User</button>
+          <button type="submit" class="flex-1 py-4 rounded-2xl bg-primary text-on-primary text-[10px] uppercase tracking-[0.2em] font-bold shadow-lg shadow-primary/20 hover:scale-105 transition-all">
+            ${userToEdit ? 'Save Changes' : 'Create User'}
+          </button>
         </div>
       </form>
     </div>
@@ -367,11 +401,16 @@ function showCreateUserModal() {
   modal.querySelector('#create-user-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = (modal.querySelector('#new-name') as HTMLInputElement).value;
-    const email = (modal.querySelector('#new-email') as HTMLInputElement).value;
     const role = (modal.querySelector('#new-role') as HTMLSelectElement).value as UserRole;
-
+    
     try {
-      await api.createUser({ name, email, role });
+      if (userToEdit) {
+        const status = (modal.querySelector('#new-status') as HTMLSelectElement).value as any;
+        await api.updateUser(userToEdit.id, { name, role, status });
+      } else {
+        const email = (modal.querySelector('#new-email') as HTMLInputElement).value;
+        await api.createUser({ name, email, role });
+      }
       modal.remove();
       // Store ensures re-render with 'users' tab active
       store.setGovernanceTab('users');
