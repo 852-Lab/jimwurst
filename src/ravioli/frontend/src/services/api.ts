@@ -365,25 +365,37 @@ export const api = {
   },
 
   async getMe(): Promise<User | null> {
-    const stored = localStorage.getItem('ravioli_user');
-    if (!stored) return null;
-    const user = JSON.parse(stored);
     try {
-      const response = await fetch(`${API_BASE}/auth/me?email=${encodeURIComponent(user.email)}`);
+      // First try to get user using cookie (browser sends it automatically)
+      // If we have a stored user, we can pass email as backup, but the cookie is primary
+      const stored = localStorage.getItem('ravioli_user');
+      const cachedUser = stored ? JSON.parse(stored) : null;
+      
+      const url = cachedUser 
+        ? `${API_BASE}/auth/me?email=${encodeURIComponent(cachedUser.email)}`
+        : `${API_BASE}/auth/me`;
+        
+      const response = await fetch(url);
       if (!response.ok) {
-        localStorage.removeItem('ravioli_user');
+        if (response.status === 401) {
+          localStorage.removeItem('ravioli_user');
+        }
         return null;
       }
       const updated = await response.json();
       localStorage.setItem('ravioli_user', JSON.stringify(updated));
       return updated;
     } catch {
-      return user; // Return cached user if offline
+      // Return cached user if offline
+      const stored = localStorage.getItem('ravioli_user');
+      return stored ? JSON.parse(stored) : null;
     }
   },
 
   logout() {
     localStorage.removeItem('ravioli_user');
+    // Clear session cookie by setting past expiration
+    document.cookie = "ravioli_session=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
   },
 
   async listUsers(): Promise<User[]> {
