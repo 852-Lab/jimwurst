@@ -13,8 +13,11 @@ export function renderGovernance() {
   const isSteward = user?.role === 'Steward';
   const canReview = isAdmin || isSteward;
 
-  // Initial tab selection
-  let activeTab = canReview ? 'review' : 'users';
+  // Initial tab selection from store or default
+  let activeTab = store.getGovernanceTab() || (canReview ? 'review' : 'users');
+  
+  // Ensure the stored tab is actually visible to this user
+  if (activeTab === 'review' && !canReview) activeTab = 'users';
 
   const renderTabs = () => {
     const tabs: { id: string, label: string, icon: string, hidden?: boolean }[] = [
@@ -71,8 +74,8 @@ export function renderGovernance() {
       btn.addEventListener('click', () => {
         const tab = btn.getAttribute('data-tab');
         if (tab) {
-          activeTab = tab;
-          updateUI();
+          store.setGovernanceTab(tab);
+          // activeTab will be updated on next render via store notify
         }
       });
     });
@@ -370,15 +373,8 @@ function showCreateUserModal() {
     try {
       await api.createUser({ name, email, role });
       modal.remove();
-      // Re-render governance to show new user
-      const main = document.querySelector('main');
-      if (main) {
-        const parent = main.parentElement;
-        if (parent) {
-          main.remove();
-          parent.appendChild(renderGovernance());
-        }
-      }
+      // Store ensures re-render with 'users' tab active
+      store.setGovernanceTab('users');
     } catch (err: any) {
       alert(err.message);
     }

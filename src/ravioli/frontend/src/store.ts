@@ -12,6 +12,7 @@ class Store {
   private users: User[] = [];
   private groups: UserGroup[] = [];
   private currentView: 'insights' | 'dashboard' | 'create-analysis' | 'knowledge' | 'data' | 'settings' | 'governance' | 'auth' = 'insights';
+  private activeGovTab: string | null = null;
   private listeners: Listener[] = [];
 
   subscribe(listener: Listener) {
@@ -98,6 +99,15 @@ class Store {
   }
 
   getKnowledgePages() { return this.knowledgePages; }
+
+  setGovernanceTab(tab: string) {
+    this.activeGovTab = tab;
+    // We don't necessarily need to notify here if we only want to persist it,
+    // but usually it's better to keep it consistent.
+    this.notify();
+  }
+
+  getGovernanceTab() { return this.activeGovTab; }
 }
 
 export const store = new Store();

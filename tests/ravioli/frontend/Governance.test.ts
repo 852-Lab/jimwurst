@@ -17,6 +17,7 @@ vi.mock('../../../src/ravioli/frontend/src/services/api', () => ({
 describe('Governance Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    store.setGovernanceTab(''); // Reset tab state
     (api.getReviewQueue as any).mockResolvedValue([]);
     (api.listUsers as any).mockResolvedValue([]);
     (api.listGroups as any).mockResolvedValue([]);
@@ -62,25 +63,25 @@ describe('Governance Component', () => {
       const usersBtn = el.querySelector('[data-tab="users"]') as HTMLButtonElement;
       usersBtn.click();
       
-      // Wait for async hydration
-      await new Promise(resolve => setTimeout(resolve, 10));
+      expect(store.getGovernanceTab()).toBe('users');
       
-      expect(api.listUsers).toHaveBeenCalled();
-      expect(el.innerHTML).toContain('Jane Doe');
-      expect(el.innerHTML).toContain('jane@test.com');
+      // Re-render to see the tab content
+      const updatedEl = renderGovernance();
+      await new Promise(resolve => setTimeout(resolve, 50));
+      expect(updatedEl.innerHTML).toContain('jane@test.com');
     });
 
     it('should show "Add New User" button only for Admins', () => {
       // Admin case
       store.setCurrentUser({ id: 'u1', name: 'Admin', email: 'a@test.com', role: 'Admin', status: 'active' });
+      store.setGovernanceTab('users');
       let el = renderGovernance();
-      (el.querySelector('[data-tab="users"]') as HTMLButtonElement).click();
       expect(el.querySelector('#btn-create-user')).not.toBeNull();
 
       // Steward case
       store.setCurrentUser({ id: 'u1', name: 'Steward', email: 's@test.com', role: 'Steward', status: 'active' });
+      store.setGovernanceTab('users');
       el = renderGovernance();
-      (el.querySelector('[data-tab="users"]') as HTMLButtonElement).click();
       expect(el.querySelector('#btn-create-user')).toBeNull();
     });
   });
