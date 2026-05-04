@@ -62,12 +62,14 @@ export function renderGovernance() {
 
     const contentArea = container.querySelector('#gov-content') as HTMLDivElement;
     
+    const refresh = () => updateUI();
+
     if (activeTab === 'review') {
       renderReviewSection(contentArea);
     } else if (activeTab === 'users') {
-      renderUsersSection(contentArea);
+      renderUsersSection(contentArea, refresh);
     } else if (activeTab === 'groups') {
-      renderGroupsSection(contentArea);
+      renderGroupsSection(contentArea, refresh);
     }
 
     container.querySelectorAll('.gov-tab-btn').forEach(btn => {
@@ -114,7 +116,7 @@ async function renderReviewSection(container: HTMLElement) {
   hydrateQueue(container);
 }
 
-async function renderUsersSection(container: HTMLElement) {
+async function renderUsersSection(container: HTMLElement, refresh: () => void) {
   const isAdmin = store.getCurrentUser()?.role === 'Admin';
   
   container.innerHTML = `
@@ -158,10 +160,10 @@ async function renderUsersSection(container: HTMLElement) {
   hydrateUsers(container);
 
   const btnCreate = container.querySelector('#btn-create-user');
-  btnCreate?.addEventListener('click', () => showCreateUserModal());
+  btnCreate?.addEventListener('click', () => showCreateUserModal(refresh));
 }
 
-async function renderGroupsSection(container: HTMLElement) {
+async function renderGroupsSection(container: HTMLElement, refresh: () => void) {
   container.innerHTML = `
     <section class="space-y-8 animate-reveal">
       <div class="flex items-center justify-between">
@@ -191,7 +193,7 @@ async function renderGroupsSection(container: HTMLElement) {
   hydrateGroups(container);
   
   container.querySelector('#btn-create-group')?.addEventListener('click', () => {
-    showCreateGroupModal();
+    showCreateGroupModal(refresh);
   });
 }
 
@@ -298,7 +300,7 @@ async function hydrateUsers(container: HTMLElement) {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id');
         const user = users.find(u => u.id === id);
-        if (user) showCreateUserModal(user);
+        if (user) showCreateUserModal(refresh, user);
       });
     });
   } catch {
@@ -343,7 +345,7 @@ async function hydrateGroups(container: HTMLElement) {
         e.stopPropagation();
         const id = btn.getAttribute('data-group-id');
         const group = groups.find(g => g.id === id);
-        if (group) showCreateGroupModal(group);
+        if (group) showCreateGroupModal(refresh, group);
       });
     });
 
@@ -361,7 +363,7 @@ async function hydrateGroups(container: HTMLElement) {
   }
 }
 
-function showCreateUserModal(userToEdit?: User) {
+function showCreateUserModal(refresh: () => void, userToEdit?: User) {
   const modal = document.createElement('div');
   modal.className = 'fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-xl animate-reveal';
   modal.innerHTML = `
@@ -433,15 +435,14 @@ function showCreateUserModal(userToEdit?: User) {
         await api.createUser({ name, email, role });
       }
       modal.remove();
-      // Store ensures re-render with 'users' tab active
-      store.setGovernanceTab('users');
+      refresh();
     } catch (err: any) {
       alert(err.message);
     }
   });
 }
 
-function showCreateGroupModal(groupToEdit?: UserGroup) {
+function showCreateGroupModal(refresh: () => void, groupToEdit?: UserGroup) {
   const modal = document.createElement('div');
   modal.className = 'fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-xl animate-reveal';
   modal.innerHTML = `
@@ -493,7 +494,7 @@ function showCreateGroupModal(groupToEdit?: UserGroup) {
         try {
           await api.deleteGroup(groupToEdit.id);
           modal.remove();
-          store.setGovernanceTab('groups');
+          refresh();
         } catch (err: any) {
           alert(err.message);
         }
@@ -513,7 +514,7 @@ function showCreateGroupModal(groupToEdit?: UserGroup) {
         await api.createGroup({ name, description });
       }
       modal.remove();
-      store.setGovernanceTab('groups');
+      refresh();
     } catch (err: any) {
       alert(err.message);
     }
