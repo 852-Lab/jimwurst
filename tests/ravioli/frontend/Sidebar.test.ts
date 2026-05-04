@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderSidebar } from '../../../src/ravioli/frontend/src/components/Sidebar';
 import { store } from '../../../src/ravioli/frontend/src/store';
-import { api } from '../../../src/ravioli/frontend/src/services/api';
 
 // Mock the api
 vi.mock('../../../src/ravioli/frontend/src/services/api', () => ({
