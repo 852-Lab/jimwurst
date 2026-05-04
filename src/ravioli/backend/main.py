@@ -100,11 +100,16 @@ def _migrate_columns():
         "ALTER TABLE app.data_sources ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES app.users(id)",
         "ALTER TABLE app.data_sources ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES app.users(id)",
 
-        "ALTER TABLE app.analyses ADD COLUMN IF NOT EXISTS owner UUID REFERENCES app.user_groups(id)",
-        "ALTER TABLE app.analyses ADD COLUMN IF NOT EXISTS owner_id UUID",
-        "ALTER TABLE app.analyses ADD COLUMN IF NOT EXISTS owner_type TEXT DEFAULT 'user'",
+        # Re-point owner FK to users (drop stale FK constraint if it exists, then add/keep column)
+        "ALTER TABLE app.analyses DROP CONSTRAINT IF EXISTS analyses_owner_fkey",
+        "ALTER TABLE app.analyses ADD COLUMN IF NOT EXISTS owner UUID REFERENCES app.users(id)",
+        # Drop legacy polymorphic columns
+        "ALTER TABLE app.analyses DROP COLUMN IF EXISTS owner_id",
+        "ALTER TABLE app.analyses DROP COLUMN IF EXISTS owner_type",
         "ALTER TABLE app.analyses ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES app.users(id)",
         "ALTER TABLE app.analyses ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES app.users(id)",
+        # Backfill owner from created_by for rows where owner is NULL
+        "UPDATE app.analyses SET owner = created_by WHERE owner IS NULL AND created_by IS NOT NULL",
 
         "ALTER TABLE app.user_groups ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES app.users(id)",
         "ALTER TABLE app.user_groups ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES app.users(id)",

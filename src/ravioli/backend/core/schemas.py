@@ -29,8 +29,6 @@ class AnalysisBase(BaseModel):
     analysis_metadata: Optional[dict] = None
     notebook: Optional[dict] = None
     owner: Optional[UUID] = None
-    owner_id: Optional[UUID] = None
-    owner_type: Optional[str] = None
 
 class AnalysisCreate(AnalysisBase):
     pass
@@ -42,9 +40,6 @@ class AnalysisUpdate(BaseModel):
     result: Optional[str] = None
     analysis_metadata: Optional[dict] = None
     notebook: Optional[dict] = None
-    owner: Optional[UUID] = None
-    owner_id: Optional[UUID] = None
-    owner_type: Optional[str] = None
 
 class QuestionCreate(BaseModel):
     question: str

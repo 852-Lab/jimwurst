@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, BackgroundTasks
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 import pandas as pd
 import asyncio
 import io
@@ -49,9 +50,7 @@ def create_analysis(
         description=analysis_in.description,
         analysis_metadata=analysis_in.analysis_metadata,
         notebook=notebook,
-        owner=analysis_in.owner or current_user.id,
-        owner_id=analysis_in.owner_id or current_user.id,
-        owner_type=analysis_in.owner_type or "user",
+        owner=current_user.id,
         created_by=current_user.id,
         updated_by=current_user.id
     )
@@ -129,10 +128,49 @@ def update_analysis(analysis_id: UUID, analysis_in: schemas.AnalysisUpdate, db: 
         raise HTTPException(status_code=404, detail="Analysis not found")
     
     update_data = analysis_in.model_dump(exclude_unset=True)
+    # Exclude ownership fields from general update — use /transfer-ownership instead
+    update_data.pop("owner", None)
+    update_data.pop("owner_id", None)
+    update_data.pop("owner_type", None)
     
     for field, value in update_data.items():
         setattr(db_analysis, field, value)
     
+    db.commit()
+    db.refresh(db_analysis)
+    return db_analysis
+
+
+class TransferOwnershipRequest(BaseModel):
+    new_owner_id: UUID
+
+
+@router.post("/{analysis_id}/transfer-ownership", response_model=schemas.Analysis)
+def transfer_ownership(
+    analysis_id: UUID,
+    request: TransferOwnershipRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """
+    Re-assign ownership of an analysis to another user.
+    Only the current owner or an Admin may do this.
+    """
+    db_analysis = db.query(models.Analysis).filter(models.Analysis.id == analysis_id).first()
+    if not db_analysis:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+
+    # Authorization: must be current owner or Admin
+    if db_analysis.owner != current_user.id and current_user.role != "Admin":
+        raise HTTPException(status_code=403, detail="Only the owner or an Admin can transfer ownership")
+
+    # Verify target user exists
+    new_owner = db.query(models.User).filter(models.User.id == request.new_owner_id).first()
+    if not new_owner:
+        raise HTTPException(status_code=404, detail="Target user not found")
+
+    db_analysis.owner = request.new_owner_id
+    db_analysis.updated_by = current_user.id
     db.commit()
     db.refresh(db_analysis)
     return db_analysis

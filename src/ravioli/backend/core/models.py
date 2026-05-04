@@ -31,13 +31,9 @@ class Analysis(Base):
     notebook: Mapped[Optional[dict]] = mapped_column(JSON)
 
     # Ownership & Audit
-    owner: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.user_groups.id"))
+    owner: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
     created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
     updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
-
-    # Legacy Polymorphic Ownership
-    owner_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True))
-    owner_type: Mapped[Optional[str]] = mapped_column(String(50)) # 'user' or 'group'
 
     # Relationships
     logs: Mapped[List["AnalysisLog"]] = relationship("AnalysisLog", back_populates="analysis", cascade="all, delete-orphan")
@@ -101,7 +97,8 @@ class User(Base):
     )
     analyses: Mapped[List["Analysis"]] = relationship(
         "Analysis",
-        primaryjoin="and_(User.id==foreign(Analysis.owner_id), Analysis.owner_type=='user')",
+        primaryjoin="User.id==Analysis.owner",
+        foreign_keys="Analysis.owner",
         viewonly=True
     )
     insights: Mapped[List["Insight"]] = relationship(
@@ -288,11 +285,6 @@ class UserGroup(Base):
     data_sources: Mapped[List["DataSource"]] = relationship(
         "DataSource",
         primaryjoin="and_(UserGroup.id==foreign(DataSource.owner_id), DataSource.owner_type=='group')",
-        viewonly=True
-    )
-    analyses: Mapped[List["Analysis"]] = relationship(
-        "Analysis",
-        primaryjoin="and_(UserGroup.id==foreign(Analysis.owner_id), Analysis.owner_type=='group')",
         viewonly=True
     )
     insights: Mapped[List["Insight"]] = relationship(
