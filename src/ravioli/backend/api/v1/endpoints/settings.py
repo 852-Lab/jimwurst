@@ -119,10 +119,23 @@ def update_setting(
     # Return redacted response
     redacted_value = _redact_sensitive(existing.value)
     return SystemSettingSchema(
-        key=existing.key, 
-        value=redacted_value, 
+        key=existing.key,
+        value=redacted_value,
         updated_at=existing.updated_at,
         owner=existing.owner,
         created_by=existing.created_by,
         updated_by=existing.updated_by
     )
+
+
+@router.delete("/{key}", status_code=204)
+def delete_setting(
+    key: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    setting = db.query(SystemSettingModel).filter(SystemSettingModel.key == key).first()
+    if not setting:
+        raise HTTPException(status_code=404, detail="Setting not found")
+    db.delete(setting)
+    db.commit()

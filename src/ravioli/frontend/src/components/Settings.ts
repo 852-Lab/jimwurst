@@ -382,11 +382,7 @@ export function renderSettings() {
             status.classList.remove('opacity-0');
             setTimeout(() => {
               status.classList.add('opacity-0');
-              setTimeout(() => {
-                isConfiguringOllama = false;
-                renderContent();
-              }, 300);
-            }, 1500);
+            }, 2000);
           }
         } catch (e) {
           console.error('Failed to save settings', e);

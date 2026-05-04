@@ -246,6 +246,14 @@ export const api = {
     return response.json();
   },
 
+  async deleteSetting(key: string): Promise<void> {
+    const response = await fetch(`${API_BASE}/settings/${key}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Failed to delete setting');
+  },
+
   async testOllamaConnection(): Promise<{status: string, message: string, models?: string[]}> {
     const response = await fetch(`${API_BASE}/settings/ollama/test`, { credentials: 'include' });
     if (!response.ok) {
