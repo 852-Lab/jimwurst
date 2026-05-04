@@ -28,6 +28,8 @@ class AnalysisBase(BaseModel):
     description: Optional[str] = None
     analysis_metadata: Optional[dict] = None
     notebook: Optional[dict] = None
+    owner_id: Optional[UUID] = None
+    owner_type: Optional[str] = None
 
 class AnalysisCreate(AnalysisBase):
     pass
@@ -75,6 +77,8 @@ class InsightBase(BaseModel):
     assumptions: Optional[str] = None
     limitations: Optional[str] = None
     insight_metadata: Optional[dict] = None
+    owner_id: Optional[UUID] = None
+    owner_type: Optional[str] = None
 
 class Insight(InsightBase):
     id: UUID
@@ -127,6 +131,7 @@ class User(UserBase):
 class UserGroupBase(BaseModel):
     name: str
     description: Optional[str] = None
+    owner_id: Optional[UUID] = None
 
 class UserGroupCreate(UserGroupBase):
     pass
@@ -134,6 +139,7 @@ class UserGroupCreate(UserGroupBase):
 class UserGroup(UserGroupBase):
     id: UUID
     created_at: datetime
+    owner: Optional[User] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -155,6 +161,7 @@ class DataSourceBase(BaseModel):
     source_url: Optional[str] = None
     has_pii: bool = False
     owner_id: Optional[UUID] = None
+    owner_type: str = "user"
 
 class DataSource(DataSourceBase):
     id: UUID
@@ -205,7 +212,7 @@ class KnowledgePageBase(BaseModel):
     content: Optional[List[dict]] = None
     icon: Optional[dict] = None
     cover: Optional[dict] = None
-    ownership_type: str = "individual"
+    owner_type: str = "user"
     owner_id: Optional[str] = None
     parent_id: Optional[UUID] = None
     source: str = "manual"
@@ -235,7 +242,7 @@ class KnowledgePageUpdate(BaseModel):
     content: Optional[List[dict]] = None
     icon: Optional[dict] = None
     cover: Optional[dict] = None
-    ownership_type: Optional[str] = None
+    owner_type: Optional[str] = None
     owner_id: Optional[str] = None
     parent_id: Optional[UUID] = None
 

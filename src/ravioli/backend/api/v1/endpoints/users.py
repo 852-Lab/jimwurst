@@ -36,15 +36,63 @@ def list_groups(db: Session = Depends(get_db)):
 
 @router.post("/groups", response_model=schemas.UserGroup)
 def create_group(group_in: schemas.UserGroupBase, db: Session = Depends(get_db)):
+    # Validate owner if provided
+    if group_in.owner_id:
+        owner = db.query(models.User).filter(models.User.id == group_in.owner_id).first()
+        if not owner:
+            raise HTTPException(status_code=404, detail="Owner user not found")
+
     new_group = models.UserGroup(
         id=uuid.uuid4(),
         name=group_in.name,
-        description=group_in.description
+        description=group_in.description,
+        owner_id=group_in.owner_id
     )
     db.add(new_group)
     db.commit()
     db.refresh(new_group)
     return new_group
+
+@router.get("/groups/{group_id}/members", response_model=List[schemas.User])
+def list_group_members(group_id: uuid.UUID, db: Session = Depends(get_db)):
+    group = db.query(models.UserGroup).filter(models.UserGroup.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    return group.members
+
+@router.post("/groups/{group_id}/members/{user_id}")
+def add_group_member(group_id: uuid.UUID, user_id: uuid.UUID, db: Session = Depends(get_db)):
+    group = db.query(models.UserGroup).filter(models.UserGroup.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user in group.members:
+        return {"message": "User already in group"}
+    
+    group.members.append(user)
+    db.commit()
+    return {"message": "User added to group"}
+
+@router.delete("/groups/{group_id}/members/{user_id}")
+def remove_group_member(group_id: uuid.UUID, user_id: uuid.UUID, db: Session = Depends(get_db)):
+    group = db.query(models.UserGroup).filter(models.UserGroup.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user not in group.members:
+        raise HTTPException(status_code=400, detail="User not in group")
+    
+    group.members.remove(user)
+    db.commit()
+    return {"message": "User removed from group"}
 
 @router.patch("/{user_id}", response_model=schemas.User)
 def update_user(user_id: uuid.UUID, user_in: schemas.UserUpdate, db: Session = Depends(get_db)):

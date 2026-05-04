@@ -79,7 +79,9 @@ async def upload_file(
     context: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user),
-    file_path: Optional[Path] = None
+    file_path: Optional[Path] = None,
+    owner_id: Optional[uuid.UUID] = None,
+    owner_type: str = "user"
 ):
     extension = Path(file.filename).suffix.lower()
     allowed_extensions = ['.csv', '.xlsx', '.xml', '.gpx']
@@ -131,7 +133,8 @@ async def upload_file(
             file_hash=file_hash,
             status="pending",
             has_pii=False,
-            owner_id=current_user.id
+            owner_id=owner_id or current_user.id,
+            owner_type=owner_type
         )
         db.add(db_source)
         # Use to_thread for DB commit if it's slow, but here it's mostly for consistency
@@ -212,7 +215,9 @@ async def upload_file(
                             file_hash=file_hash,
                             status="completed",
                             row_count=other["row_count"],
-                            has_pii=False, owner_id=current_user.id
+                            has_pii=False,
+                            owner_id=owner_id or current_user.id,
+                            owner_type=owner_type
                         )
                         # PII Scan for other
                         try:
@@ -276,7 +281,9 @@ async def upload_file(
                             file_hash=file_hash,
                             status="completed",
                             row_count=other["row_count"],
-                            has_pii=False, owner_id=current_user.id
+                            has_pii=False,
+                            owner_id=owner_id or current_user.id,
+                            owner_type=owner_type
                         )
                         # PII Scan for other
                         try:
@@ -460,7 +467,7 @@ async def list_wfs_layers(url: str):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to fetch WFS layers: {str(e)}")
 
-async def _run_wfs_ingestion(file_id: uuid.UUID, url: str, layer: Optional[str], table_name: str, schema_name: str):
+async def _run_wfs_ingestion(file_id: uuid.UUID, url: str, layer: Optional[str], table_name: str, schema_name: str, owner_id: uuid.UUID, owner_type: str):
     """Background task: performs the actual WFS data pull and DuckDB ingestion."""
     db = SessionLocal()
 
@@ -526,6 +533,8 @@ async def _run_wfs_ingestion(file_id: uuid.UUID, url: str, layer: Optional[str],
             logger.warning(f"PII scan failed: {scan_err}")
             db_source.has_pii = False
 
+        db_source.owner_id = owner_id
+        db_source.owner_type = owner_type
         db_source.status = "completed"
         logger.info(f"WFS ingestion completed successfully: {db_source.row_count:,} rows.")
 
@@ -546,7 +555,10 @@ async def _run_wfs_ingestion(file_id: uuid.UUID, url: str, layer: Optional[str],
 async def ingest_wfs_layer(
     request: schemas.WFSInjestRequest,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+    owner_id: Optional[uuid.UUID] = None,
+    owner_type: str = "user"
 ):
     # Derive placeholder names from the URL; the background task will update
     # them once the real layer name is known (if layer was not provided).
@@ -574,7 +586,9 @@ async def ingest_wfs_layer(
         schema_name=schema_name,
         source_type="wfs",
         source_url=request.url,
-        status="pending"
+        status="pending",
+        owner_id=owner_id or current_user.id,
+        owner_type=owner_type
     )
     db.add(db_source)
     db.commit()
@@ -587,7 +601,9 @@ async def ingest_wfs_layer(
         url=request.url,
         layer=request.layer,
         table_name=table_name,
-        schema_name=schema_name
+        schema_name=schema_name,
+        owner_id=owner_id or current_user.id,
+        owner_type=owner_type
     )
 
     # Return immediately — the client will poll for status updates
@@ -598,7 +614,9 @@ async def upload_file_stream(
     file: UploadFile = File(...),
     context: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(get_current_user),
+    owner_id: Optional[uuid.UUID] = None,
+    owner_type: str = "user"
 ):
     log_queue = asyncio.Queue()
     loop = asyncio.get_running_loop()
@@ -636,7 +654,7 @@ async def upload_file_stream(
             logging.info(f"[SYSTEM] File saved to {temp_path.name}. Starting ingestion...")
             
             # Start the ingestion task
-            ingestion_task = asyncio.create_task(upload_file(file, context, db, current_user, file_path=temp_path))
+            ingestion_task = asyncio.create_task(upload_file(file, context, db, current_user, file_path=temp_path, owner_id=owner_id, owner_type=owner_type))
             
             # While the task is running, yield logs
             while not ingestion_task.done():

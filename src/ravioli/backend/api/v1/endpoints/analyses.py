@@ -43,7 +43,9 @@ def create_analysis(analysis_in: schemas.AnalysisCreate, db: Session = Depends(g
         title=analysis_in.title,
         description=analysis_in.description,
         analysis_metadata=analysis_in.analysis_metadata,
-        notebook=notebook
+        notebook=notebook,
+        owner_id=analysis_in.owner_id,
+        owner_type=analysis_in.owner_type
     )
     db.add(db_analysis)
     db.commit()
@@ -155,6 +157,10 @@ async def extract_and_store_insights(analysis_id: str, result_markdown: str, tit
     db = SessionLocal()
     try:
         analysis_uuid = UUID(analysis_id)
+        analysis = db.query(models.Analysis).filter(models.Analysis.id == analysis_uuid).first()
+        if not analysis:
+            return
+            
         # Skip if insights already extracted for this analysis
         if db.query(models.Insight).filter(models.Insight.analysis_id == analysis_uuid).first():
             return
@@ -175,9 +181,11 @@ async def extract_and_store_insights(analysis_id: str, result_markdown: str, tit
                     source_label=title,
                     assumptions=assumptions or None,
                     limitations=limitations or None,
-                    metadata=metadata if any(metadata.values()) else None,
+                    insight_metadata=metadata if any(metadata.values()) else None, # Note: corrected from 'metadata' to 'insight_metadata' to match models.py
                     is_verified=False,
                     is_published=False,
+                    owner_id=analysis.owner_id,
+                    owner_type=analysis.owner_type
                 ))
         db.commit()
         logger.info("Extracted %d insights from analysis %s", len(bullets), analysis_id)
