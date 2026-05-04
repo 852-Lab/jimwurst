@@ -78,11 +78,30 @@ def _migrate_columns():
         "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS assumptions TEXT",
         "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS limitations TEXT",
         "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS insight_metadata JSONB",
+        "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS owner UUID REFERENCES app.user_groups(id)",
+        "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES app.users(id)",
+        "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES app.users(id)",
+
         "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS icon JSONB",
         "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS cover JSONB",
         "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS properties JSONB",
         "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES app.knowledge_pages(id)",
+        "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS owner UUID REFERENCES app.user_groups(id)",
+        "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES app.users(id)",
+        "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES app.users(id)",
+
         "ALTER TABLE app.data_sources ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES app.users(id)",
+        "ALTER TABLE app.data_sources ADD COLUMN IF NOT EXISTS owner UUID REFERENCES app.user_groups(id)",
+        "ALTER TABLE app.data_sources ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES app.users(id)",
+        "ALTER TABLE app.data_sources ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES app.users(id)",
+
+        "ALTER TABLE app.analyses ADD COLUMN IF NOT EXISTS owner UUID REFERENCES app.user_groups(id)",
+        "ALTER TABLE app.analyses ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES app.users(id)",
+        "ALTER TABLE app.analyses ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES app.users(id)",
+
+        "ALTER TABLE app.user_groups ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES app.users(id)",
+        "ALTER TABLE app.user_groups ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES app.users(id)",
+
         "ALTER TABLE app.users ADD COLUMN IF NOT EXISTS hashed_password TEXT",
         "ALTER TABLE app.users ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'Viewer'",
         "ALTER TABLE app.users ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'",
