@@ -57,6 +57,7 @@ function updateUI() {
 
 // Initial Load
 async function init() {
+  try {
     // Fetch current user
     try {
       const user = await api.getMe();
