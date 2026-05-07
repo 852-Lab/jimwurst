@@ -17,11 +17,34 @@ Traditional DWHs are stiff and complex. **ravioli** is different. It's built to 
 ---
 
 ## 🛠 Features
-- **Seamless Ingestion**: Python-based ingestors for Apple Health, Spotify, LinkedIn, Substack, and more (powered by `dlt`).
-- **Kowalski AI Agent**: A clinical, evidence-driven AI persona for high-fidelity data analysis and statistical profiling.
-- **Studio Noir UI**: A premium, high-contrast dark-mode interface built with Tailwind CSS v4 and Vite.
-- **Knowledge Base**: Manage domain-specific context to ground AI insights in reality.
-- **Professional Transformation**: Powered by `dbt` for reliable, version-controlled data modeling.
+
+### 🔌 Seamless Ingestion
+Python-based ingestors for Apple Health, Spotify, LinkedIn, Substack, and more (powered by `dlt`).
+![Data Sources List](docs/images/data_sources_list.png)
+*Easily connect and manage your personal data sources.*
+
+### 🤖 Kowalski AI Agent
+A clinical, evidence-driven AI persona for high-fidelity data analysis and statistical profiling.
+![AI Insights](docs/images/insights.png)
+*High-fidelity automated insights and statistical profiling.*
+
+### 🧠 Knowledge Base
+Manage domain-specific context to ground AI insights in reality.
+![Knowledge Base](docs/images/knowledge.png)
+*Ground your AI agent with custom domain knowledge.*
+
+### 🎨 Studio Noir UI
+A premium, high-contrast dark-mode interface built with Tailwind CSS v4 and Vite.
+![Governance Dashboard](docs/images/governance.png)
+*Sleek, professional interface for data governance and exploration.*
+
+### 🏗 Enterprise Integration
+Native support for Data Warehouses and LLM providers.
+![LLM Integration](docs/images/integration_llm.png)
+![DWH Integration](docs/images/integration_docs_dwh.png)
+*Deep integration with modern AI and data stacks.*
+
+
 
 ---
 
