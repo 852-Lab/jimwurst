@@ -28,6 +28,11 @@ Make insights your own - Manage domain-specific context to ground AI insights in
 ![Knowledge Base](docs/images/knowledge.png)
 *Ground your AI agent with custom domain knowledge.*
 
+### 🛡️ Governance for Scale
+Maintain absolute integrity over your analytical ecosystem. Ravioli features human-in-the-loop verification for AI insights, granular Role-Based Access Control (RBAC), and decentralized team management.
+![Governance Dashboard](docs/images/governance.png)
+*Professional-grade oversight with human verification and access management.*
+
 ### 🔌 Seamless Ingestion
 Python-based ingestors for Apple Health, Spotify, LinkedIn, Substack, and more (powered by `dlt`).
 ![Data Sources List](docs/images/data_sources_list.png)
@@ -38,12 +43,6 @@ Native support for Data Warehouses and LLM providers.
 ![LLM Integration](docs/images/integration_llm.png)
 ![DWH Integration](docs/images/integration_docs_dwh.png)
 *Deep integration with modern AI and data stacks.*
-
-### 🛡️ Governance for Scale
-Maintain absolute integrity over your analytical ecosystem. Ravioli features human-in-the-loop verification for AI insights, granular Role-Based Access Control (RBAC), and decentralized team management.
-![Governance Dashboard](docs/images/governance.png)
-*Professional-grade oversight with human verification and access management.*
-
 
 ---
 
