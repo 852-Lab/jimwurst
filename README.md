@@ -2,16 +2,19 @@
 
 ![ravioli](src/ravioli/frontend/public/ravioli-logo.png)
 
-> AI-Native, Privacy Respecting, Collaborative, Personal Data Warehouse for "Vibe-Analytics".
+**AI-Native** • **Privacy Respecting** • **Collaborative**  
+*The Personal Data Warehouse for "Vibe-Analytics"*
 
-**Ravioli** is a modern, open-source personal Data Warehouse (DWH) designed for the AI era. It combines the power of a professional data stack with the casual, interactive feel of a notebook. Part of the **AI Passione** ecosystem.
+
+**Ravioli** is a modern, open-source Data Warehouse (DWH) built for SMEs with limited analytics resources and small, agile data teams. It is the ideal solution for those managing sensitive PII who require a secure, local environment without big-tech exposure. By blending professional data engineering with a casual, notebook-style interface, Ravioli makes "Vibe-Analytics" accessible to everyone. Part of the **AI Passione** ecosystem.
+
 
 ## 🚀 Vision: Vibe-Analytics for Everyone
 Traditional DWHs are stiff and complex. **ravioli** is different. It's built to be:
 - **AI-Native**: Ready for integration with LLMs for natural language querying and automated insights.
 - **Notebook-Style**: Interactive, iterative, and visual.
 - **Business-Friendly**: Designed for people who want results, not just queries.
-- **100% Local**: Your data stays on your machine. Privacy by design.
+- **100% Local**: Your data stays on your machine. Zero big-tech exposure. Privacy by design.
 - **Hybrid Architecture**: Fast metadata in Postgres, blazing-fast analytics in DuckDB.
 
 ---
