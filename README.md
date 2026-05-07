@@ -24,7 +24,7 @@ Traditional DWHs are stiff and complex. **ravioli** is different. It's built to 
 *Automated insights from AI-powered analytics and human-in-the-loop validation, at scale.* 
 
 ### 🧠 Knowledge Base
-Make insights your own - Manage domain-specific context to ground AI insights in reality.
+Make insights your own - Manage company-specific context to ground AI insights in reality. Your unique context is your competitive advantage among your peers.
 ![Knowledge Base](docs/images/knowledge.png)
 *Ground your AI agent with custom domain knowledge.*
 
