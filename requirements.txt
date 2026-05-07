@@ -100,5 +100,5 @@ uuid-utils==0.13.0
 yarl==1.22.0
 zipp==3.23.0
 zstandard==0.25.0
-python-multipart>=0.0.7
+python-multipart>=0.0.27
 cryptography>=43.0.0
