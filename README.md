@@ -39,10 +39,11 @@ Native support for Data Warehouses and LLM providers.
 ![DWH Integration](docs/images/integration_docs_dwh.png)
 *Deep integration with modern AI and data stacks.*
 
-### 🎨 Studio Noir UI
-A premium, high-contrast dark-mode interface built with Tailwind CSS v4 and Vite.
+### 🛡️ Governance for Scale
+Maintain absolute integrity over your analytical ecosystem. Ravioli features human-in-the-loop verification for AI insights, granular Role-Based Access Control (RBAC), and decentralized team management.
 ![Governance Dashboard](docs/images/governance.png)
-*Sleek, professional interface for data governance and exploration.*
+*Professional-grade oversight with human verification and access management.*
+
 
 ---
 
