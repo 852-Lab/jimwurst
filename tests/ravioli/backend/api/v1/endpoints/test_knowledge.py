@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, UTC
 from ravioli.backend.core.models import KnowledgePage
 
-def create_mock_page(id=None, title="Test Page", properties=None, content=None):
+def create_mock_page(id=None, title="Test Page", properties=None, content=None, ownership_type="individual"):
     return KnowledgePage(
         id=id or uuid.uuid4(),
         title=title,
@@ -11,6 +11,7 @@ def create_mock_page(id=None, title="Test Page", properties=None, content=None):
         icon={"type": "emoji", "emoji": "📄"},
         cover={"type": "external", "external": {"url": "https://example.com/cover.jpg"}},
         owner_type="individual",
+        ownership_type=ownership_type,
         source="manual",
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC)

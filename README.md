@@ -1,27 +1,54 @@
-# ravioli 🍝
+# 🥟 ravioli
 
 ![ravioli](src/ravioli/frontend/public/ravioli-logo.png)
 
-> AI-Native, Privacy First, Local First, Personal Data Warehouse for "Vibe-Analytics".
+**AI-Native** • **Privacy Respecting** • **Collaborative**  
+*The Personal Data Warehouse for "Vibe-Analytics"*
 
-**Ravioli** is a modern, open-source personal Data Warehouse (DWH) designed for the AI era. It combines the power of a professional data stack with the casual, interactive feel of a notebook. Part of the **AI Passione** ecosystem.
+
+**Ravioli** is a modern, open-source Data Warehouse (DWH) built for SMEs with limited analytics resources and small, agile data teams. It is the ideal solution for those managing sensitive PII who require a secure, local environment without big-tech exposure. By blending professional data engineering with a casual, notebook-style interface, Ravioli makes "Vibe-Analytics" accessible to everyone. Part of the **AI Passione** ecosystem.
+
 
 ## 🚀 Vision: Vibe-Analytics for Everyone
 Traditional DWHs are stiff and complex. **ravioli** is different. It's built to be:
 - **AI-Native**: Ready for integration with LLMs for natural language querying and automated insights.
 - **Notebook-Style**: Interactive, iterative, and visual.
 - **Business-Friendly**: Designed for people who want results, not just queries.
-- **100% Local**: Your data stays on your machine. Privacy by design.
+- **100% Local**: Your data stays on your machine. Zero big-tech exposure. Privacy by design.
 - **Hybrid Architecture**: Fast metadata in Postgres, blazing-fast analytics in DuckDB.
 
 ---
 
 ## 🛠 Features
-- **Seamless Ingestion**: Python-based ingestors for Apple Health, Spotify, LinkedIn, Substack, and more (powered by `dlt`).
-- **Kowalski AI Agent**: A clinical, evidence-driven AI persona for high-fidelity data analysis and statistical profiling.
-- **Studio Noir UI**: A premium, high-contrast dark-mode interface built with Tailwind CSS v4 and Vite.
-- **Knowledge Base**: Manage domain-specific context to ground AI insights in reality.
-- **Professional Transformation**: Powered by `dbt` for reliable, version-controlled data modeling.
+
+### 🤖 Speedy Insights generation by AI
+
+🐧 Kowalski as your AI analyst to provide high-fidelity data analysis and statistical profiling.
+
+![AI Insights](docs/images/insights.png)
+
+*Automated insights from AI-powered analytics and human-in-the-loop validation, at scale.* 
+
+### 🧠 Knowledge Base
+Make insights your own - Manage company-specific context to ground AI insights in reality. Your unique context is your competitive advantage among your peers.
+![Knowledge Base](docs/images/knowledge.png)
+*Ground your AI agent with custom domain knowledge.*
+
+### 🛡️ Governance for Scale
+Maintain absolute integrity over your analytical ecosystem. Ravioli features human-in-the-loop validation for AI insights before they got published to the team, granular Role-Based Access Control (RBAC), and decentralized team management. All unified for professional data stewardship.
+![Governance Dashboard](docs/images/governance.png)
+*Professional-grade oversight with human verification and access management.*
+
+### 🔌 Seamless Ingestion
+Python-based ingestors for Apple Health, Spotify, LinkedIn, Substack, and more (powered by `dlt`).
+![Data Sources List](docs/images/data_sources_list.png)
+*Easily connect and manage your personal data sources.*
+
+### 🏗 Plug & Play Integration
+Native support for LLM providers, Documentation vendors, and Data Warehouses.
+![LLM Integration](docs/images/integration_llm.png)
+![DWH Integration](docs/images/integration_docs_dwh.png)
+*Deep integration with modern AI and data stacks.*
 
 ---
 
