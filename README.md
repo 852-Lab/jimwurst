@@ -21,7 +21,7 @@ Traditional DWHs are stiff and complex. **ravioli** is different. It's built to 
 ### 🤖 Speedy Insights genration by AI
 🐧 Kowalski as your AI analyst to provide high-fidelity data analysis and statistical profiling.
 ![AI Insights](docs/images/insights.png)
-*High-fidelity automated insights and statistical profiling.*
+*Automated insights from AI-powered analytics and human-in-the-loop validation, at scale.* 
 
 ### 🧠 Knowledge Base
 Make insights your own - Manage domain-specific context to ground AI insights in reality.
