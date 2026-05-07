@@ -1,4 +1,4 @@
-# ravioli 🍝
+# 🥟 ravioli
 
 ![ravioli](src/ravioli/frontend/public/ravioli-logo.png)
 
