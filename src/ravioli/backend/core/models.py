@@ -246,6 +246,7 @@ class KnowledgePage(Base):
     # Legacy Polymorphic Ownership
     owner_type: Mapped[str] = mapped_column(String(50), default="user") # 'user' or 'group'
     owner_id: Mapped[Optional[str]] = mapped_column(String(255)) 
+    ownership_type: Mapped[str] = mapped_column(String(50), default="individual") # 'individual' or 'team'
     
     # Hierarchy support
     parent_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.knowledge_pages.id"))

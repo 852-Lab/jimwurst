@@ -238,6 +238,7 @@ class KnowledgePageBase(BaseModel):
     owner: Optional[UUID] = None
     owner_type: str = "user"
     owner_id: Optional[str] = None
+    ownership_type: str = "individual"
     parent_id: Optional[UUID] = None
     source: str = "manual"
     source_id: Optional[str] = None
@@ -268,6 +269,7 @@ class KnowledgePageUpdate(BaseModel):
     cover: Optional[dict] = None
     owner_type: Optional[str] = None
     owner_id: Optional[str] = None
+    ownership_type: Optional[str] = None
     parent_id: Optional[UUID] = None
 
 class KnowledgePage(KnowledgePageBase):
