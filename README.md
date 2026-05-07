@@ -39,7 +39,7 @@ Python-based ingestors for Apple Health, Spotify, LinkedIn, Substack, and more (
 *Easily connect and manage your personal data sources.*
 
 ### 🏗 Plug & Play Integration
-Native support for Data Warehouses and LLM providers.
+Native support for LLM providers, Documentation vendors, and Data Warehouses.
 ![LLM Integration](docs/images/integration_llm.png)
 ![DWH Integration](docs/images/integration_docs_dwh.png)
 *Deep integration with modern AI and data stacks.*
