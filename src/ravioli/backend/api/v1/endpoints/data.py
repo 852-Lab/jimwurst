@@ -703,7 +703,7 @@ async def upload_file_stream(
                 yield f"data: DONE:{json.dumps(result_dict)}\n\n"
             except Exception as e:
                 logger.exception(f"Error during upload_file_stream ingestion task for {file.filename}")
-                yield f"data: ERROR:An internal error occurred: {str(e)}\n\n"
+                yield "data: ERROR:An internal error occurred.\n\n"
                 
         finally:
             root_logger = logging.getLogger()
