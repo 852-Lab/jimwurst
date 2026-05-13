@@ -200,6 +200,17 @@ class DataSourceUpdate(BaseModel):
 class DataSourcePIIUpdate(BaseModel):
     has_pii: bool
 
+class DataDiff(BaseModel):
+    total_local: int
+    total_remote: int
+    added: int
+    removed: int
+    status: str
+    error: Optional[str] = None
+
+class DataSyncRequest(BaseModel):
+    direction: str # "push" or "pull"
+
 # --- WFS Schemas ---
 
 class WFSLayer(BaseModel):

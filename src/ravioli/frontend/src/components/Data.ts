@@ -147,6 +147,9 @@ export function renderData() {
                     </div>
                   </td>
                   <td class="px-8 py-5 text-right flex justify-end gap-2">
+                    <button class="btn-sync p-2 rounded-lg hover:bg-amber-500/10 text-neutral-400 hover:text-amber-400 transition-all" data-id="${source.id}" data-filename="${source.original_filename}" title="Sync with Cloud">
+                      <span class="material-symbols-outlined">sync</span>
+                    </button>
                     <button class="btn-inspect p-2 rounded-lg hover:bg-primary/10 text-neutral-400 hover:text-primary transition-all" data-table="${source.schema_name}.${source.table_name}" data-filename="${source.original_filename}" title="Preview">
                       <span class="material-symbols-outlined">visibility</span>
                     </button>
@@ -727,6 +730,156 @@ export function renderData() {
       }
     });
   });
+
+  // --- Sync Modal Logic ---
+  const syncModal = container.querySelector('#sync-modal') as HTMLElement;
+  const syncModalContent = container.querySelector('#sync-modal-content') as HTMLElement;
+  const syncModalFooter = container.querySelector('#sync-modal-footer') as HTMLElement;
+  const syncModalTitle = container.querySelector('#sync-modal-title') as HTMLElement;
+  const closeSyncModal = container.querySelector('#close-sync-modal');
+  const btnPush = container.querySelector('#btn-push') as HTMLButtonElement;
+  const btnPull = container.querySelector('#btn-pull') as HTMLButtonElement;
+  
+  let currentSyncFileId: string | null = null;
+
+  const showSyncModal = async (fileId: string, filename: string) => {
+    currentSyncFileId = fileId;
+    syncModalTitle.textContent = `Sync: ${filename}`;
+    syncModal.classList.remove('hidden');
+    syncModalFooter.classList.add('hidden');
+    syncModalContent.innerHTML = `
+      <div class="flex flex-col items-center justify-center h-32 gap-3">
+        <span class="material-symbols-outlined animate-spin text-primary text-3xl">sync</span>
+        <p class="text-sm text-neutral-500">Calculating data differences...</p>
+      </div>
+    `;
+    
+    setTimeout(() => {
+      syncModal.classList.remove('opacity-0');
+      syncModal.querySelector('div')?.classList.remove('translate-y-4');
+    }, 10);
+
+    try {
+      const diff = await api.getFileDiff(fileId);
+      renderDiffResult(diff);
+    } catch (err: any) {
+      syncModalContent.innerHTML = `<div class="text-center text-red-400 py-10">${err.message || 'Failed to fetch diff.'}</div>`;
+    }
+  };
+
+  const renderDiffResult = (diff: any) => {
+    if (diff.status === 'error') {
+      syncModalContent.innerHTML = `
+        <div class="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center">
+          <span class="material-symbols-outlined text-red-400 text-3xl mb-3">error</span>
+          <p class="text-sm text-neutral-200 mb-2">${diff.error}</p>
+          <p class="text-xs text-neutral-500">Please ensure Motherduck is connected in Settings.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const isSynced = diff.status === 'synced';
+    
+    syncModalContent.innerHTML = `
+      <div class="space-y-6">
+        <div class="grid grid-cols-2 gap-4">
+          <div class="p-4 rounded-2xl bg-surface-container-highest border border-outline/5 text-center">
+            <span class="text-[10px] text-neutral-500 uppercase tracking-widest block mb-1">Local Data</span>
+            <span class="text-2xl font-medium text-neutral-100">${diff.total_local.toLocaleString()}</span>
+            <span class="text-[10px] text-neutral-500 block">Rows</span>
+          </div>
+          <div class="p-4 rounded-2xl bg-surface-container-highest border border-outline/5 text-center">
+            <span class="text-[10px] text-neutral-500 uppercase tracking-widest block mb-1">Cloud Data</span>
+            <span class="text-2xl font-medium text-neutral-100">${diff.total_remote.toLocaleString()}</span>
+            <span class="text-[10px] text-neutral-500 block">Rows</span>
+          </div>
+        </div>
+
+        <div class="bg-surface-container-lowest rounded-2xl border border-outline/10 overflow-hidden">
+          <div class="px-6 py-4 border-b border-outline/5 bg-white/[0.02] flex items-center justify-between">
+             <span class="text-xs font-medium text-neutral-300">Git-style Diff Status</span>
+             <span class="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider ${isSynced ? 'bg-green-500/10 text-green-400' : 'bg-amber-500/10 text-amber-400'}">
+               ${diff.status.replace('_', ' ')}
+             </span>
+          </div>
+          <div class="p-6 space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2 text-sm text-neutral-300">
+                <span class="material-symbols-outlined text-green-400 text-lg">add_circle</span>
+                Local Additions
+              </div>
+              <span class="text-sm font-mono text-green-400">+${diff.added.toLocaleString()}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2 text-sm text-neutral-300">
+                <span class="material-symbols-outlined text-red-400 text-lg">remove_circle</span>
+                Remote Deletions
+              </div>
+              <span class="text-sm font-mono text-red-400">-${diff.removed.toLocaleString()}</span>
+            </div>
+          </div>
+        </div>
+        
+        ${isSynced ? `
+          <div class="flex items-center gap-2 text-xs text-green-400 bg-green-500/5 p-3 rounded-xl border border-green-500/10">
+            <span class="material-symbols-outlined text-sm">check_circle</span>
+            Data is perfectly synchronized between local and cloud.
+          </div>
+        ` : `
+          <p class="text-[11px] text-neutral-500 italic text-center px-4">
+            Warning: Syncing will overwrite the destination data to match the source perfectly.
+          </p>
+        `}
+      </div>
+    `;
+    
+    syncModalFooter.classList.remove('hidden');
+    btnPush.disabled = false;
+    btnPush.innerHTML = `<span class="material-symbols-outlined text-sm">upload</span> Push to Cloud`;
+    btnPull.disabled = false;
+    btnPull.innerHTML = `<span class="material-symbols-outlined text-sm">download</span> Pull from Cloud`;
+  };
+
+  const hideSyncModal = () => {
+    syncModal.classList.add('opacity-0');
+    syncModal.querySelector('div')?.classList.add('translate-y-4');
+    setTimeout(() => syncModal.classList.add('hidden'), 300);
+    currentSyncFileId = null;
+  };
+
+  closeSyncModal?.addEventListener('click', hideSyncModal);
+
+  container.querySelectorAll('.btn-sync').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-id');
+      const filename = btn.getAttribute('data-filename');
+      if (id && filename) showSyncModal(id, filename);
+    });
+  });
+
+  const handleSyncAction = async (direction: 'push' | 'pull') => {
+    if (!currentSyncFileId) return;
+    
+    const btn = direction === 'push' ? btnPush : btnPull;
+    const otherBtn = direction === 'push' ? btnPull : btnPush;
+    
+    btn.disabled = true;
+    otherBtn.disabled = true;
+    btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-sm">sync</span> ${direction === 'push' ? 'Pushing...' : 'Pulling...'}`;
+    
+    try {
+      const result = await api.syncFile(currentSyncFileId, direction);
+      renderDiffResult(result);
+      refreshFiles(); // Refresh row counts in background
+    } catch (err: any) {
+      alert(`Sync failed: ${err.message}`);
+      renderDiffResult({ status: 'diverged', total_local: 0, total_remote: 0, added: 0, removed: 0 }); // Reset state
+    }
+  };
+
+  btnPush.addEventListener('click', () => handleSyncAction('push'));
+  btnPull.addEventListener('click', () => handleSyncAction('pull'));
 
   return container;
 }

@@ -93,5 +93,82 @@ class DuckDBManager:
         # Replace NaN/NaT with None for JSON compliance
         return df.where(pd.notnull(df), None).to_dict(orient='records')
 
+    def is_motherduck_connected(self):
+        """Check if Motherduck database is attached."""
+        try:
+            res = self.connection.execute("PRAGMA show_databases").fetchall()
+            return any(row[0] == 'motherduck' for row in res)
+        except:
+            return False
+
+    def get_table_diff(self, schema: str, table: str):
+        """Calculate diff between local and remote Motherduck table."""
+        if not self.is_motherduck_connected():
+            return {"error": "Motherduck not connected"}
+        
+        local_table = f'"{schema}"."{table}"'
+        remote_table = f'motherduck."{schema}"."{table}"'
+        
+        try:
+            # Check if local exists
+            local_exists = self.connection.execute(f"SELECT count(*) FROM information_schema.tables WHERE table_schema='{schema}' AND table_name='{table}'").fetchone()[0] > 0
+            if not local_exists:
+                return {"error": f"Local table {local_table} does not exist"}
+            
+            # Check if remote exists
+            # We must be careful about remote schema existence
+            try:
+                self.connection.execute(f"CREATE SCHEMA IF NOT EXISTS motherduck.\"{schema}\"")
+            except:
+                pass # Might fail if read-only or other issues, but we try
+
+            remote_exists = self.connection.execute(f"SELECT count(*) FROM information_schema.tables WHERE table_catalog='motherduck' AND table_schema='{schema}' AND table_name='{table}'").fetchone()[0] > 0
+            
+            diff = {
+                "total_local": self.connection.execute(f"SELECT count(*) FROM {local_table}").fetchone()[0],
+                "total_remote": 0,
+                "added": 0,
+                "removed": 0,
+                "status": "diverged"
+            }
+
+            if not remote_exists:
+                diff["added"] = diff["total_local"]
+                diff["status"] = "local_only"
+                return diff
+
+            diff["total_remote"] = self.connection.execute(f"SELECT count(*) FROM {remote_table}").fetchone()[0]
+            
+            # Rows in local not in remote (Additions)
+            diff["added"] = self.connection.execute(f"SELECT count(*) FROM (SELECT * FROM {local_table} EXCEPT SELECT * FROM {remote_table})").fetchone()[0]
+            
+            # Rows in remote not in local (Deletions from local perspective)
+            diff["removed"] = self.connection.execute(f"SELECT count(*) FROM (SELECT * FROM {remote_table} EXCEPT SELECT * FROM {local_table})").fetchone()[0]
+            
+            if diff["added"] == 0 and diff["removed"] == 0:
+                diff["status"] = "synced"
+            
+            return diff
+        except Exception as e:
+            logger.error(f"Error diffing table {schema}.{table}: {e}")
+            return {"error": str(e)}
+
+    def sync_table(self, schema: str, table: str, direction: str = "push"):
+        """Sync table between local and remote."""
+        if not self.is_motherduck_connected():
+            raise Exception("Motherduck not connected")
+
+        local_table = f'"{schema}"."{table}"'
+        remote_table = f'motherduck."{schema}"."{table}"'
+        
+        if direction == "push":
+            self.connection.execute(f"CREATE SCHEMA IF NOT EXISTS motherduck.\"{schema}\"")
+            self.connection.execute(f"CREATE OR REPLACE TABLE {remote_table} AS SELECT * FROM {local_table}")
+        else:
+            self.connection.execute(f"CREATE SCHEMA IF NOT EXISTS \"{schema}\"")
+            self.connection.execute(f"CREATE OR REPLACE TABLE {local_table} AS SELECT * FROM {remote_table}")
+        
+        return self.get_table_diff(schema, table)
+
 duckdb_manager = DuckDBManager()
 data_ingestor = DataIngestor(duckdb_manager)
