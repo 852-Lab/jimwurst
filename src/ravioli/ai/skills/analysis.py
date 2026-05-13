@@ -94,7 +94,7 @@ async def extract_insights(result_markdown: str, generate_func) -> dict:
 
 async def generate_insights_summary(insights: list[str], days: int, generate_func) -> str:
     """Generate an executive AI summary synthesizing all verified insights."""
-    if not insights: return "> [!NOTE]\n> No verified insights available."
+    if not insights: return f"> [!NOTE]\n> No verified insights available in the last {days} day(s)."
     bullet_block = "\n".join(f"- {i}" for i in insights)
     prompt = f"Synthesize these verified insights from the last {days} day(s) into an executive brief (bullet points only):\n{bullet_block}"
     try:
