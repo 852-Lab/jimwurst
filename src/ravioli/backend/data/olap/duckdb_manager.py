@@ -72,15 +72,21 @@ class DuckDBManager:
                     if "can only be set during initialization" not in str(init_err):
                         try:
                             self._connection.execute(f"SET motherduck_token='{token}';")
-                        except Exception:
-                            pass
+                        except Exception as token_set_err:
+                            logger.debug(
+                                "Non-fatal: failed to set motherduck token during fallback setup: %s",
+                                token_set_err
+                            )
                 
                 # IMPORTANT: The following management logic must run every time
                 # Force multi-database mode so we can see 'ravioli' as a separate DB
                 try:
                     self._connection.execute("SET motherduck_attach_mode='multi';")
-                except Exception:
-                    pass
+                except Exception as attach_mode_err:
+                    logger.debug(
+                        "Could not set motherduck_attach_mode='multi'; continuing without multi attach mode: %s",
+                        attach_mode_err,
+                    )
                 
                 # 1. Ensure the 'ravioli' database exists in the cloud
                 try:
@@ -116,8 +122,8 @@ class DuckDBManager:
                         # Final fallback
                         try:
                             self._connection.execute("ATTACH 'md:'")
-                        except Exception:
-                            pass
+                        except Exception as fallback_err:
+                            logger.warning(f"Final fallback ATTACH 'md:' also failed: {fallback_err}")
         except Exception as e:
             logger.error(f"Error fetching Motherduck settings: {e}")
         finally:
