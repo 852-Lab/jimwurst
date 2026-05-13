@@ -1,8 +1,8 @@
 import './style.css';
 import { store } from './store';
 import { api } from './services/api';
-import { renderSidebar } from './components/Sidebar';
-import { renderNotebook } from './components/Notebook';
+import { renderSidebar, updateSidebarUI } from './components/Sidebar';
+import { renderNotebook, updateNotebookUI } from './components/Notebook';
 import { renderInsights } from './components/Insights';
 import { renderCreateAnalysis } from './components/CreateAnalysis';
 import { renderKnowledge } from './components/Knowledge';
@@ -68,18 +68,19 @@ function updateUI() {
     app.appendChild(shell);
   }
 
-  // Update Sidebar if user changed or analyses changed (Sidebar handles its own data fetching from store)
+  // Update Sidebar if user changed or analyses changed
   const sidebarContainer = document.getElementById('sidebar-container')!;
-  // For simplicity, we re-render sidebar if anything changed in store, 
-  // but we should eventually make Sidebar smarter.
-  // To avoid flicker, we can check if it needs a full replace.
-  const newSidebar = renderSidebar();
-  sidebarContainer.innerHTML = '';
-  sidebarContainer.appendChild(newSidebar);
+  let sidebarAside = document.getElementById('sidebar-aside');
+  if (!sidebarAside) {
+    sidebarAside = renderSidebar();
+    sidebarContainer.appendChild(sidebarAside);
+  } else {
+    updateSidebarUI(sidebarAside);
+  }
 
   // Update Content area only if view or active analysis changed
+  const contentContainer = document.getElementById('content-container')!;
   if (currentView !== lastView || activeId !== lastActiveId || currentUser.id !== lastUserId) {
-    const contentContainer = document.getElementById('content-container')!;
     contentContainer.innerHTML = '';
     
     let content: HTMLElement;
@@ -105,11 +106,11 @@ function updateUI() {
     lastActiveId = activeId;
     lastUserId = currentUser.id;
   } else {
-    // If we are in the Notebook (dashboard) and only logs changed, 
-    // we should ideally update just the logs. 
-    // For now, we'll let Notebook handle its own internal updates if we can,
-    // or we'll skip re-rendering the whole Notebook if only logs changed.
-    // NOTE: This prevents the flicker during polling!
+    // Same view. If it's the dashboard, update logs/status granularly.
+    const notebookView = contentContainer.querySelector('#notebook-view') as HTMLElement;
+    if (notebookView && currentView === 'dashboard') {
+      updateNotebookUI(notebookView);
+    }
   }
 }
 
