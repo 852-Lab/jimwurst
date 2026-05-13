@@ -34,6 +34,7 @@ class DuckDBManager:
     def _attach_motherduck(self):
         """
         Check for Motherduck token in system_settings and attach if found.
+        Handles workspace mode where aliases might be restricted.
         """
         db = SessionLocal()
         try:
@@ -45,14 +46,45 @@ class DuckDBManager:
                 try:
                     self._connection.execute(f"INSTALL motherduck; LOAD motherduck;")
                     self._connection.execute(f"SET motherduck_token='{token}';")
-                    self._connection.execute("ATTACH 'md:' AS motherduck")
-                    logger.info("Successfully attached to Motherduck as 'motherduck'")
+                    
+                    # Try to attach with alias first (legacy/standalone mode)
+                    try:
+                        self._connection.execute("ATTACH 'md:' AS motherduck")
+                        logger.info("Successfully attached to Motherduck as 'motherduck'")
+                    except Exception as alias_err:
+                        if "Database aliases are not yet supported" in str(alias_err):
+                            logger.info("Workspace mode detected, attaching 'md:' without alias...")
+                            self._connection.execute("ATTACH 'md:'")
+                            logger.info("Successfully attached to Motherduck (no alias)")
+                        else:
+                            raise alias_err
                 except Exception as e:
                     logger.error(f"Failed to attach Motherduck: {e}")
         except Exception as e:
             logger.error(f"Error fetching Motherduck settings: {e}")
         finally:
             db.close()
+
+    def _get_remote_db_name(self):
+        """Find the name of the attached Motherduck database."""
+        try:
+            res = self.connection.execute("PRAGMA show_databases").fetchall()
+            # Remote DB is usually the one starting with md: in path or just the one that isn't main/temp/system
+            # But more reliably, Motherduck DBs have 'md:' in their source path (if we could see it)
+            # For now, let's look for 'motherduck' alias or any db that isn't local
+            for row in res:
+                if row[0] == 'motherduck':
+                    return 'motherduck'
+            
+            # If no alias, look for the first non-standard database
+            # Standard: 'main', 'temp', 'system'
+            for row in res:
+                if row[0] not in ('main', 'temp', 'system', 'memory'):
+                    return row[0]
+            
+            return 'motherduck' # Fallback
+        except:
+            return 'motherduck'
 
     def reconnect(self):
         """
@@ -97,7 +129,8 @@ class DuckDBManager:
         """Check if Motherduck database is attached."""
         try:
             res = self.connection.execute("PRAGMA show_databases").fetchall()
-            return any(row[0] == 'motherduck' for row in res)
+            # In Motherduck workspace mode, we might not have 'motherduck' alias
+            return any(row[0] not in ('main', 'temp', 'system', 'memory') for row in res)
         except Exception:
             return False
 
@@ -106,8 +139,9 @@ class DuckDBManager:
         if not self.is_motherduck_connected():
             return {"error": "Motherduck not connected"}
         
+        remote_db = self._get_remote_db_name()
         local_table = f'"{schema}"."{table}"'
-        remote_table = f'motherduck."{schema}"."{table}"'
+        remote_table = f'{remote_db}."{schema}"."{table}"'
         
         try:
             # Check if local exists
@@ -118,11 +152,11 @@ class DuckDBManager:
             # Check if remote exists
             # We must be careful about remote schema existence
             try:
-                self.connection.execute(f"CREATE SCHEMA IF NOT EXISTS motherduck.\"{schema}\"")
+                self.connection.execute(f"CREATE SCHEMA IF NOT EXISTS {remote_db}.\"{schema}\"")
             except Exception:
                 pass # Might fail if read-only or other issues, but we try
 
-            remote_exists = self.connection.execute(f"SELECT count(*) FROM information_schema.tables WHERE table_catalog='motherduck' AND table_schema='{schema}' AND table_name='{table}'").fetchone()[0] > 0
+            remote_exists = self.connection.execute(f"SELECT count(*) FROM information_schema.tables WHERE table_catalog='{remote_db}' AND table_schema='{schema}' AND table_name='{table}'").fetchone()[0] > 0
             
             diff = {
                 "total_local": self.connection.execute(f"SELECT count(*) FROM {local_table}").fetchone()[0],
@@ -158,11 +192,12 @@ class DuckDBManager:
         if not self.is_motherduck_connected():
             raise Exception("Motherduck not connected")
 
+        remote_db = self._get_remote_db_name()
         local_table = f'"{schema}"."{table}"'
-        remote_table = f'motherduck."{schema}"."{table}"'
+        remote_table = f'{remote_db}."{schema}"."{table}"'
         
         if direction == "push":
-            self.connection.execute(f"CREATE SCHEMA IF NOT EXISTS motherduck.\"{schema}\"")
+            self.connection.execute(f"CREATE SCHEMA IF NOT EXISTS {remote_db}.\"{schema}\"")
             self.connection.execute(f"CREATE OR REPLACE TABLE {remote_table} AS SELECT * FROM {local_table}")
         else:
             self.connection.execute(f"CREATE SCHEMA IF NOT EXISTS \"{schema}\"")
