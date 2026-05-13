@@ -741,9 +741,11 @@ export function renderData() {
   const btnPull = container.querySelector('#btn-pull') as HTMLButtonElement;
   
   let currentSyncFileId: string | null = null;
+  let currentSyncHasPII: boolean = false;
 
-  const showSyncModal = async (fileId: string, filename: string) => {
+  const showSyncModal = async (fileId: string, filename: string, hasPII: boolean) => {
     currentSyncFileId = fileId;
+    currentSyncHasPII = hasPII;
     syncModalTitle.textContent = `Sync: ${filename}`;
     syncModal.classList.remove('hidden');
     syncModalFooter.classList.add('hidden');
@@ -761,13 +763,13 @@ export function renderData() {
 
     try {
       const diff = await api.getFileDiff(fileId);
-      renderDiffResult(diff);
+      renderDiffResult(diff, hasPII);
     } catch (err: any) {
       syncModalContent.innerHTML = `<div class="text-center text-red-400 py-10">${err.message || 'Failed to fetch diff.'}</div>`;
     }
   };
 
-  const renderDiffResult = (diff: any) => {
+  const renderDiffResult = (diff: any, hasPII: boolean) => {
     if (diff.status === 'error') {
       syncModalContent.innerHTML = `
         <div class="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center">
@@ -785,12 +787,12 @@ export function renderData() {
       <div class="space-y-6">
         <div class="grid grid-cols-2 gap-4">
           <div class="p-4 rounded-2xl bg-surface-container-highest border border-outline/5 text-center">
-            <span class="text-[10px] text-neutral-500 uppercase tracking-widest block mb-1">Local Data</span>
+            <span class="text-[10px] text-neutral-500 uppercase tracking-widest block mb-1">Local Branch</span>
             <span class="text-2xl font-medium text-neutral-100">${diff.total_local.toLocaleString()}</span>
             <span class="text-[10px] text-neutral-500 block">Rows</span>
           </div>
           <div class="p-4 rounded-2xl bg-surface-container-highest border border-outline/5 text-center">
-            <span class="text-[10px] text-neutral-500 uppercase tracking-widest block mb-1">Cloud Data</span>
+            <span class="text-[10px] text-neutral-500 uppercase tracking-widest block mb-1">Remote Branch</span>
             <span class="text-2xl font-medium text-neutral-100">${diff.total_remote.toLocaleString()}</span>
             <span class="text-[10px] text-neutral-500 block">Rows</span>
           </div>
@@ -821,22 +823,41 @@ export function renderData() {
           </div>
         </div>
         
-        ${isSynced ? `
-          <div class="flex items-center gap-2 text-xs text-green-400 bg-green-500/5 p-3 rounded-xl border border-green-500/10">
-            <span class="material-symbols-outlined text-sm">check_circle</span>
-            Data is perfectly synchronized between local and cloud.
+        ${hasPII ? `
+          <div class="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex gap-4">
+            <span class="material-symbols-outlined text-amber-500">security</span>
+            <div>
+              <p class="text-xs font-bold text-amber-500 uppercase tracking-wider mb-1">Privacy Protection Active</p>
+              <p class="text-[11px] text-neutral-300 leading-relaxed">This asset contains PII data and is restricted to Local storage only. Push to cloud is disabled for security reasons.</p>
+            </div>
           </div>
         ` : `
-          <p class="text-[11px] text-neutral-500 italic text-center px-4">
-            Warning: Syncing will overwrite the destination data to match the source perfectly.
-          </p>
+          ${isSynced ? `
+            <div class="flex items-center gap-2 text-xs text-green-400 bg-green-500/5 p-3 rounded-xl border border-green-500/10">
+              <span class="material-symbols-outlined text-sm">check_circle</span>
+              Data is perfectly synchronized between local and cloud.
+            </div>
+          ` : `
+            <p class="text-[11px] text-neutral-500 italic text-center px-4">
+              Warning: Syncing will overwrite the destination data to match the source perfectly.
+            </p>
+          `}
         `}
       </div>
     `;
     
     syncModalFooter.classList.remove('hidden');
-    btnPush.disabled = false;
+    
+    // Disable push if PII
+    btnPush.disabled = hasPII;
+    btnPush.title = hasPII ? "Push disabled due to PII" : "Push Local to Remote";
     btnPush.innerHTML = `<span class="material-symbols-outlined text-sm">upload</span> Push to Cloud`;
+    if (hasPII) {
+      btnPush.classList.add('opacity-50', 'cursor-not-allowed');
+    } else {
+      btnPush.classList.remove('opacity-50', 'cursor-not-allowed');
+    }
+    
     btnPull.disabled = false;
     btnPull.innerHTML = `<span class="material-symbols-outlined text-sm">download</span> Pull from Cloud`;
   };
@@ -854,7 +875,8 @@ export function renderData() {
     btn.addEventListener('click', () => {
       const id = btn.getAttribute('data-id');
       const filename = btn.getAttribute('data-filename');
-      if (id && filename) showSyncModal(id, filename);
+      const source = store.getDataSources().find(s => s.id === id);
+      if (id && filename && source) showSyncModal(id, filename, source.has_pii);
     });
   });
 
@@ -870,7 +892,7 @@ export function renderData() {
     
     try {
       const result = await api.syncFile(currentSyncFileId, direction);
-      renderDiffResult(result);
+      renderDiffResult(result, currentSyncHasPII);
       refreshFiles(); // Refresh row counts in background
     } catch (err: any) {
       alert(`Sync failed: ${err.message}`);

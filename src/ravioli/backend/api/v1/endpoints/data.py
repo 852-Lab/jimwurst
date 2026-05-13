@@ -500,6 +500,12 @@ async def sync_file_data(
     if not db_source.table_name:
         raise HTTPException(status_code=400, detail="File has no associated table")
 
+    if sync_req.direction == "push" and db_source.has_pii:
+        raise HTTPException(
+            status_code=403, 
+            detail="Privacy Protection: This asset is tagged with PII and is restricted to Local storage only."
+        )
+
     try:
         result = duckdb_manager.sync_table(db_source.schema_name, db_source.table_name, sync_req.direction)
         
