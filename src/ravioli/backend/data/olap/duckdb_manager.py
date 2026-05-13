@@ -39,7 +39,8 @@ class DuckDBManager:
         try:
             setting = db.query(SystemSetting).filter(SystemSetting.key == "motherduck").first()
             if setting and "token" in setting.value and setting.value["token"]:
-                token = setting.value["token"]
+                from ravioli.backend.core.encryption import decrypt_value
+                token = decrypt_value(setting.value["token"])
                 logger.info("Motherduck token found, attaching to Motherduck...")
                 try:
                     self._connection.execute(f"INSTALL motherduck; LOAD motherduck;")

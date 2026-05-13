@@ -5,7 +5,7 @@ from ravioli.backend.api.v1.endpoints.data import get_current_user
 from ravioli.backend.core import models
 from ravioli.backend.core.models import SystemSetting as SystemSettingModel
 from ravioli.backend.core.schemas import SystemSetting as SystemSettingSchema, SystemSettingBase
-from ravioli.backend.core.encryption import encrypt_value
+from ravioli.backend.core.encryption import encrypt_value, decrypt_value
 from ravioli.backend.core.ollama import OllamaClient
 
 router = APIRouter()
@@ -37,7 +37,8 @@ async def test_motherduck_connection(db: Session = Depends(get_db)):
         if not setting or "token" not in setting.value or not setting.value["token"]:
              raise HTTPException(status_code=400, detail="Motherduck token not configured.")
         
-        token = setting.value["token"]
+        from ravioli.backend.core.encryption import decrypt_value
+        token = decrypt_value(setting.value["token"])
         import duckdb
         # Attempt a temporary connection
         conn = duckdb.connect(f"md:?motherduck_token={token}")

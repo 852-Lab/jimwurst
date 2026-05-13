@@ -17,7 +17,12 @@ def mock_duckdb():
         mock.return_value = conn
         yield mock
 
-def test_duckdb_manager_attaches_motherduck(mock_db_session, mock_duckdb):
+@pytest.fixture
+def mock_decrypt():
+    with patch("ravioli.backend.core.encryption.decrypt_value", side_effect=lambda x: x) as mock:
+        yield mock
+
+def test_duckdb_manager_attaches_motherduck(mock_db_session, mock_duckdb, mock_decrypt):
     # Setup mock setting
     mock_setting = SystemSetting(key="motherduck", value={"token": "test-token"})
     mock_db_session.query.return_value.filter.return_value.first.return_value = mock_setting
@@ -34,7 +39,7 @@ def test_duckdb_manager_attaches_motherduck(mock_db_session, mock_duckdb):
         assert any("SET motherduck_token='test-token'" in cmd for cmd in execute_calls)
         assert any("ATTACH 'md:' AS motherduck" in cmd for cmd in execute_calls)
 
-def test_duckdb_manager_no_motherduck_if_no_token(mock_db_session, mock_duckdb):
+def test_duckdb_manager_no_motherduck_if_no_token(mock_db_session, mock_duckdb, mock_decrypt):
     # Setup mock setting with no token
     mock_db_session.query.return_value.filter.return_value.first.return_value = None
     
@@ -46,7 +51,7 @@ def test_duckdb_manager_no_motherduck_if_no_token(mock_db_session, mock_duckdb):
         execute_calls = [call[0][0] for call in mock_duckdb.return_value.execute.call_args_list]
         assert not any("ATTACH 'md:'" in cmd for cmd in execute_calls)
 
-def test_duckdb_manager_reconnect(mock_db_session, mock_duckdb):
+def test_duckdb_manager_reconnect(mock_db_session, mock_duckdb, mock_decrypt):
     # Setup mock setting
     mock_db_session.query.return_value.filter.return_value.first.return_value = None
     
