@@ -150,4 +150,35 @@ describe('Settings component', () => {
     localRadio.dispatchEvent(new Event('change', { bubbles: true }));
     expect(el.querySelector('#ollama-base-url')).not.toBeNull();
   });
+
+  it('should render a Configure button for Motherduck in Integrations tab', async () => {
+    const { renderSettings } = await import('../../../src/ravioli/frontend/src/components/Settings');
+    const el = renderSettings();
+    (el.querySelector('#tab-integrations') as HTMLButtonElement).click();
+    
+    const btn = el.querySelector('#btn-configure-motherduck');
+    expect(btn).not.toBeNull();
+  });
+
+  it('should show Motherduck token field after clicking Configure', async () => {
+    const { renderSettings } = await import('../../../src/ravioli/frontend/src/components/Settings');
+    const el = renderSettings();
+    (el.querySelector('#tab-integrations') as HTMLButtonElement).click();
+    
+    (el.querySelector('#btn-configure-motherduck') as HTMLButtonElement).click();
+    expect(el.querySelector('#md-token')).not.toBeNull();
+    expect(el.querySelector('#btn-save-motherduck')).not.toBeNull();
+  });
+
+  it('should close Motherduck configuration panel on cancel', async () => {
+    const { renderSettings } = await import('../../../src/ravioli/frontend/src/components/Settings');
+    const el = renderSettings();
+    (el.querySelector('#tab-integrations') as HTMLButtonElement).click();
+    (el.querySelector('#btn-configure-motherduck') as HTMLButtonElement).click();
+    
+    const cancelBtn = el.querySelector('#btn-cancel-motherduck') as HTMLButtonElement;
+    cancelBtn.click();
+    expect(el.querySelector('#btn-configure-motherduck')).not.toBeNull();
+    expect(el.querySelector('#md-token')).toBeNull();
+  });
 });

@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ravioli.backend.core.database import get_db
@@ -7,6 +8,9 @@ from ravioli.backend.core.models import SystemSetting as SystemSettingModel
 from ravioli.backend.core.schemas import SystemSetting as SystemSettingSchema, SystemSettingBase
 from ravioli.backend.core.encryption import encrypt_value
 from ravioli.backend.core.ollama import OllamaClient
+from ravioli.backend.data.olap.duckdb_manager import duckdb_manager
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -26,40 +30,138 @@ async def test_ollama_connection(db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Fields within a setting's value dict that should be encrypted at rest
-_SENSITIVE_FIELDS = {"api_key"}
+@router.get("/motherduck/test")
+async def test_motherduck_connection(db: Session = Depends(get_db)):
+    """Test connection to Motherduck based on current database settings."""
+    try:
+        from ravioli.backend.data.olap.duckdb_manager import DuckDBManager
+        setting = db.query(SystemSettingModel).filter(SystemSettingModel.key == "motherduck").first()
+        if not setting or "token" not in setting.value or not setting.value["token"]:
+             raise HTTPException(status_code=400, detail="Motherduck token not configured.")
+        
+        from ravioli.backend.core.encryption import decrypt_value
+        token = decrypt_value(setting.value["token"])
+        import duckdb
+        conn = duckdb.connect(f"md:?motherduck_token={token}")
+        conn.execute("SELECT 1")
+        return {
+            "status": "success",
+            "message": "Successfully connected to Motherduck!"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Motherduck connection failed: {str(e)}")
 
+@router.post("/motherduck/push")
+async def push_all_to_motherduck(db: Session = Depends(get_db)):
+    """Push all local tables to Motherduck (excluding PII)."""
+    from ravioli.backend.data.olap.duckdb_manager import duckdb_manager
+    from ravioli.backend.core.models import DataSource
+    from sqlalchemy import select
+
+    if not duckdb_manager.is_motherduck_connected():
+        raise HTTPException(status_code=400, detail="Motherduck not connected")
+
+    remote_db = duckdb_manager._get_remote_db_name()
+    logger.info(f"=== STARTING PUSH ALL TO MOTHERDUCK (Target DB: {remote_db}) ===")
+
+    stmt = select(DataSource).where(DataSource.has_pii == False)
+    sources = db.execute(stmt).scalars().all()
+    
+    results = []
+    for source in sources:
+        if not source.table_name: continue
+        try:
+            duckdb_manager.sync_table(source.schema_name, source.table_name, direction="push")
+            results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "success"})
+        except Exception as e:
+            logger.error(f"Failed to push {source.table_name}: {e}")
+            results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "failed", "error": str(e)})
+            
+    logger.info(f"=== PUSH ALL COMPLETED ({len(results)} tables processed) ===")
+    return {"status": "completed", "results": results}
+
+@router.post("/motherduck/pull")
+async def pull_all_from_motherduck(db: Session = Depends(get_db)):
+    """Pull all tables from Motherduck to local."""
+    from ravioli.backend.data.olap.duckdb_manager import duckdb_manager
+    from ravioli.backend.core.models import DataSource
+    from sqlalchemy import select
+
+    if not duckdb_manager.is_motherduck_connected():
+        raise HTTPException(status_code=400, detail="Motherduck not connected")
+
+    stmt = select(DataSource)
+    sources = db.execute(stmt).scalars().all()
+    
+    results = []
+    for source in sources:
+        if not source.table_name: continue
+        try:
+            res = duckdb_manager.sync_table(source.schema_name, source.table_name, direction="pull")
+            if "total_local" in res:
+                source.row_count = res["total_local"]
+            results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "success"})
+        except Exception:
+            logger.exception(f"Failed to pull {source.schema_name}.{source.table_name} from Motherduck")
+            results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "failed", "error": "Internal error while syncing table"})
+            
+    db.commit()
+    return {"status": "completed", "results": results}
+
+_SENSITIVE_FIELDS = {"api_key", "token"}
 _REDACTED = "••••••••"
 
-
 def _encrypt_sensitive(value: dict) -> dict:
-    """Return a copy of value with sensitive fields encrypted."""
     out = dict(value)
     for field in _SENSITIVE_FIELDS:
         if field in out and out[field]:
             out[field] = encrypt_value(out[field])
     return out
 
-
 def _redact_sensitive(value: dict) -> dict:
-    """Return a copy of value with sensitive fields replaced by a redacted placeholder."""
     out = dict(value)
     for field in _SENSITIVE_FIELDS:
         if field in out and out[field]:
             out[field] = _REDACTED
     return out
 
+@router.get("/md-debug")
+async def debug_motherduck(db: Session = Depends(get_db)):
+    """Deep debug for Motherduck connection and state."""
+    if not duckdb_manager.is_motherduck_connected():
+        return {"status": "error", "message": "Motherduck not connected"}
+    
+    try:
+        conn = duckdb_manager.connection
+        identity = conn.execute("SELECT current_user(), current_database(), current_schemas()").fetchone()
+        databases = conn.execute("PRAGMA show_databases").fetchall()
+        
+        # Look specifically at 'ravioli' database
+        try:
+            schemas = conn.execute("SELECT schema_name FROM ravioli.information_schema.schemata").fetchall()
+            tables = conn.execute("SELECT table_schema, table_name FROM ravioli.information_schema.tables").fetchall()
+        except Exception:
+            schemas = ["Error: Could not query ravioli database schemas"]
+            tables = []
+
+        return {
+            "identity": {
+                "user": identity[0],
+                "database": identity[1],
+                "schemas": identity[2]
+            },
+            "databases": [{"name": r[0], "path": r[1] if len(r)>1 else "N/A"} for r in databases],
+            "ravioli_schemas": [s[0] for s in schemas],
+            "ravioli_tables": [{"schema": t[0], "table": t[1]} for t in tables]
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
 
 @router.get("/{key}", response_model=SystemSettingSchema)
-def get_setting(
-    key: str, 
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
-):
+def get_setting(key: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     setting = db.query(SystemSettingModel).filter(SystemSettingModel.key == key).first()
     if not setting:
         raise HTTPException(status_code=404, detail="Setting not found")
-    # Return a copy with sensitive fields redacted — never expose raw ciphertext or plaintext to the frontend
     redacted_value = _redact_sensitive(setting.value)
     return SystemSettingSchema(
         key=setting.key, 
@@ -70,33 +172,23 @@ def get_setting(
         updated_by=setting.updated_by
     )
 
-
 @router.put("/{key}", response_model=SystemSettingSchema)
-def update_setting(
-    key: str, 
-    setting_in: SystemSettingBase, 
-    db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
-):
+def update_setting(key: str, setting_in: SystemSettingBase, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if key != setting_in.key:
         raise HTTPException(status_code=400, detail="Key in path does not match key in body")
 
-    # If the frontend sends back our redacted placeholder, preserve the existing encrypted value
     existing = db.query(SystemSettingModel).filter(SystemSettingModel.key == key).first()
     incoming = dict(setting_in.value)
 
     for field in _SENSITIVE_FIELDS:
         if field in incoming:
             if incoming[field] == _REDACTED:
-                # User did not change the sensitive field — keep the existing encrypted value
                 if existing and field in existing.value:
                     incoming[field] = existing.value[field]
                 else:
                     incoming[field] = ""
             elif incoming[field]:
-                # New plaintext value — encrypt it
                 incoming[field] = encrypt_value(incoming[field])
-            # Empty string means the user cleared the field
 
     if existing:
         existing.value = incoming
@@ -116,7 +208,10 @@ def update_setting(
     db.commit()
     db.refresh(existing)
 
-    # Return redacted response
+    if key == "motherduck":
+        from ravioli.backend.data.olap.duckdb_manager import duckdb_manager
+        duckdb_manager.reconnect()
+
     redacted_value = _redact_sensitive(existing.value)
     return SystemSettingSchema(
         key=existing.key, 

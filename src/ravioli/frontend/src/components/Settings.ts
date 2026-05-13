@@ -17,6 +17,10 @@ export function renderSettings() {
   let apiKeyIsSet = false;
   let isConfiguringOllama = false;
 
+  // Motherduck State
+  let motherduckTokenIsSet = false;
+  let isConfiguringMotherduck = false;
+
   const renderContent = () => {
     const user = store.getCurrentUser();
     if (!user) return;
@@ -128,7 +132,7 @@ export function renderSettings() {
       try {
         const updatedUser = await api.updateUser(user.id, { name: newName });
         store.setCurrentUser(updatedUser);
-        
+
         if (status) {
           status.classList.remove('opacity-0');
           setTimeout(() => status.classList.add('opacity-0'), 2000);
@@ -145,7 +149,7 @@ export function renderSettings() {
 
   const renderIntegrationsHtml = () => {
     let ollamaContent = '';
-    
+
     if (!isConfiguringOllama) {
       ollamaContent = `
         <div class="pt-2">
@@ -318,10 +322,75 @@ export function renderSettings() {
                 <span class="material-symbols-outlined text-yellow-500 text-2xl">database</span>
                 <h3 class="text-lg font-medium text-neutral-100">Motherduck</h3>
               </div>
-              <span class="text-[10px] bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 px-2 py-1 rounded-full font-bold uppercase tracking-wider">Coming Soon</span>
+              ${motherduckTokenIsSet ? `
+                <span class="text-[10px] bg-green-400/20 text-green-400 border border-green-400/30 px-2 py-1 rounded-full font-bold uppercase tracking-wider">Connected</span>
+              ` : `
+                <span class="text-[10px] bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 px-2 py-1 rounded-full font-bold uppercase tracking-wider">Setup Needed</span>
+              `}
             </div>
-            <p class="text-sm text-on-surface-variant mb-4">Serverless cloud analytics using DuckDB.</p>
-            <button class="text-sm font-bold text-outline-variant cursor-not-allowed" disabled>Configure</button>
+            
+            ${!isConfiguringMotherduck ? `
+              <p class="text-sm text-on-surface-variant mb-4">Serverless cloud analytics using DuckDB. Connect your local instance to Motherduck cloud.</p>
+              <div class="flex items-center gap-4">
+                <button id="btn-configure-motherduck" class="text-sm font-bold text-primary-fixed-dim hover:text-primary-fixed transition-colors">Configure</button>
+                <a href="https://motherduck.com/docs/key-tasks/authenticating-and-connecting-to-motherduck/authenticating-to-motherduck/#creating-an-access-token" target="_blank" class="text-xs text-on-surface-variant hover:text-neutral-100 transition-colors flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">help_outline</span>
+                  How to get a token?
+                </a>
+              </div>
+
+              ${motherduckTokenIsSet ? `
+                <div class="mt-6 pt-6 border-t border-outline-variant/30">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Synchronize Entire Database</span>
+                    <span class="text-[9px] text-on-surface-variant/60 italic">Local as source of truth</span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <button id="btn-push-all" class="flex-1 bg-surface-container-highest border border-outline-variant/50 text-neutral-100 font-bold py-2.5 px-4 rounded-xl text-xs hover:bg-primary-fixed-dim hover:text-on-primary-fixed transition-all flex items-center justify-center gap-2 shadow-sm group">
+                      <span class="material-symbols-outlined text-sm group-hover:scale-110 transition-transform">upload</span> Push All
+                    </button>
+                    <button id="btn-pull-all" class="flex-1 bg-surface-container-highest border border-outline-variant/50 text-neutral-100 font-bold py-2.5 px-4 rounded-xl text-xs hover:bg-surface-container transition-all flex items-center justify-center gap-2 shadow-sm group">
+                      <span class="material-symbols-outlined text-sm group-hover:scale-110 transition-transform">download</span> Pull All
+                    </button>
+                  </div>
+                  <div class="flex items-center gap-1.5 mt-2 px-1 opacity-80">
+                    <span class="material-symbols-outlined text-[12px] text-amber-500">security</span>
+                    <span class="text-[9px] text-on-surface-variant font-medium">PII data sources are automatically excluded from Push operations</span>
+                  </div>
+                  <div id="sync-all-status" class="mt-3 text-[10px] hidden p-3 rounded-lg bg-black/20 border border-outline-variant/10 max-h-40 overflow-y-auto custom-scrollbar font-mono text-on-surface-variant"></div>
+                </div>
+              ` : ''}
+            ` : `
+              <div class="space-y-4 pt-2">
+                <div>
+                  <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Motherduck Token</label>
+                  ${motherduckTokenIsSet ? `
+                    <div class="flex items-center gap-3 mb-2">
+                      <span class="flex items-center gap-1 text-xs font-bold text-green-400 bg-green-400/10 border border-green-400/30 px-3 py-1 rounded-full">
+                        <span class="material-symbols-outlined text-sm">lock</span> Token stored securely
+                      </span>
+                      <button id="btn-clear-md-token" class="text-xs text-on-surface-variant hover:text-red-400 transition-colors underline">Replace</button>
+                    </div>
+                  ` : ''}
+                  <input id="md-token" type="password" class="w-full bg-surface-container-highest border border-outline-variant/50 rounded-lg px-4 py-3 text-sm text-neutral-100 focus:outline-none focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim transition-colors" placeholder="${motherduckTokenIsSet ? 'Enter new token' : 'e.g. eyJhbG...'}" />
+                  <div class="mt-2">
+                    <a href="https://motherduck.com/docs/key-tasks/authenticating-and-connecting-to-motherduck/authenticating-to-motherduck/#creating-an-access-token" target="_blank" class="text-[10px] text-on-surface-variant hover:text-neutral-100 transition-colors flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[12px]">info</span>
+                      Guide: Create an Access Token (Read & Write)
+                    </a>
+                  </div>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                  <button id="btn-save-motherduck" class="bg-primary-fixed-dim text-on-primary-fixed font-bold py-2 px-6 rounded-full text-sm hover:brightness-110 transition-all shadow-md">
+                    Save
+                  </button>
+                  <button id="btn-test-motherduck" class="text-sm font-bold text-neutral-100 hover:text-primary-fixed-dim transition-colors">Test</button>
+                  <button id="btn-cancel-motherduck" class="text-sm font-bold text-on-surface-variant hover:text-neutral-100 transition-colors">Cancel</button>
+                </div>
+                <div id="md-test-status" class="text-xs mt-2 hidden p-2 rounded border"></div>
+              </div>
+            `}
           </div>
 
           <!-- BigQuery -->
@@ -380,7 +449,7 @@ export function renderSettings() {
         const btn = testBtn as HTMLButtonElement;
         const statusDiv = container.querySelector('#test-status') as HTMLDivElement;
         const originalText = btn.innerHTML;
-        
+
         btn.disabled = true;
         btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span> Testing...';
         statusDiv.classList.remove('hidden', 'bg-green-400/10', 'border-green-400/30', 'text-green-400', 'bg-red-400/10', 'border-red-400/30', 'text-red-400');
@@ -394,7 +463,7 @@ export function renderSettings() {
           if (urlInput) ollamaConfig.base_url = urlInput.value;
           const modelInput = container.querySelector('#ollama-default-model') as HTMLInputElement;
           if (modelInput) ollamaConfig.default_model = modelInput.value;
-          
+
           const keyInput = container.querySelector('#ollama-api-key') as HTMLInputElement;
           if (keyInput && keyInput.value && keyInput.value !== REDACTED) {
             ollamaConfig.api_key = keyInput.value;
@@ -434,10 +503,10 @@ export function renderSettings() {
       saveBtn.addEventListener('click', async () => {
         const urlInput = container.querySelector('#ollama-base-url') as HTMLInputElement;
         if (urlInput) ollamaConfig.base_url = urlInput.value;
-        
+
         const modelInput = container.querySelector('#ollama-default-model') as HTMLInputElement;
         if (modelInput) ollamaConfig.default_model = modelInput.value;
-        
+
         const REDACTED = '••••••••';
         const keyInput = container.querySelector('#ollama-api-key') as HTMLInputElement;
         if (keyInput && keyInput.value && keyInput.value !== REDACTED) {
@@ -447,7 +516,7 @@ export function renderSettings() {
         } else {
           ollamaConfig.api_key = '';
         }
-        
+
         if (ollamaConfig.mode === 'default') {
           ollamaConfig.base_url = 'http://localhost:11434';
           ollamaConfig.default_model = 'gemma3:4b';
@@ -465,7 +534,7 @@ export function renderSettings() {
             default_model: ollamaConfig.default_model,
             api_key: ollamaConfig.api_key
           });
-          
+
           const status = container.querySelector('#save-status');
           if (status) {
             status.classList.remove('opacity-0');
@@ -485,6 +554,143 @@ export function renderSettings() {
         }
       });
     }
+
+    // Motherduck listeners
+    const configureMdBtn = container.querySelector('#btn-configure-motherduck');
+    if (configureMdBtn) {
+      configureMdBtn.addEventListener('click', () => {
+        isConfiguringMotherduck = true;
+        renderContent();
+      });
+    }
+
+    const cancelMdBtn = container.querySelector('#btn-cancel-motherduck');
+    if (cancelMdBtn) {
+      cancelMdBtn.addEventListener('click', () => {
+        isConfiguringMotherduck = false;
+        renderContent();
+      });
+    }
+
+    const clearMdTokenBtn = container.querySelector('#btn-clear-md-token');
+    if (clearMdTokenBtn) {
+      clearMdTokenBtn.addEventListener('click', () => {
+        motherduckTokenIsSet = false;
+        renderContent();
+      });
+    }
+
+    const testMdBtn = container.querySelector('#btn-test-motherduck');
+    if (testMdBtn) {
+      testMdBtn.addEventListener('click', async () => {
+        const btn = testMdBtn as HTMLButtonElement;
+        const statusDiv = container.querySelector('#md-test-status') as HTMLDivElement;
+        const tokenInput = container.querySelector('#md-token') as HTMLInputElement;
+        const originalText = btn.innerHTML;
+
+        btn.disabled = true;
+        btn.textContent = 'Testing...';
+        statusDiv.classList.remove('hidden', 'bg-green-400/10', 'text-green-400', 'bg-red-400/10', 'text-red-400');
+        statusDiv.classList.add('bg-surface-container-highest', 'text-on-surface-variant');
+        statusDiv.textContent = 'Connecting to Motherduck...';
+        statusDiv.classList.remove('hidden');
+
+        try {
+          const REDACTED = '••••••••';
+          let tokenToSave = tokenInput.value;
+          if (motherduckTokenIsSet && !tokenToSave) tokenToSave = REDACTED;
+
+          if (tokenToSave && tokenToSave !== REDACTED) {
+            await api.updateSetting('motherduck', { token: tokenToSave });
+          }
+
+          const result = await api.testMotherduckConnection();
+          statusDiv.classList.remove('bg-surface-container-highest', 'text-on-surface-variant');
+          statusDiv.classList.add('bg-green-400/10', 'text-green-400');
+          statusDiv.innerHTML = `<span class="material-symbols-outlined text-sm inline-block align-middle mr-1">check_circle</span> ${result.message}`;
+        } catch (e: any) {
+          statusDiv.classList.remove('bg-surface-container-highest', 'text-on-surface-variant');
+          statusDiv.classList.add('bg-red-400/10', 'text-red-400');
+          statusDiv.innerHTML = `<span class="material-symbols-outlined text-sm inline-block align-middle mr-1">error</span> ${e.message}`;
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        }
+      });
+    }
+
+    const saveMdBtn = container.querySelector('#btn-save-motherduck');
+    if (saveMdBtn) {
+      saveMdBtn.addEventListener('click', async () => {
+        const tokenInput = container.querySelector('#md-token') as HTMLInputElement;
+        const REDACTED = '••••••••';
+        let tokenToSave = tokenInput.value;
+        if (motherduckTokenIsSet && !tokenToSave) tokenToSave = REDACTED;
+
+        const btn = saveMdBtn as HTMLButtonElement;
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
+
+        try {
+          await api.updateSetting('motherduck', { token: tokenToSave });
+          motherduckTokenIsSet = tokenToSave !== '';
+          isConfiguringMotherduck = false;
+          renderContent();
+        } catch (e) {
+          console.error('Failed to save Motherduck settings', e);
+          alert('Failed to save settings');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Save';
+        }
+      });
+    }
+
+    // Global Sync listeners
+    const pushAllBtn = container.querySelector('#btn-push-all');
+    const pullAllBtn = container.querySelector('#btn-pull-all');
+    const syncStatus = container.querySelector('#sync-all-status');
+
+    const handleSyncAll = async (direction: 'push' | 'pull') => {
+      if (!pushAllBtn || !pullAllBtn || !syncStatus) return;
+      
+      const btn = direction === 'push' ? pushAllBtn : pullAllBtn;
+      const otherBtn = direction === 'push' ? pullAllBtn : pushAllBtn;
+      const originalText = btn.innerHTML;
+      
+      btn.disabled = true;
+      otherBtn.disabled = true;
+      btn.innerHTML = `<span class="material-symbols-outlined text-sm animate-spin">sync</span> ${direction === 'push' ? 'Pushing...' : 'Pulling...'}`;
+      
+      syncStatus.classList.remove('hidden');
+      syncStatus.innerHTML = `<div class="animate-pulse">Initializing synchronization sequence...</div>`;
+      
+      try {
+        const result = direction === 'push' ? await api.pushAllToMotherduck() : await api.pullAllFromMotherduck();
+        
+        syncStatus.innerHTML = result.results.map((r: any) => `
+          <div class="flex items-center justify-between py-1 border-b border-outline-variant/5 last:border-0">
+            <span class="${r.status === 'success' ? 'text-green-400' : 'text-red-400'}">
+              ${r.status === 'success' ? '✓' : '✗'} ${r.table}
+            </span>
+            <span class="text-[8px] opacity-60 uppercase font-bold">${r.status}</span>
+          </div>
+        `).join('');
+        
+        if (result.results.length === 0) {
+          syncStatus.innerHTML = '<div class="text-center py-2 italic opacity-60">No tables found to synchronize.</div>';
+        }
+      } catch (err: any) {
+        syncStatus.innerHTML = `<div class="text-red-400 font-bold">Sync Error: ${err.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        otherBtn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    };
+
+    pushAllBtn?.addEventListener('click', () => handleSyncAll('push'));
+    pullAllBtn?.addEventListener('click', () => handleSyncAll('pull'));
   };
 
   // Initial Load
@@ -499,6 +705,13 @@ export function renderSettings() {
       renderContent();
     }
   }).catch(e => console.error('Failed to fetch settings', e));
+
+  api.getSetting('motherduck').then(setting => {
+    if (setting && setting.value && setting.value.token) {
+      motherduckTokenIsSet = setting.value.token === '••••••••';
+      renderContent();
+    }
+  }).catch(e => console.error('Failed to fetch Motherduck settings', e));
 
   return container;
 }
