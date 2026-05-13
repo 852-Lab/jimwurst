@@ -346,21 +346,16 @@ export function renderSettings() {
                     <span class="text-[9px] text-on-surface-variant/60 italic">Local as source of truth</span>
                   </div>
                   <div class="flex items-center gap-3">
-                    <div class="flex-1 flex flex-col gap-1.5">
-                      <button id="btn-push-all" class="w-full bg-surface-container-highest border border-outline-variant/50 text-neutral-100 font-bold py-2.5 px-4 rounded-xl text-xs hover:bg-primary-fixed-dim hover:text-on-primary-fixed transition-all flex items-center justify-center gap-2 shadow-sm group">
-                        <span class="material-symbols-outlined text-sm group-hover:scale-110 transition-transform">upload</span> Push All
-                      </button>
-                      <div class="flex items-center gap-1.5 px-1">
-                        <span class="material-symbols-outlined text-[12px] text-amber-500">security</span>
-                        <span class="text-[9px] text-on-surface-variant leading-none font-medium">PII Excluded</span>
-                      </div>
-                    </div>
-                    <div class="flex-1 flex flex-col gap-1.5">
-                      <button id="btn-pull-all" class="w-full bg-surface-container-highest border border-outline-variant/50 text-neutral-100 font-bold py-2.5 px-4 rounded-xl text-xs hover:bg-surface-container transition-all flex items-center justify-center gap-2 shadow-sm group">
-                        <span class="material-symbols-outlined text-sm group-hover:scale-110 transition-transform">download</span> Pull All
-                      </button>
-                      <div class="h-[12px]"></div> <!-- Spacer for alignment -->
-                    </div>
+                    <button id="btn-push-all" class="flex-1 bg-surface-container-highest border border-outline-variant/50 text-neutral-100 font-bold py-2.5 px-4 rounded-xl text-xs hover:bg-primary-fixed-dim hover:text-on-primary-fixed transition-all flex items-center justify-center gap-2 shadow-sm group">
+                      <span class="material-symbols-outlined text-sm group-hover:scale-110 transition-transform">upload</span> Push All
+                    </button>
+                    <button id="btn-pull-all" class="flex-1 bg-surface-container-highest border border-outline-variant/50 text-neutral-100 font-bold py-2.5 px-4 rounded-xl text-xs hover:bg-surface-container transition-all flex items-center justify-center gap-2 shadow-sm group">
+                      <span class="material-symbols-outlined text-sm group-hover:scale-110 transition-transform">download</span> Pull All
+                    </button>
+                  </div>
+                  <div class="flex items-center gap-1.5 mt-2 px-1 opacity-80">
+                    <span class="material-symbols-outlined text-[12px] text-amber-500">security</span>
+                    <span class="text-[9px] text-on-surface-variant font-medium">PII data sources are automatically excluded from Push operations</span>
                   </div>
                   <div id="sync-all-status" class="mt-3 text-[10px] hidden p-3 rounded-lg bg-black/20 border border-outline-variant/10 max-h-40 overflow-y-auto custom-scrollbar font-mono text-on-surface-variant"></div>
                 </div>
