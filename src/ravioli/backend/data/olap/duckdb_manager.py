@@ -85,6 +85,11 @@ class DuckDBManager:
                     try:
                         logger.info("Attempting to ATTACH 'md:ravioli'...")
                         self._connection.execute("ATTACH 'md:ravioli' AS ravioli")
+                        
+                        # IDENTITY CHECK: Confirm who we are logged in as
+                        id_info = self._connection.execute("SELECT current_user(), current_database()").fetchone()
+                        logger.info(f"Successfully attached! Cloud Identity: {id_info[0]} | Active DB: {id_info[1]}")
+                        
                         logger.info("Successfully attached to dedicated 'ravioli' database in Motherduck")
                     except Exception as attach_err:
                         err_str = str(attach_err)
