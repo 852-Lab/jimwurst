@@ -95,7 +95,7 @@ tqdm==4.67.1
 typing-extensions==4.15.0
 typing-inspection==0.4.2
 tzdata==2025.3
-urllib3==2.6.3
+urllib3==2.7.0
 uuid-utils==0.13.0
 yarl==1.22.0
 zipp==3.23.0
