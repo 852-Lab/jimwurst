@@ -62,9 +62,20 @@ class DuckDBManager:
                 from ravioli.backend.core.encryption import decrypt_value
                 token = decrypt_value(setting.value["token"])
                 logger.info("Motherduck token found, preparing to attach...")
+                # Only initialize Motherduck if it's not already set up
                 try:
-                    self._connection.execute(f"INSTALL motherduck; LOAD motherduck;")
-                    self._connection.execute(f"SET motherduck_token='{token}';")
+                    self._connection.execute("INSTALL motherduck; LOAD motherduck;")
+                    # Check if token is already set to avoid initialization error
+                    current_token = self._connection.execute("SELECT current_setting('motherduck_token')").fetchone()[0]
+                    if not current_token:
+                        self._connection.execute(f"SET motherduck_token='{token}';")
+                except Exception as init_err:
+                    # If current_setting fails or token is already set, we might get an error, which is fine
+                    if "can only be set during initialization" not in str(init_err):
+                        try:
+                            self._connection.execute(f"SET motherduck_token='{token}';")
+                        except:
+                            pass
                     
                     # Force multi-database mode to ensure we can manage the 'ravioli' db specifically
                     try:
