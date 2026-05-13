@@ -8,6 +8,7 @@ from ravioli.backend.core.models import SystemSetting as SystemSettingModel
 from ravioli.backend.core.schemas import SystemSetting as SystemSettingSchema, SystemSettingBase
 from ravioli.backend.core.encryption import encrypt_value
 from ravioli.backend.core.ollama import OllamaClient
+from ravioli.backend.data.olap.duckdb_manager import duckdb_manager
 
 logger = logging.getLogger(__name__)
 
@@ -122,6 +123,38 @@ def _redact_sensitive(value: dict) -> dict:
         if field in out and out[field]:
             out[field] = _REDACTED
     return out
+
+@router.get("/md-debug")
+async def debug_motherduck(db: Session = Depends(get_db)):
+    """Deep debug for Motherduck connection and state."""
+    if not duckdb_manager.is_motherduck_connected():
+        return {"status": "error", "message": "Motherduck not connected"}
+    
+    try:
+        conn = duckdb_manager.connection
+        identity = conn.execute("SELECT current_user(), current_database(), current_schemas()").fetchone()
+        databases = conn.execute("PRAGMA show_databases").fetchall()
+        
+        # Look specifically at 'ravioli' database
+        try:
+            schemas = conn.execute("SELECT schema_name FROM ravioli.information_schema.schemata").fetchall()
+            tables = conn.execute("SELECT table_schema, table_name FROM ravioli.information_schema.tables").fetchall()
+        except:
+            schemas = ["Error: Could not query ravioli database schemas"]
+            tables = []
+
+        return {
+            "identity": {
+                "user": identity[0],
+                "database": identity[1],
+                "schemas": identity[2]
+            },
+            "databases": [{"name": r[0], "path": r[1] if len(r)>1 else "N/A"} for r in databases],
+            "ravioli_schemas": [s[0] for s in schemas],
+            "ravioli_tables": [{"schema": t[0], "table": t[1]} for t in tables]
+        }
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
 
 @router.get("/{key}", response_model=SystemSettingSchema)
 def get_setting(key: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):

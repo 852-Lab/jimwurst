@@ -200,7 +200,7 @@ class DuckDBManager:
             # Verify it's actually a Motherduck connection by checking for 'md:' prefix 
             # or 'ravioli' name (our specific alias)
             for row in res:
-                if row[0] == 'ravioli':
+                if row[0] in ('ravioli', 'motherduck'):
                     return True
                 if len(row) > 1 and str(row[1]).startswith('md:'):
                     return True
@@ -280,6 +280,15 @@ class DuckDBManager:
             # VERIFICATION: Check if the table actually has data in Motherduck
             remote_count = self.connection.execute(f"SELECT count(*) FROM {remote_table}").fetchone()[0]
             logger.info(f"Sync: Push completed. Verified {remote_count} rows in Motherduck for {remote_table}")
+            
+            # WAKE UP THE SIDEBAR: Force Motherduck to update its metadata
+            try:
+                self.connection.execute("PRAGMA md_update_catalog()")
+                # LOG EXPLORATION: Show what's in there now
+                schemas = self.connection.execute(f"SELECT schema_name FROM \"{remote_db}\".information_schema.schemata").fetchall()
+                logger.info(f"Sync: Current cloud schemas in {remote_db}: {[s[0] for s in schemas]}")
+            except Exception as e:
+                logger.info(f"Sync: Could not refresh catalog (this is normal in some modes): {e}")
         else:
             logger.info(f"Sync: Pulling {remote_table} -> {local_table}")
             # Ensure the schema exists locally
