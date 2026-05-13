@@ -66,35 +66,34 @@ class DuckDBManager:
                     self._connection.execute(f"INSTALL motherduck; LOAD motherduck;")
                     self._connection.execute(f"SET motherduck_token='{token}';")
                     
-                    # Try to create/attach a dedicated 'ravioli' database so it's visible in the UI
+                    # Force multi-database mode to ensure we can manage the 'ravioli' db specifically
+                    try:
+                        self._connection.execute("SET motherduck_attach_mode='multi';")
+                    except:
+                        pass # Might not be supported in all versions, but we try
+                    
+                    # 1. Attach to the workspace root to create the database if needed
+                    try:
+                        # Use a temporary alias to create the db
+                        self._connection.execute("ATTACH 'md:' AS md_root")
+                        self._connection.execute("CREATE DATABASE IF NOT EXISTS ravioli")
+                        self._connection.execute("DETACH md_root")
+                    except Exception as create_err:
+                        logger.info(f"Creation of 'ravioli' db through md_root failed: {create_err}")
+                    
+                    # 2. Specifically attach the 'ravioli' database
                     try:
                         logger.info("Attempting to ATTACH 'md:ravioli'...")
-                        # MotherDuck allows creating databases via SQL
-                        self._connection.execute("CREATE DATABASE IF NOT EXISTS ravioli")
                         self._connection.execute("ATTACH 'md:ravioli' AS ravioli")
                         logger.info("Successfully attached to dedicated 'ravioli' database in Motherduck")
-                    except Exception as ded_err:
-                        logger.info(f"Could not use dedicated 'ravioli' db, falling back to default: {ded_err}")
-                        # Fallback to default attach
-                        try:
-                            self._connection.execute("ATTACH 'md:' AS motherduck")
-                            logger.info("Successfully attached to Motherduck as 'motherduck'")
-                        except Exception as alias_err:
-                            err_str = str(alias_err)
-                            if "Database aliases are not yet supported" in err_str:
-                                logger.info("Workspace mode detected, attaching 'md:' without alias...")
-                                try:
-                                    self._connection.execute("ATTACH 'md:'")
-                                    logger.info("Successfully attached to Motherduck (no alias)")
-                                except Exception as attach_err:
-                                    if "already attached" in str(attach_err).lower():
-                                        logger.info("Motherduck already attached (workspace mode).")
-                                    else:
-                                        raise attach_err
-                            elif "already attached" in err_str.lower():
-                                logger.info("Motherduck already attached.")
-                            else:
-                                raise alias_err
+                    except Exception as attach_err:
+                        err_str = str(attach_err)
+                        if "already attached" in err_str.lower():
+                            logger.info("Motherduck 'ravioli' database already attached.")
+                        else:
+                            logger.info(f"Could not attach 'md:ravioli', falling back to default 'md:': {attach_err}")
+                            self._connection.execute("ATTACH 'md:' AS ravioli")
+                            logger.info("Successfully attached to default Motherduck as 'ravioli'")
                 except Exception as e:
                     logger.error(f"Failed to attach Motherduck: {e}")
         except Exception as e:
