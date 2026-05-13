@@ -208,9 +208,19 @@ async function hydrateSummary(container: HTMLElement, days: number) {
         <span class="text-lg font-body-lg text-on-surface-variant leading-relaxed group-hover/item:text-on-surface transition-colors duration-300">${b}</span>
       </li>`;
 
-    const bulletHtml = bullets.length > 0
-      ? bullets.map((b, i) => renderBullet(b, i)).join('')
-      : `<li class="text-on-surface-variant opacity-60 font-body-md text-sm">${data.summary}</li>`;
+    const isActuallyEmpty = bullets.length === 0 && data.summary.toLowerCase().includes('no verified insights');
+
+    const bulletHtml = !isActuallyEmpty
+      ? (bullets.length > 0 ? bullets.map((b, i) => renderBullet(b, i)).join('') : `<li class="text-on-surface-variant opacity-60 font-body-md text-sm">${data.summary}</li>`)
+      : `<div class="flex flex-col items-center gap-6 py-8 animate-reveal">
+          <div class="w-16 h-16 rounded-2xl bg-surface-container-low flex items-center justify-center border border-white/5">
+            <span class="material-symbols-outlined text-outline opacity-20 text-4xl" data-icon="history">history</span>
+          </div>
+          <div class="text-center space-y-2 max-w-sm">
+            <p class="text-on-surface-variant font-body-md text-lg leading-relaxed">No verified signals found in the last ${days} days.</p>
+            ${data.total_verified_count > 0 ? `<p class="text-xs text-outline opacity-40 uppercase tracking-widest font-bold">Try selecting a longer period to see all ${data.total_verified_count} verified insights.</p>` : ''}
+          </div>
+        </div>`;
 
     const countNote = data.insight_count > 0
       ? `<div class="pt-8 border-t border-white/5 flex items-center justify-between mt-10">

@@ -111,11 +111,21 @@ class KowalskiAgent:
     def _setup_agent(self):
         schemas = "public,marts,s_spotify,s_linkedin,s_substack,s_telegram,s_bolt,s_apple_health,s_google_sheet"
         db_uri = f"{settings.database_url}?options=-csearch_path%3D{schemas}"
-        db = SQLDatabase.from_uri(db_uri)
-        sql_executor = create_sql_agent_executor(db=db, llm=self.llm, persona=self.persona)
-        query_tool = get_query_database_tool(sql_executor)
-        tools = [ingest_data_tool, run_transformations_tool, query_tool]
-        return initialize_agent(tools, self.llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True, max_iterations=10)
+        
+        # Mask credentials in logs
+        masked_uri = db_uri.replace(settings.postgres_password, "****") if settings.postgres_password else db_uri
+        logger.info(f"KowalskiAgent: Initializing SQL connection to {masked_uri}")
+        
+        try:
+            db = SQLDatabase.from_uri(db_uri)
+            sql_executor = create_sql_agent_executor(db=db, llm=self.llm, persona=self.persona)
+            query_tool = get_query_database_tool(sql_executor)
+            tools = [ingest_data_tool, run_transformations_tool, query_tool]
+            return initialize_agent(tools, self.llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True, max_iterations=10)
+        except Exception as e:
+            logger.error(f"KowalskiAgent: Failed to initialize SQL agent: {e}")
+            # Fallback to no-tool agent or raise depending on criticality
+            return None
 
     def chat(self, prompt: str):
         try:

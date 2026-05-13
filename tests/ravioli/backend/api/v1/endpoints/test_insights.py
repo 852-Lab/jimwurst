@@ -37,7 +37,17 @@ async def test_get_insights_summary(client, session, mocker):
     
     # Mock DB query for insights
     mock_insight = create_mock_insight(is_verified=True)
-    session.query.return_value.filter.return_value.order_by.return_value.all.return_value = [mock_insight]
+    # Mock for the first query (insights list)
+    mock_all = MagicMock()
+    mock_all.all.return_value = [mock_insight]
+    # Mock for the second query (total count)
+    mock_scalar = MagicMock()
+    mock_scalar.scalar.return_value = 1
+    
+    session.query.side_effect = [
+        MagicMock(filter=MagicMock(return_value=MagicMock(order_by=MagicMock(return_value=mock_all)))),
+        MagicMock(filter=MagicMock(return_value=mock_scalar))
+    ]
     
     response = client.get("/api/v1/insights/summary?days=7")
     

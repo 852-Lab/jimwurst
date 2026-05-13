@@ -47,7 +47,16 @@ async def get_insights_summary(days: int = 7, db: Session = Depends(get_db)):
 
     agent = KowalskiAgent(db)
     summary = await skill_analysis.generate_insights_summary(contents, days, agent.generate)
-    return {"summary": summary, "insight_count": len(contents), "days": days}
+    total_verified = db.query(func.count(models.Insight.id)).filter(
+        models.Insight.is_verified == True
+    ).scalar() or 0
+
+    return {
+        "summary": summary,
+        "insight_count": len(contents),
+        "total_verified_count": total_verified,
+        "days": days
+    }
 
 
 @router.get("/review-queue", response_model=List[schemas.Insight])
