@@ -72,19 +72,31 @@ class DuckDBManager:
                     except:
                         pass # Might not be supported in all versions, but we try
                     
-                    # 1. Attach to the workspace root to create the database if needed
+                    # 1. Ensure we are connected to the workspace to create the database if needed
                     try:
-                        # Use a temporary alias to create the db
-                        self._connection.execute("ATTACH 'md:' AS md_root")
+                        # In workspace mode, we often can't use aliases for 'md:'
+                        # We just attach 'md:' directly
+                        try:
+                            self._connection.execute("ATTACH 'md:'")
+                        except Exception as e:
+                            if "already attached" not in str(e).lower():
+                                logger.error(f"Failed to attach workspace root: {e}")
+                        
                         self._connection.execute("CREATE DATABASE IF NOT EXISTS ravioli")
-                        self._connection.execute("DETACH md_root")
                     except Exception as create_err:
-                        logger.info(f"Creation of 'ravioli' db through md_root failed: {create_err}")
+                        logger.error(f"Creation of 'ravioli' database failed: {create_err}")
                     
                     # 2. Specifically attach the 'ravioli' database
                     try:
                         logger.info("Attempting to ATTACH 'md:ravioli'...")
-                        self._connection.execute("ATTACH 'md:ravioli' AS ravioli")
+                        # We try with an alias first, but fallback to no alias for workspace mode
+                        try:
+                            self._connection.execute("ATTACH 'md:ravioli' AS ravioli")
+                        except Exception as alias_err:
+                            if "aliases are not yet supported" in str(alias_err):
+                                self._connection.execute("ATTACH 'md:ravioli'")
+                            else:
+                                raise alias_err
                         
                         # IDENTITY CHECK: Confirm who we are logged in as
                         id_info = self._connection.execute("SELECT current_user(), current_database()").fetchone()
@@ -96,9 +108,12 @@ class DuckDBManager:
                         if "already attached" in err_str.lower():
                             logger.info("Motherduck 'ravioli' database already attached.")
                         else:
-                            logger.info(f"Could not attach 'md:ravioli', falling back to default 'md:': {attach_err}")
-                            self._connection.execute("ATTACH 'md:' AS ravioli")
-                            logger.info("Successfully attached to default Motherduck as 'ravioli'")
+                            logger.error(f"Could not attach 'md:ravioli': {attach_err}")
+                            # Final fallback to default workspace
+                            try:
+                                self._connection.execute("ATTACH 'md:'")
+                            except:
+                                pass
                 except Exception as e:
                     logger.error(f"Failed to attach Motherduck: {e}")
         except Exception as e:
