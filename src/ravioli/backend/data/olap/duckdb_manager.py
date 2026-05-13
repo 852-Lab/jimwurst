@@ -266,20 +266,21 @@ class DuckDBManager:
         if not self.is_motherduck_connected():
             raise Exception("Motherduck not connected")
 
-        remote_db = self._get_remote_db_name()
+        # Use the explicit cloud path 'md:ravioli' to avoid alias confusion
+        target_db = "md:ravioli"
         local_table = f"\"{schema}\".\"{table}\""
-        remote_table = f"\"{remote_db}\".\"{schema}\".\"{table}\""
+        remote_table = f"\"{target_db}\".\"{schema}\".\"{table}\""
         
         if direction == "push":
             logger.info(f"Sync: Pushing {local_table} -> {remote_table}")
-            # Ensure the schema exists in the remote database
-            self.connection.execute(f"CREATE SCHEMA IF NOT EXISTS \"{remote_db}\".\"{schema}\"")
+            # Ensure the schema exists in the remote database using the absolute cloud path
+            self.connection.execute(f"CREATE SCHEMA IF NOT EXISTS \"{target_db}\".\"{schema}\"")
             # Push table data
             self.connection.execute(f"CREATE OR REPLACE TABLE {remote_table} AS SELECT * FROM {local_table}")
             
-            # VERIFICATION: Check if the table actually has data in Motherduck
+            # VERIFICATION: Check the cloud count directly using the absolute path
             remote_count = self.connection.execute(f"SELECT count(*) FROM {remote_table}").fetchone()[0]
-            logger.info(f"Sync: Push completed. Verified {remote_count} rows in Motherduck for {remote_table}")
+            logger.info(f"Sync: Push completed. Verified {remote_count} rows in Motherduck at {remote_table}")
         else:
             logger.info(f"Sync: Pulling {remote_table} -> {local_table}")
             # Ensure the schema exists locally
