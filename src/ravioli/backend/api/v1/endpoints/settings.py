@@ -50,6 +50,59 @@ async def test_motherduck_connection(db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Motherduck connection failed: {str(e)}")
 
+@router.post("/motherduck/push")
+async def push_all_to_motherduck(db: Session = Depends(get_db)):
+    """Push all local tables to Motherduck (excluding PII)."""
+    from ravioli.backend.data.olap.duckdb_manager import duckdb_manager
+    from ravioli.backend.core.models import DataSource
+    from sqlalchemy import select
+
+    if not duckdb_manager.is_motherduck_connected():
+        raise HTTPException(status_code=400, detail="Motherduck not connected")
+
+    # Get all tables that are NOT PII
+    stmt = select(DataSource).where(DataSource.has_pii == False)
+    sources = db.execute(stmt).scalars().all()
+    
+    results = []
+    for source in sources:
+        if not source.table_name: continue
+        try:
+            duckdb_manager.sync_table(source.schema_name, source.table_name, direction="push")
+            results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "success"})
+        except Exception as e:
+            results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "failed", "error": str(e)})
+            
+    return {"status": "completed", "results": results}
+
+@router.post("/motherduck/pull")
+async def pull_all_from_motherduck(db: Session = Depends(get_db)):
+    """Pull all tables from Motherduck to local."""
+    from ravioli.backend.data.olap.duckdb_manager import duckdb_manager
+    from ravioli.backend.core.models import DataSource
+    from sqlalchemy import select
+
+    if not duckdb_manager.is_motherduck_connected():
+        raise HTTPException(status_code=400, detail="Motherduck not connected")
+
+    stmt = select(DataSource)
+    sources = db.execute(stmt).scalars().all()
+    
+    results = []
+    for source in sources:
+        if not source.table_name: continue
+        try:
+            res = duckdb_manager.sync_table(source.schema_name, source.table_name, direction="pull")
+            # Update row count
+            if "total_local" in res:
+                source.row_count = res["total_local"]
+            results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "success"})
+        except Exception as e:
+            results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "failed", "error": str(e)})
+            
+    db.commit()
+    return {"status": "completed", "results": results}
+
 # Fields within a setting's value dict that should be encrypted at rest
 _SENSITIVE_FIELDS = {"api_key", "token"}
 

@@ -281,6 +281,24 @@ export const api = {
     return response.json();
   },
 
+  async pushAllToMotherduck(): Promise<any> {
+    const response = await fetch(`${API_BASE}/settings/motherduck/push`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Push all failed');
+    return response.json();
+  },
+
+  async pullAllFromMotherduck(): Promise<any> {
+    const response = await fetch(`${API_BASE}/settings/motherduck/pull`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Pull all failed');
+    return response.json();
+  },
+
   async getInsightStats(): Promise<InsightStats> {
     const response = await fetch(`${API_BASE}/insights/stats`, { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch insight stats');

@@ -341,6 +341,24 @@ export function renderSettings() {
                   How to get a token?
                 </a>
               </div>
+
+              ${motherduckTokenIsSet ? `
+                <div class="mt-6 pt-6 border-t border-outline-variant/30">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Synchronize Entire Database</span>
+                    <span class="text-[9px] text-on-surface-variant/60 italic">Local as source of truth</span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <button id="btn-push-all" class="flex-1 bg-surface-container-highest border border-outline-variant/50 text-neutral-100 font-bold py-2.5 px-4 rounded-xl text-xs hover:bg-primary-fixed-dim hover:text-on-primary-fixed transition-all flex items-center justify-center gap-2 shadow-sm group">
+                      <span class="material-symbols-outlined text-sm group-hover:scale-110 transition-transform">upload</span> Push All
+                    </button>
+                    <button id="btn-pull-all" class="flex-1 bg-surface-container-highest border border-outline-variant/50 text-neutral-100 font-bold py-2.5 px-4 rounded-xl text-xs hover:bg-surface-container transition-all flex items-center justify-center gap-2 shadow-sm group">
+                      <span class="material-symbols-outlined text-sm group-hover:scale-110 transition-transform">download</span> Pull All
+                    </button>
+                  </div>
+                  <div id="sync-all-status" class="mt-3 text-[10px] hidden p-3 rounded-lg bg-black/20 border border-outline-variant/10 max-h-40 overflow-y-auto custom-scrollbar font-mono text-on-surface-variant"></div>
+                </div>
+              ` : ''}
             ` : `
               <div class="space-y-4 pt-2">
                 <div>
@@ -626,6 +644,52 @@ export function renderSettings() {
         }
       });
     }
+
+    // Global Sync listeners
+    const pushAllBtn = container.querySelector('#btn-push-all');
+    const pullAllBtn = container.querySelector('#btn-pull-all');
+    const syncStatus = container.querySelector('#sync-all-status');
+
+    const handleSyncAll = async (direction: 'push' | 'pull') => {
+      if (!pushAllBtn || !pullAllBtn || !syncStatus) return;
+      
+      const btn = direction === 'push' ? pushAllBtn : pullAllBtn;
+      const otherBtn = direction === 'push' ? pullAllBtn : pushAllBtn;
+      const originalText = btn.innerHTML;
+      
+      btn.disabled = true;
+      otherBtn.disabled = true;
+      btn.innerHTML = `<span class="material-symbols-outlined text-sm animate-spin">sync</span> ${direction === 'push' ? 'Pushing...' : 'Pulling...'}`;
+      
+      syncStatus.classList.remove('hidden');
+      syncStatus.innerHTML = `<div class="animate-pulse">Initializing synchronization sequence...</div>`;
+      
+      try {
+        const result = direction === 'push' ? await api.pushAllToMotherduck() : await api.pullAllFromMotherduck();
+        
+        syncStatus.innerHTML = result.results.map((r: any) => `
+          <div class="flex items-center justify-between py-1 border-b border-outline-variant/5 last:border-0">
+            <span class="${r.status === 'success' ? 'text-green-400' : 'text-red-400'}">
+              ${r.status === 'success' ? '✓' : '✗'} ${r.table}
+            </span>
+            <span class="text-[8px] opacity-60 uppercase font-bold">${r.status}</span>
+          </div>
+        `).join('');
+        
+        if (result.results.length === 0) {
+          syncStatus.innerHTML = '<div class="text-center py-2 italic opacity-60">No tables found to synchronize.</div>';
+        }
+      } catch (err: any) {
+        syncStatus.innerHTML = `<div class="text-red-400 font-bold">Sync Error: ${err.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        otherBtn.disabled = false;
+        btn.innerHTML = originalText;
+      }
+    };
+
+    pushAllBtn?.addEventListener('click', () => handleSyncAll('push'));
+    pullAllBtn?.addEventListener('click', () => handleSyncAll('pull'));
   };
 
   // Initial Load
