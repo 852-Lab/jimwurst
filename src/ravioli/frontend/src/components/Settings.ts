@@ -16,7 +16,7 @@ export function renderSettings() {
   };
   let apiKeyIsSet = false;
   let isConfiguringOllama = false;
-  
+
   // Motherduck State
   let motherduckConfig = {
     token: ''
@@ -135,7 +135,7 @@ export function renderSettings() {
       try {
         const updatedUser = await api.updateUser(user.id, { name: newName });
         store.setCurrentUser(updatedUser);
-        
+
         if (status) {
           status.classList.remove('opacity-0');
           setTimeout(() => status.classList.add('opacity-0'), 2000);
@@ -152,7 +152,7 @@ export function renderSettings() {
 
   const renderIntegrationsHtml = () => {
     let ollamaContent = '';
-    
+
     if (!isConfiguringOllama) {
       ollamaContent = `
         <div class="pt-2">
@@ -336,7 +336,7 @@ export function renderSettings() {
               <p class="text-sm text-on-surface-variant mb-4">Serverless cloud analytics using DuckDB. Connect your local instance to Motherduck cloud.</p>
               <div class="flex items-center gap-4">
                 <button id="btn-configure-motherduck" class="text-sm font-bold text-primary-fixed-dim hover:text-primary-fixed transition-colors">Configure</button>
-                <a href="https://davnnis2003.github.io/databiz/" target="_blank" class="text-xs text-on-surface-variant hover:text-neutral-100 transition-colors flex items-center gap-1">
+                <a href="https://motherduck.com/docs/key-tasks/authenticating-and-connecting-to-motherduck/authenticating-to-motherduck/#creating-an-access-token" target="_blank" class="text-xs text-on-surface-variant hover:text-neutral-100 transition-colors flex items-center gap-1">
                   <span class="material-symbols-outlined text-sm">help_outline</span>
                   How to get a token?
                 </a>
@@ -355,7 +355,7 @@ export function renderSettings() {
                   ` : ''}
                   <input id="md-token" type="password" class="w-full bg-surface-container-highest border border-outline-variant/50 rounded-lg px-4 py-3 text-sm text-neutral-100 focus:outline-none focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim transition-colors" placeholder="${motherduckTokenIsSet ? 'Enter new token' : 'e.g. eyJhbG...'}" />
                   <div class="mt-2">
-                    <a href="https://davnnis2003.github.io/databiz/" target="_blank" class="text-[10px] text-on-surface-variant hover:text-neutral-100 transition-colors flex items-center gap-1">
+                    <a href="https://motherduck.com/docs/key-tasks/authenticating-and-connecting-to-motherduck/authenticating-to-motherduck/#creating-an-access-token" target="_blank" class="text-[10px] text-on-surface-variant hover:text-neutral-100 transition-colors flex items-center gap-1">
                       <span class="material-symbols-outlined text-[12px]">info</span>
                       Guide: Create an Access Token (Read & Write)
                     </a>
@@ -430,7 +430,7 @@ export function renderSettings() {
         const btn = testBtn as HTMLButtonElement;
         const statusDiv = container.querySelector('#test-status') as HTMLDivElement;
         const originalText = btn.innerHTML;
-        
+
         btn.disabled = true;
         btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">refresh</span> Testing...';
         statusDiv.classList.remove('hidden', 'bg-green-400/10', 'border-green-400/30', 'text-green-400', 'bg-red-400/10', 'border-red-400/30', 'text-red-400');
@@ -444,7 +444,7 @@ export function renderSettings() {
           if (urlInput) ollamaConfig.base_url = urlInput.value;
           const modelInput = container.querySelector('#ollama-default-model') as HTMLInputElement;
           if (modelInput) ollamaConfig.default_model = modelInput.value;
-          
+
           const keyInput = container.querySelector('#ollama-api-key') as HTMLInputElement;
           if (keyInput && keyInput.value && keyInput.value !== REDACTED) {
             ollamaConfig.api_key = keyInput.value;
@@ -484,10 +484,10 @@ export function renderSettings() {
       saveBtn.addEventListener('click', async () => {
         const urlInput = container.querySelector('#ollama-base-url') as HTMLInputElement;
         if (urlInput) ollamaConfig.base_url = urlInput.value;
-        
+
         const modelInput = container.querySelector('#ollama-default-model') as HTMLInputElement;
         if (modelInput) ollamaConfig.default_model = modelInput.value;
-        
+
         const REDACTED = '••••••••';
         const keyInput = container.querySelector('#ollama-api-key') as HTMLInputElement;
         if (keyInput && keyInput.value && keyInput.value !== REDACTED) {
@@ -497,7 +497,7 @@ export function renderSettings() {
         } else {
           ollamaConfig.api_key = '';
         }
-        
+
         if (ollamaConfig.mode === 'default') {
           ollamaConfig.base_url = 'http://localhost:11434';
           ollamaConfig.default_model = 'gemma3:4b';
@@ -515,7 +515,7 @@ export function renderSettings() {
             default_model: ollamaConfig.default_model,
             api_key: ollamaConfig.api_key
           });
-          
+
           const status = container.querySelector('#save-status');
           if (status) {
             status.classList.remove('opacity-0');
@@ -568,7 +568,7 @@ export function renderSettings() {
         const statusDiv = container.querySelector('#md-test-status') as HTMLDivElement;
         const tokenInput = container.querySelector('#md-token') as HTMLInputElement;
         const originalText = btn.innerHTML;
-        
+
         btn.disabled = true;
         btn.textContent = 'Testing...';
         statusDiv.classList.remove('hidden', 'bg-green-400/10', 'text-green-400', 'bg-red-400/10', 'text-red-400');
