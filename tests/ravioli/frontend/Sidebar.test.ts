@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderSidebar } from '../../../src/ravioli/frontend/src/components/Sidebar';
+import { renderSidebar, updateSidebarUI } from '../../../src/ravioli/frontend/src/components/Sidebar';
 import { store } from '../../../src/ravioli/frontend/src/store';
 
 // Mock the api
@@ -120,5 +120,34 @@ describe('Sidebar Component - Historical Analyses', () => {
     
     // Store should be updated
     expect(store.getActiveAnalysisId()).toBe('a1');
+  });
+  
+  it('mitigation: updates the existing sidebar element instead of replacing it', () => {
+    const sidebar = renderSidebar();
+    // Add a marker to the DOM element to verify it's the same one
+    (sidebar as any).__test_marker = 'stable';
+    
+    // Add a new analysis to the store
+    const mockAnalyses = [
+      {
+        id: 'a1',
+        title: 'New Analysis',
+        status: 'completed',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        owner_type: 'user',
+      }
+    ];
+    store.setAnalyses(mockAnalyses as any);
+    
+    // Call the update function (main.ts does this on store change)
+    updateSidebarUI(sidebar);
+    
+    // Verify it's the same DOM reference
+    expect((sidebar as any).__test_marker).toBe('stable');
+    
+    // Verify content updated
+    expect(sidebar.querySelector('[data-analysis-id="a1"]')).not.toBeNull();
+    expect(sidebar.textContent).toContain('New Analysis');
   });
 });
