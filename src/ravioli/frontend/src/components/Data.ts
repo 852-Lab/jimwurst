@@ -146,6 +146,7 @@ export function renderData() {
                       <span class="text-xs text-neutral-400 font-medium">${source.owner?.name || 'Admin'}</span>
                     </div>
                   </td>
+                  <td class="px-8 py-5 text-right flex justify-end gap-2">
                     <button class="btn-inspect p-2 rounded-lg hover:bg-primary/10 text-neutral-400 hover:text-primary transition-all" data-table="${source.schema_name}.${source.table_name}" data-filename="${source.original_filename}" title="Preview">
                       <span class="material-symbols-outlined">visibility</span>
                     </button>
