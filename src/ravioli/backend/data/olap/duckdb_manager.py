@@ -36,10 +36,11 @@ class DuckDBManager:
         Check for Motherduck token in system_settings and attach if found.
         Handles workspace mode where aliases might be restricted.
         """
-        # First check if we are already connected to avoid redundant ATTACH attempts
+        # Check if ravioli is already specifically attached
         try:
-            if self.is_motherduck_connected():
-                logger.info("Motherduck is already connected.")
+            res = self._connection.execute("PRAGMA show_databases").fetchall()
+            if any(row[0] == 'ravioli' for row in res):
+                logger.info("Motherduck 'ravioli' database is already connected.")
                 return
         except:
             pass

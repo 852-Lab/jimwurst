@@ -60,6 +60,9 @@ async def push_all_to_motherduck(db: Session = Depends(get_db)):
     if not duckdb_manager.is_motherduck_connected():
         raise HTTPException(status_code=400, detail="Motherduck not connected")
 
+    remote_db = duckdb_manager._get_remote_db_name()
+    logger.info(f"=== STARTING PUSH ALL TO MOTHERDUCK (Target DB: {remote_db}) ===")
+
     stmt = select(DataSource).where(DataSource.has_pii == False)
     sources = db.execute(stmt).scalars().all()
     
@@ -70,8 +73,10 @@ async def push_all_to_motherduck(db: Session = Depends(get_db)):
             duckdb_manager.sync_table(source.schema_name, source.table_name, direction="push")
             results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "success"})
         except Exception as e:
+            logger.error(f"Failed to push {source.table_name}: {e}")
             results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "failed", "error": str(e)})
             
+    logger.info(f"=== PUSH ALL COMPLETED ({len(results)} tables processed) ===")
     return {"status": "completed", "results": results}
 
 @router.post("/motherduck/pull")
