@@ -40,9 +40,17 @@ class DuckDBManager:
         try:
             res = self._connection.execute("PRAGMA show_databases").fetchall()
             logger.info(f"Currently attached databases: {res}")
-            if any(row[0] == 'ravioli' and str(row[1]).startswith('md:') for row in res):
-                logger.info("Motherduck 'ravioli' database is already connected.")
-                return
+            # Be safe with tuple length as it varies between DuckDB versions/modes
+            for row in res:
+                if row[0] == 'ravioli':
+                    # If we have path info, check for md: prefix
+                    if len(row) > 1 and str(row[1]).startswith('md:'):
+                        logger.info("Motherduck 'ravioli' database is already connected.")
+                        return
+                    elif len(row) == 1:
+                        # If only name is present, assume it's our Motherduck DB
+                        logger.info("Database 'ravioli' found, assuming Motherduck.")
+                        return
         except Exception as e:
             logger.error(f"Error checking attached databases: {e}")
             pass
@@ -165,8 +173,14 @@ class DuckDBManager:
         """Check if Motherduck database is attached."""
         try:
             res = self.connection.execute("PRAGMA show_databases").fetchall()
-            # Verify it's actually a Motherduck connection by checking for 'md:' prefix
-            return any(str(row[1]).startswith('md:') for row in res)
+            # Verify it's actually a Motherduck connection by checking for 'md:' prefix 
+            # or 'ravioli' name (our specific alias)
+            for row in res:
+                if row[0] == 'ravioli':
+                    return True
+                if len(row) > 1 and str(row[1]).startswith('md:'):
+                    return True
+            return False
         except Exception:
             return False
 
