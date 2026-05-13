@@ -75,107 +75,159 @@ function renderChart(canvasId: string, vizData: any) {
   });
 }
 
+let lastLogsJson = '';
+
 export function renderNotebook() {
+  const container = document.createElement('main');
+  container.id = 'notebook-view';
+  container.className = 'flex-1 relative overflow-hidden bg-background h-screen flex flex-col';
+  
+  updateNotebookUI(container, true);
+  return container;
+}
+
+export function updateNotebookUI(container: HTMLElement, isInitial = false) {
   const activeId = store.getActiveAnalysisId();
   const analyses = store.getAnalyses();
   const analysis = analyses.find(a => a.id === activeId);
   const logs = store.getLogs();
-
-  const container = document.createElement('main');
-  container.className = 'flex-1 ml-64 relative overflow-hidden bg-background h-screen flex flex-col';
+  const logsJson = JSON.stringify(logs);
 
   if (!analysis) {
+    if (isInitial || container.querySelector('#empty-state') === null) {
+      container.innerHTML = `
+        <div id="empty-state" class="h-full w-full relative">
+          <!-- TopAppBar -->
+          <header class="flex justify-end items-center px-12 w-full h-16 absolute top-0 right-0 z-40 bg-transparent">
+            <div class="flex items-center gap-8">
+              <button class="material-symbols-outlined text-neutral-400 hover:text-neutral-100 transition-all" data-icon="notifications">notifications</button>
+              <button class="material-symbols-outlined text-neutral-400 hover:text-neutral-100 transition-all" data-icon="account_circle">account_circle</button>
+            </div>
+          </header>
+
+          <!-- Cinematic Vignette Overlay -->
+          <div class="absolute inset-0 cinematic-vignette"></div>
+
+          <!-- Empty State Content -->
+          <div class="h-full w-full flex flex-col items-center justify-center relative z-10 px-margin">
+            <div class="w-px h-24 bg-gradient-to-b from-transparent via-tertiary/30 to-transparent mb-scale-16"></div>
+            <h1 class="font-display-lg text-display-lg text-on-surface mb-4 tracking-tight">Select an Analysis</h1>
+            <p class="font-label-sm text-label-sm tracking-[0.4em] text-tertiary-fixed-dim uppercase">The silent concierge is waiting.</p>
+            
+            <div class="mt-scale-16 flex items-center gap-4">
+              <div class="flex items-center gap-2 px-4 py-2 bg-surface-container-lowest/50 backdrop-blur-md rounded-full border border-outline-variant/10">
+                <span class="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>
+                <span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest">System Ready</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action Floating Group -->
+          <div class="absolute bottom-12 left-1/2 -translate-x-1/2 z-20 flex gap-12">
+            <button class="group flex flex-col items-center gap-2" id="btn-new-sequence">
+              <div class="p-4 rounded-full border border-outline-variant/20 group-hover:border-tertiary/50 transition-all duration-500 bg-surface-container-low">
+                <span class="material-symbols-outlined text-on-surface-variant group-hover:text-tertiary" data-icon="add">add</span>
+              </div>
+              <span class="font-label-sm text-label-sm text-neutral-500 group-hover:text-neutral-300 tracking-tighter transition-colors uppercase">New Sequence</span>
+            </button>
+          </div>
+        </div>
+      `;
+      
+      container.querySelector('#btn-new-sequence')?.addEventListener('click', () => {
+        store.setCurrentView('create-analysis');
+      });
+    }
+    return;
+  }
+
+  // Active Analysis Shell
+  if (isInitial || !container.querySelector('#notebook-shell')) {
     container.innerHTML = `
-      <!-- TopAppBar -->
-      <header class="flex justify-end items-center px-12 w-full h-16 absolute top-0 right-0 z-40 bg-transparent">
-        <div class="flex items-center gap-8">
-          <button class="material-symbols-outlined text-neutral-400 hover:text-neutral-100 transition-all" data-icon="notifications">notifications</button>
-          <button class="material-symbols-outlined text-neutral-400 hover:text-neutral-100 transition-all" data-icon="account_circle">account_circle</button>
-        </div>
-      </header>
-
-      <!-- Cinematic Vignette Overlay -->
-      <div class="absolute inset-0 cinematic-vignette"></div>
-
-      <!-- Empty State -->
-      <div class="h-full w-full flex flex-col items-center justify-center relative z-10 px-margin">
-        <div class="w-px h-24 bg-gradient-to-b from-transparent via-tertiary/30 to-transparent mb-scale-16"></div>
-        <h1 class="font-display-lg text-display-lg text-on-surface mb-4 tracking-tight">Select an Analysis</h1>
-        <p class="font-label-sm text-label-sm tracking-[0.4em] text-tertiary-fixed-dim uppercase">The silent concierge is waiting.</p>
-        
-        <div class="mt-scale-16 flex items-center gap-4">
-          <div class="flex items-center gap-2 px-4 py-2 bg-surface-container-lowest/50 backdrop-blur-md rounded-full border border-outline-variant/10">
-            <span class="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>
-            <span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest">System Ready</span>
+      <div id="notebook-shell" class="flex flex-col h-full w-full">
+        <header class="flex justify-between items-center px-12 py-8 bg-surface-container-low border-b border-outline-variant/10 z-10">
+          <div class="space-y-1" id="header-info">
+            <h2 class="text-2xl font-headline-lg text-white" id="analysis-title">${analysis.title}</h2>
+            <div class="flex items-center gap-4" id="analysis-status-container">
+               <!-- Status will be updated here -->
+            </div>
           </div>
+          <div class="flex items-center gap-4">
+            <button class="p-2 text-outline hover:text-white transition-colors">
+              <span class="material-symbols-outlined" data-icon="settings">settings</span>
+            </button>
+            <button class="p-2 text-outline hover:text-white transition-colors">
+              <span class="material-symbols-outlined" data-icon="share">share</span>
+            </button>
+          </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto px-12 pt-8 pb-32 space-y-12 custom-scrollbar" id="cell-container">
+          <!-- Logs will be updated here -->
         </div>
 
-        <div class="absolute bottom-16 right-16 opacity-10">
-          <div class="font-display-lg text-[120px] font-thin text-on-surface-variant select-none pointer-events-none italic">V</div>
+        <!-- Floating Interaction Cell -->
+        <div class="w-full px-12 pb-12 pt-6 bg-gradient-to-t from-background via-background/90 to-transparent relative z-20">
+          <div class="max-w-4xl mx-auto relative">
+            <div class="glass-panel p-2 rounded-[2rem] group focus-within:border-primary/30 transition-all duration-500 shadow-2xl shadow-primary/5">
+              <div class="flex items-center gap-4 px-4">
+                <button id="btn-magic" class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 hover:bg-primary/20 transition-colors relative group/magic" title="Magic Suggestions">
+                   <span class="material-symbols-outlined text-primary text-xl group-hover/magic:rotate-12 transition-transform" data-icon="auto_awesome">auto_awesome</span>
+                   <div id="magic-popover" class="absolute bottom-full left-0 mb-4 w-80 glass-panel p-4 rounded-2xl hidden animate-in fade-in slide-in-from-bottom-2 duration-300 z-50">
+                      <div class="flex items-center gap-2 mb-3 text-tertiary">
+                        <span class="material-symbols-outlined text-sm" data-icon="lightbulb">lightbulb</span>
+                        <span class="text-[10px] font-label-md uppercase tracking-[0.2em]">Neural Suggestions</span>
+                      </div>
+                      <div id="magic-suggestions-list" class="space-y-2"></div>
+                   </div>
+                </button>
+                <div class="flex-1 min-w-0 py-2">
+                  <textarea id="cell-input" class="w-full bg-transparent border-none text-on-surface focus:ring-0 resize-none py-2 text-lg font-body-lg max-h-48 custom-scrollbar" placeholder="Ask Kowalski a follow-up question..." rows="1"></textarea>
+                </div>
+                <div class="flex items-center pr-2">
+                  <button id="btn-execute" class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-110 transition-transform disabled:opacity-50 disabled:scale-100 group/btn shadow-lg shadow-primary/20">
+                    <span class="material-symbols-outlined text-xl group-hover/btn:translate-x-0.5 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
-      </div>
-
-      <!-- Action Floating Group -->
-      <div class="absolute bottom-12 left-1/2 -translate-x-1/2 z-20 flex gap-12">
-        <button class="group flex flex-col items-center gap-2" id="btn-new-sequence">
-          <div class="p-4 rounded-full border border-outline-variant/20 group-hover:border-tertiary/50 transition-all duration-500 bg-surface-container-low">
-            <span class="material-symbols-outlined text-on-surface-variant group-hover:text-tertiary" data-icon="add">add</span>
-          </div>
-          <span class="font-label-sm text-label-sm text-neutral-500 group-hover:text-neutral-300 tracking-tighter transition-colors uppercase">New Sequence</span>
-        </button>
-        <button class="group flex flex-col items-center gap-2">
-          <div class="p-4 rounded-full border border-outline-variant/20 group-hover:border-primary/50 transition-all duration-500 bg-surface-container-low">
-            <span class="material-symbols-outlined text-on-surface-variant group-hover:text-primary" data-icon="auto_awesome">auto_awesome</span>
-          </div>
-          <span class="font-label-sm text-label-sm text-neutral-500 group-hover:text-neutral-300 tracking-tighter transition-colors uppercase">AI Discovery</span>
-        </button>
       </div>
     `;
     
-    container.querySelector('#btn-new-sequence')?.addEventListener('click', () => {
-      store.setCurrentView('create-analysis');
-    });
-
-    return container;
+    bindInteractions(container);
   }
 
-  // Active Analysis Rendering
-  container.innerHTML = `
-    <header class="flex justify-between items-center px-12 py-8 bg-surface-container-low border-b border-outline-variant/10 z-10">
-      <div class="space-y-1">
-        <h2 class="text-2xl font-headline-lg text-white">${analysis.title}</h2>
-        <div class="flex items-center gap-4">
-          <span class="flex items-center gap-2 text-xs font-label-md text-tertiary uppercase tracking-widest">
-            <span class="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>
-            ${analysis.status}
-          </span>
-          <span class="text-[10px] text-outline uppercase tracking-widest font-label-sm opacity-50"># ${logs.length} Steps</span>
-        </div>
-      </div>
-      <div class="flex items-center gap-4">
-        <button class="p-2 text-outline hover:text-white transition-colors">
-          <span class="material-symbols-outlined" data-icon="settings">settings</span>
-        </button>
-        <button class="p-2 text-outline hover:text-white transition-colors">
-          <span class="material-symbols-outlined" data-icon="share">share</span>
-        </button>
-      </div>
-    </header>
+  // Update Status
+  const statusContainer = container.querySelector('#analysis-status-container');
+  if (statusContainer) {
+    statusContainer.innerHTML = `
+      <span class="flex items-center gap-2 text-xs font-label-md text-tertiary uppercase tracking-widest">
+        <span class="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>
+        ${analysis.status}
+      </span>
+      <span class="text-[10px] text-outline uppercase tracking-widest font-label-sm opacity-50"># ${logs.length} Steps</span>
+    `;
+  }
 
-    <div class="flex-1 overflow-y-auto px-12 pt-8 pb-32 space-y-12 custom-scrollbar" id="cell-container">
-      ${analysis.result ? `
-        <div class="glass-panel p-12 rounded-[2rem] space-y-8 border-primary/20 bg-primary/[0.02] animate-in fade-in slide-in-from-bottom-8 duration-1000 relative overflow-hidden group">
-          <!-- Subtle glow background -->
-          <div class="absolute -top-24 -right-24 w-48 h-48 bg-primary/10 rounded-full blur-[80px] group-hover:bg-primary/20 transition-colors duration-1000"></div>
-          
+  // Update Logs only if they changed and we are NOT streaming
+  const cellContainer = container.querySelector('#cell-container') as HTMLElement;
+  const isStreaming = cellContainer?.querySelector('#streaming-content') !== null;
+  
+  if (cellContainer && logsJson !== lastLogsJson && !isStreaming) {
+    lastLogsJson = logsJson;
+    
+    let html = '';
+    if (analysis.result) {
+      html += `
+        <div class="glass-panel p-12 rounded-[2rem] space-y-8 border-primary/20 bg-primary/[0.02] relative overflow-hidden group">
           <div class="flex items-center gap-4 text-primary relative z-10">
             <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
               <span class="material-symbols-outlined text-2xl" data-icon="auto_awesome">auto_awesome</span>
             </div>
             <h3 class="text-xl font-headline-sm uppercase tracking-[0.2em]">Executive Insights</h3>
           </div>
-          
           <div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg relative z-10">
             ${renderMarkdown(analysis.result)}
           </div>
@@ -196,96 +248,51 @@ export function renderNotebook() {
               </div>
             </div>
           ` : ''}
-
-          <div class="flex items-center justify-between pt-6 border-t border-outline-variant/10 relative z-10">
-            <div class="flex items-center gap-2 opacity-40 hover:opacity-100 transition-opacity">
-              <span class="material-symbols-outlined text-sm" data-icon="verified">verified</span>
-              <span class="text-[10px] uppercase tracking-widest font-label-sm">Validated by Local LLM Node</span>
-            </div>
-            <span class="text-[10px] text-outline uppercase tracking-widest opacity-40">System: Studio Noir</span>
-          </div>
         </div>
-      ` : ''}
+      `;
+    }
 
-      ${logs.map(log => `
-        <div class="group animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div class="flex items-center gap-4 mb-4">
-             <div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 overflow-hidden border border-outline-variant/20">
-                ${log.log_type === 'user_query' 
-                  ? `<span class="material-symbols-outlined text-outline text-sm" data-icon="person">person</span>` 
-                  : `<img src="/src/assets/kowalski.png" class="w-full h-full object-cover" alt="Kowalski">`}
-             </div>
-             <span class="text-[10px] uppercase tracking-[0.2em] text-outline font-label-sm">
-                ${log.log_type === 'user_query' ? 'Operator' : 'Kowalski'}
-             </span>
-          </div>
-          <div class="pl-12">
-            <div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg">
-              ${renderMarkdown(log.content)}
-            </div>
-            ${log.data && log.data.type === 'chart' ? `
-              <div class="mt-6 glass-panel p-6 rounded-2xl border-primary/20 h-80 relative">
-                <canvas id="chart-${log.id}"></canvas>
-              </div>
-            ` : ''}
-          </div>
+    html += logs.map(log => `
+      <div class="group mt-12">
+        <div class="flex items-center gap-4 mb-4">
+           <div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 overflow-hidden border border-outline-variant/20">
+              ${log.log_type === 'user_query' 
+                ? `<span class="material-symbols-outlined text-outline text-sm" data-icon="person">person</span>` 
+                : `<img src="/src/assets/kowalski.png" class="w-full h-full object-cover" alt="Kowalski">`}
+           </div>
+           <span class="text-[10px] uppercase tracking-[0.2em] text-outline font-label-sm">
+              ${log.log_type === 'user_query' ? 'Operator' : 'Kowalski'}
+           </span>
         </div>
-      `).join('')}
-    </div>
-
-    <!-- Floating Interaction Cell (Perplexity Style) -->
-    <div class="w-full px-12 pb-12 pt-6 bg-gradient-to-t from-background via-background/90 to-transparent relative z-20">
-      <div class="max-w-4xl mx-auto relative">
-        <div class="glass-panel p-2 rounded-[2rem] group focus-within:border-primary/30 transition-all duration-500 shadow-2xl shadow-primary/5">
-          <div class="flex items-center gap-4 px-4">
-            <button id="btn-magic" class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 hover:bg-primary/20 transition-colors relative group/magic" title="Magic Suggestions">
-               <span class="material-symbols-outlined text-primary text-xl group-hover/magic:rotate-12 transition-transform" data-icon="auto_awesome">auto_awesome</span>
-               
-               <!-- Suggestions Popover -->
-               <div id="magic-popover" class="absolute bottom-full left-0 mb-4 w-80 glass-panel p-4 rounded-2xl hidden animate-in fade-in slide-in-from-bottom-2 duration-300 z-50">
-                  <div class="flex items-center gap-2 mb-3 text-tertiary">
-                    <span class="material-symbols-outlined text-sm" data-icon="lightbulb">lightbulb</span>
-                    <span class="text-[10px] font-label-md uppercase tracking-[0.2em]">Neural Suggestions</span>
-                  </div>
-                  <div id="magic-suggestions-list" class="space-y-2">
-                    <!-- Dynamic suggestions here -->
-                  </div>
-               </div>
-            </button>
-            <div class="flex-1 min-w-0 py-2">
-              <textarea id="cell-input" class="w-full bg-transparent border-none text-on-surface focus:ring-0 resize-none py-2 text-lg font-body-lg max-h-48 custom-scrollbar" placeholder="Ask Kowalski a follow-up question..." rows="1"></textarea>
-            </div>
-            <div class="flex items-center pr-2">
-              <button id="btn-execute" class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-110 transition-transform disabled:opacity-50 disabled:scale-100 group/btn shadow-lg shadow-primary/20">
-                <span class="material-symbols-outlined text-xl group-hover/btn:translate-x-0.5 transition-transform" data-icon="arrow_forward">arrow_forward</span>
-              </button>
-            </div>
+        <div class="pl-12">
+          <div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg">
+            ${renderMarkdown(log.content)}
           </div>
-        </div>
-        
-        <!-- Subtle Status Hint -->
-        <div class="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none">
-          <span class="text-[10px] uppercase tracking-[0.3em] text-primary/50 font-label-sm">Kowalski Neural Link Active</span>
+          ${log.data && log.data.type === 'chart' ? `
+            <div class="mt-6 glass-panel p-6 rounded-2xl border-primary/20 h-80 relative">
+              <canvas id="chart-${log.id}"></canvas>
+            </div>
+          ` : ''}
         </div>
       </div>
-    </div>
-  `;
+    `).join('');
 
-  // Auto-scroll to bottom for latest convo
-  setTimeout(() => {
-    const scrollContainer = container.querySelector('#cell-container');
-    if (scrollContainer) {
-      scrollContainer.scrollTop = scrollContainer.scrollHeight;
-    }
+    cellContainer.innerHTML = html;
     
-    // Initialize any existing charts
-    logs.forEach(log => {
-      if (log.data && log.data.type === 'chart') {
-        renderChart(`chart-${log.id}`, log.data);
-      }
-    });
-  }, 100);
+    // Initialize charts
+    setTimeout(() => {
+      logs.forEach(log => {
+        if (log.data && log.data.type === 'chart') {
+          renderChart(`chart-${log.id}`, log.data);
+        }
+      });
+      cellContainer.scrollTop = cellContainer.scrollHeight;
+    }, 100);
+  }
+}
 
+function bindInteractions(container: HTMLElement) {
+  const activeId = store.getActiveAnalysisId();
   const input = container.querySelector('#cell-input') as HTMLTextAreaElement;
   const btn = container.querySelector('#btn-execute');
   const btnMagic = container.querySelector('#btn-magic');
@@ -298,25 +305,14 @@ export function renderNotebook() {
     if (!activeId) return;
 
     if (magicPopover?.classList.contains('hidden')) {
-      // Show and Load
       magicPopover.classList.remove('hidden');
       if (suggestionsList) {
-        suggestionsList.innerHTML = `
-          <div class="py-4 flex flex-col items-center gap-2 opacity-50">
-            <span class="material-symbols-outlined animate-spin text-lg" data-icon="progress_activity">progress_activity</span>
-            <span class="text-[9px] uppercase tracking-widest font-label-sm">Analyzing context...</span>
-          </div>
-        `;
-
+        suggestionsList.innerHTML = `<div class="py-4 flex flex-col items-center gap-2 opacity-50"><span class="material-symbols-outlined animate-spin text-lg" data-icon="progress_activity">progress_activity</span></div>`;
         try {
           const prompts = await api.getSuggestedPrompts(activeId);
           suggestionsList.innerHTML = prompts.map(p => `
-            <button class="magic-suggestion-item w-full text-left px-3 py-2 text-xs font-body-sm text-on-surface-variant hover:bg-primary/10 hover:text-primary rounded-lg border border-transparent hover:border-primary/20 transition-all duration-200" data-prompt="${p.replace(/"/g, '&quot;')}">
-              ${p}
-            </button>
+            <button class="magic-suggestion-item w-full text-left px-3 py-2 text-xs font-body-sm text-on-surface-variant hover:bg-primary/10 hover:text-primary rounded-lg" data-prompt="${p.replace(/"/g, '&quot;')}">${p}</button>
           `).join('');
-
-          // Bind items
           suggestionsList.querySelectorAll('.magic-suggestion-item').forEach(item => {
             item.addEventListener('click', () => {
               const prompt = item.getAttribute('data-prompt');
@@ -328,29 +324,19 @@ export function renderNotebook() {
               }
             });
           });
-        } catch (err) {
-          suggestionsList.innerHTML = `<div class="text-[10px] text-error p-2">Neural Link Interrupted</div>`;
-        }
+        } catch (err) { suggestionsList.innerHTML = `<div class="text-[10px] text-error p-2">Error</div>`; }
       }
-    } else {
-      magicPopover?.classList.add('hidden');
-    }
+    } else { magicPopover?.classList.add('hidden'); }
   });
 
-  // Close popover on outside click
-  document.addEventListener('click', () => {
-    magicPopover?.classList.add('hidden');
-  });
-  
+  document.addEventListener('click', () => magicPopover?.classList.add('hidden'));
   magicPopover?.addEventListener('click', (e) => e.stopPropagation());
 
-  // Auto-resize textarea
   input?.addEventListener('input', () => {
     input.style.height = 'auto';
     input.style.height = input.scrollHeight + 'px';
   });
 
-  // Enter to send (Shift+Enter for newline)
   input?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -365,33 +351,27 @@ export function renderNotebook() {
     input.value = '';
     input.style.height = 'auto';
     btn.setAttribute('disabled', 'true');
-    btn.classList.add('opacity-50');
 
-    // Create a temporary streaming bubble
     const cellContainer = container.querySelector('#cell-container');
     if (!cellContainer) return;
 
-    // 1. Add user query bubble immediately
+    // Add user query bubble
     const userBubble = document.createElement('div');
-    userBubble.className = 'group animate-in fade-in slide-in-from-bottom-4 duration-500';
+    userBubble.className = 'group mt-12';
     userBubble.innerHTML = `
       <div class="flex items-center gap-4 mb-4">
-         <div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 overflow-hidden border border-outline-variant/20">
+         <div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 border border-outline-variant/20">
             <span class="material-symbols-outlined text-outline text-sm" data-icon="person">person</span>
          </div>
          <span class="text-[10px] uppercase tracking-[0.2em] text-outline font-label-sm">Operator</span>
       </div>
-      <div class="pl-12">
-        <div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg">
-          ${renderMarkdown(question)}
-        </div>
-      </div>
+      <div class="pl-12"><div class="prose prose-invert text-on-surface-variant">${renderMarkdown(question)}</div></div>
     `;
     cellContainer.appendChild(userBubble);
 
-    // 2. Add Kowalski streaming bubble
+    // Add Kowalski streaming bubble
     const agentBubble = document.createElement('div');
-    agentBubble.className = 'group animate-in fade-in slide-in-from-bottom-4 duration-500 mt-12';
+    agentBubble.className = 'group mt-12';
     agentBubble.innerHTML = `
       <div class="flex items-center gap-4 mb-4">
          <div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 overflow-hidden border border-outline-variant/20">
@@ -399,11 +379,7 @@ export function renderNotebook() {
          </div>
          <span class="text-[10px] uppercase tracking-[0.2em] text-outline font-label-sm">Kowalski</span>
       </div>
-      <div class="pl-12">
-        <div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg" id="streaming-content">
-          <span class="inline-block w-1 h-4 bg-primary animate-pulse"></span>
-        </div>
-      </div>
+      <div class="pl-12"><div class="prose prose-invert text-on-surface-variant" id="streaming-content"><span class="inline-block w-1 h-4 bg-primary animate-pulse"></span></div></div>
     `;
     cellContainer.appendChild(agentBubble);
     cellContainer.scrollTop = cellContainer.scrollHeight;
@@ -420,45 +396,15 @@ export function renderNotebook() {
         }
       },
       async () => {
-        // Complete
-        if (streamingContent) {
-          streamingContent.innerHTML = renderMarkdown(fullText);
-        }
-        
-        // Handle visualization if present in the stream
-        const vizMatch = fullText.match(/\[VIZ\]({.*})/);
-        if (vizMatch) {
-          try {
-            const vizData = JSON.parse(vizMatch[1]);
-            // Remove the [VIZ] tag from display
-            fullText = fullText.replace(/\[VIZ\].*$/, '');
-            if (streamingContent) {
-              streamingContent.innerHTML = renderMarkdown(fullText);
-            }
-            
-            // Append chart container
-            const chartId = `chart-live-${Date.now()}`;
-            const chartDiv = document.createElement('div');
-            chartDiv.className = 'mt-6 glass-panel p-6 rounded-2xl border-primary/20 h-80 relative animate-in zoom-in-95 duration-500';
-            chartDiv.innerHTML = `<canvas id="${chartId}"></canvas>`;
-            streamingContent.parentElement?.appendChild(chartDiv);
-            
-            setTimeout(() => renderChart(chartId, vizData), 100);
-          } catch (e) {
-            console.error("Failed to parse viz payload", e);
-          }
-        }
-
+        if (streamingContent) streamingContent.innerHTML = renderMarkdown(fullText);
         btn.removeAttribute('disabled');
-        btn.classList.remove('opacity-50');
-        // Refresh to get official logs and IDs
         const newLogs = await api.listLogs(activeId);
+        lastLogsJson = JSON.stringify(newLogs); // Mark as updated to avoid immediate re-render from poll
         store.setLogs(newLogs);
       },
       (err) => {
         console.error('Streaming error', err);
         btn.removeAttribute('disabled');
-        btn.classList.remove('opacity-50');
       }
     );
   });
@@ -476,6 +422,5 @@ export function renderNotebook() {
       }
     });
   });
-
-  return container;
 }
+
