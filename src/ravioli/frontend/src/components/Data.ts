@@ -287,6 +287,34 @@ export function renderData() {
         </div>
       </div>
     </div>
+
+    <!-- Sync Modal -->
+    <div id="sync-modal" class="fixed inset-0 z-[120] flex items-center justify-center p-8 bg-black/80 backdrop-blur-md hidden opacity-0 transition-opacity duration-300">
+      <div class="bg-surface-container rounded-[2rem] w-full max-w-lg flex flex-col shadow-2xl border border-outline/10 translate-y-4 transition-transform duration-300 overflow-hidden">
+        <header class="px-8 py-6 border-b border-outline/10 flex items-center justify-between">
+          <div>
+            <h2 id="sync-modal-title" class="text-xl font-medium text-neutral-100">Sync with Motherduck</h2>
+            <p id="sync-modal-subtitle" class="text-xs text-neutral-500 uppercase tracking-widest mt-1">Data Comparison</p>
+          </div>
+          <button id="close-sync-modal" class="p-2 rounded-full hover:bg-white/5 text-neutral-400 hover:text-white transition-colors">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </header>
+        <div id="sync-modal-content" class="p-8">
+           <div class="flex items-center justify-center h-32">
+             <span class="material-symbols-outlined animate-spin text-primary">sync</span>
+           </div>
+        </div>
+        <footer id="sync-modal-footer" class="px-8 py-6 border-t border-outline/10 bg-surface-container-high/50 flex justify-end gap-3 hidden">
+           <button id="btn-pull" class="px-4 py-2 rounded-xl border border-outline/20 text-neutral-300 hover:bg-white/5 transition-colors flex items-center gap-2">
+             <span class="material-symbols-outlined text-sm">download</span> Pull from Cloud
+           </button>
+           <button id="btn-push" class="px-4 py-2 rounded-xl bg-primary text-on-primary font-medium hover:bg-primary/90 transition-all flex items-center gap-2">
+             <span class="material-symbols-outlined text-sm">upload</span> Push to Cloud
+           </button>
+        </footer>
+      </div>
+    </div>
   `;
   
   let isIngesting = false;
