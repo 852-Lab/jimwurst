@@ -334,7 +334,13 @@ export function renderSettings() {
             
             ${!isConfiguringMotherduck ? `
               <p class="text-sm text-on-surface-variant mb-4">Serverless cloud analytics using DuckDB. Connect your local instance to Motherduck cloud.</p>
-              <button id="btn-configure-motherduck" class="text-sm font-bold text-primary-fixed-dim hover:text-primary-fixed transition-colors">Configure</button>
+              <div class="flex items-center gap-4">
+                <button id="btn-configure-motherduck" class="text-sm font-bold text-primary-fixed-dim hover:text-primary-fixed transition-colors">Configure</button>
+                <a href="https://davnnis2003.github.io/databiz/" target="_blank" class="text-xs text-on-surface-variant hover:text-neutral-100 transition-colors flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm">help_outline</span>
+                  How to get a token?
+                </a>
+              </div>
             ` : `
               <div class="space-y-4 pt-2">
                 <div>
@@ -348,6 +354,12 @@ export function renderSettings() {
                     </div>
                   ` : ''}
                   <input id="md-token" type="password" class="w-full bg-surface-container-highest border border-outline-variant/50 rounded-lg px-4 py-3 text-sm text-neutral-100 focus:outline-none focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim transition-colors" placeholder="${motherduckTokenIsSet ? 'Enter new token' : 'e.g. eyJhbG...'}" />
+                  <div class="mt-2">
+                    <a href="https://davnnis2003.github.io/databiz/" target="_blank" class="text-[10px] text-on-surface-variant hover:text-neutral-100 transition-colors flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[12px]">info</span>
+                      Guide: Create an Access Token (Read & Write)
+                    </a>
+                  </div>
                 </div>
                 
                 <div class="flex items-center gap-4">
