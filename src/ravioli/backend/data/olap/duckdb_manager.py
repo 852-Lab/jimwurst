@@ -53,7 +53,6 @@ class DuckDBManager:
                         logger.info(f"Database '{row[0]}' found in session, verifying cloud status...")
         except Exception as e:
             logger.error(f"Error checking attached databases: {e}")
-            pass
 
         db = SessionLocal()
         try:
@@ -73,14 +72,14 @@ class DuckDBManager:
                     if "can only be set during initialization" not in str(init_err):
                         try:
                             self._connection.execute(f"SET motherduck_token='{token}';")
-                        except:
+                        except Exception:
                             pass
                 
                 # IMPORTANT: The following management logic must run every time
                 # Force multi-database mode so we can see 'ravioli' as a separate DB
                 try:
                     self._connection.execute("SET motherduck_attach_mode='multi';")
-                except:
+                except Exception:
                     pass
                 
                 # 1. Ensure the 'ravioli' database exists in the cloud
@@ -117,10 +116,8 @@ class DuckDBManager:
                         # Final fallback
                         try:
                             self._connection.execute("ATTACH 'md:'")
-                        except:
+                        except Exception:
                             pass
-                except Exception as e:
-                    logger.error(f"Failed to attach Motherduck: {e}")
         except Exception as e:
             logger.error(f"Error fetching Motherduck settings: {e}")
         finally:

@@ -101,8 +101,9 @@ async def pull_all_from_motherduck(db: Session = Depends(get_db)):
             if "total_local" in res:
                 source.row_count = res["total_local"]
             results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "success"})
-        except Exception as e:
-            results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "failed", "error": str(e)})
+        except Exception:
+            logger.exception(f"Failed to pull {source.schema_name}.{source.table_name} from Motherduck")
+            results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "failed", "error": "Internal error while syncing table"})
             
     db.commit()
     return {"status": "completed", "results": results}
