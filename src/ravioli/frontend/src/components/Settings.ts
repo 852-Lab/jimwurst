@@ -3,7 +3,7 @@ import { store } from '../store';
 
 export function renderSettings() {
   const container = document.createElement('div');
-  container.className = 'flex-1 bg-surface-container-lowest flex flex-col min-h-screen overflow-y-auto text-on-surface';
+  container.className = 'flex-1 ml-64 bg-surface-container-lowest flex flex-col h-full overflow-y-auto text-on-surface custom-scrollbar';
 
   let currentSubPage = 'general'; // 'general' or 'integrations'
 
