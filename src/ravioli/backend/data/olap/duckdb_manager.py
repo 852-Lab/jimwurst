@@ -55,26 +55,34 @@ class DuckDBManager:
                     self._connection.execute(f"INSTALL motherduck; LOAD motherduck;")
                     self._connection.execute(f"SET motherduck_token='{token}';")
                     
-                    # Try to attach with alias first (legacy/standalone mode)
+                    # Try to create/attach a dedicated 'ravioli' database so it's visible in the UI
                     try:
-                        self._connection.execute("ATTACH 'md:' AS motherduck")
-                        logger.info("Successfully attached to Motherduck as 'motherduck'")
-                    except Exception as alias_err:
-                        err_str = str(alias_err)
-                        if "Database aliases are not yet supported" in err_str:
-                            logger.info("Workspace mode detected, attaching 'md:' without alias...")
-                            try:
-                                self._connection.execute("ATTACH 'md:'")
-                                logger.info("Successfully attached to Motherduck (no alias)")
-                            except Exception as attach_err:
-                                if "already attached" in str(attach_err).lower():
-                                    logger.info("Motherduck already attached (workspace mode).")
-                                else:
-                                    raise attach_err
-                        elif "already attached" in err_str.lower():
-                            logger.info("Motherduck already attached.")
-                        else:
-                            raise alias_err
+                        # MotherDuck allows creating databases via SQL
+                        self._connection.execute("CREATE DATABASE IF NOT EXISTS ravioli")
+                        self._connection.execute("ATTACH 'md:ravioli' AS ravioli")
+                        logger.info("Successfully attached to dedicated 'ravioli' database in Motherduck")
+                    except Exception as ded_err:
+                        logger.info(f"Could not use dedicated 'ravioli' db, falling back to default: {ded_err}")
+                        # Fallback to default attach
+                        try:
+                            self._connection.execute("ATTACH 'md:' AS motherduck")
+                            logger.info("Successfully attached to Motherduck as 'motherduck'")
+                        except Exception as alias_err:
+                            err_str = str(alias_err)
+                            if "Database aliases are not yet supported" in err_str:
+                                logger.info("Workspace mode detected, attaching 'md:' without alias...")
+                                try:
+                                    self._connection.execute("ATTACH 'md:'")
+                                    logger.info("Successfully attached to Motherduck (no alias)")
+                                except Exception as attach_err:
+                                    if "already attached" in str(attach_err).lower():
+                                        logger.info("Motherduck already attached (workspace mode).")
+                                    else:
+                                        raise attach_err
+                            elif "already attached" in err_str.lower():
+                                logger.info("Motherduck already attached.")
+                            else:
+                                raise alias_err
                 except Exception as e:
                     logger.error(f"Failed to attach Motherduck: {e}")
         except Exception as e:
@@ -86,17 +94,19 @@ class DuckDBManager:
         """Find the name of the attached Motherduck database."""
         try:
             res = self.connection.execute("PRAGMA show_databases").fetchall()
-            # Remote DB is usually the one starting with md: in path or just the one that isn't main/temp/system
-            # But more reliably, Motherduck DBs have 'md:' in their source path (if we could see it)
-            # For now, let's look for 'motherduck' alias or any db that isn't local
-            remote_name = 'motherduck'
+            # 1. Look for 'ravioli' (our preferred dedicated db)
+            for row in res:
+                if row[0] == 'ravioli':
+                    return 'ravioli'
+            
+            # 2. Look for 'motherduck' alias
             for row in res:
                 if row[0] == 'motherduck':
-                    remote_name = 'motherduck'
-                    break
+                    return 'motherduck'
             
-            # If no alias, look for the first non-standard database
+            # 3. If no preferred names, look for the first non-standard database
             # Standard: 'main', 'temp', 'system'
+            remote_name = 'motherduck'
             for row in res:
                 if row[0] not in ('main', 'temp', 'system', 'memory'):
                     remote_name = row[0]
