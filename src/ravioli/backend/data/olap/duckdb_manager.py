@@ -36,13 +36,15 @@ class DuckDBManager:
         Check for Motherduck token in system_settings and attach if found.
         Handles workspace mode where aliases might be restricted.
         """
-        # Check if ravioli is already specifically attached
+        # Check if ravioli is already specifically attached as a Motherduck DB
         try:
             res = self._connection.execute("PRAGMA show_databases").fetchall()
-            if any(row[0] == 'ravioli' for row in res):
+            logger.info(f"Currently attached databases: {res}")
+            if any(row[0] == 'ravioli' and str(row[1]).startswith('md:') for row in res):
                 logger.info("Motherduck 'ravioli' database is already connected.")
                 return
-        except:
+        except Exception as e:
+            logger.error(f"Error checking attached databases: {e}")
             pass
 
         db = SessionLocal()
@@ -51,13 +53,14 @@ class DuckDBManager:
             if setting and "token" in setting.value and setting.value["token"]:
                 from ravioli.backend.core.encryption import decrypt_value
                 token = decrypt_value(setting.value["token"])
-                logger.info("Motherduck token found, attaching to Motherduck...")
+                logger.info("Motherduck token found, preparing to attach...")
                 try:
                     self._connection.execute(f"INSTALL motherduck; LOAD motherduck;")
                     self._connection.execute(f"SET motherduck_token='{token}';")
                     
                     # Try to create/attach a dedicated 'ravioli' database so it's visible in the UI
                     try:
+                        logger.info("Attempting to ATTACH 'md:ravioli'...")
                         # MotherDuck allows creating databases via SQL
                         self._connection.execute("CREATE DATABASE IF NOT EXISTS ravioli")
                         self._connection.execute("ATTACH 'md:ravioli' AS ravioli")
@@ -162,8 +165,8 @@ class DuckDBManager:
         """Check if Motherduck database is attached."""
         try:
             res = self.connection.execute("PRAGMA show_databases").fetchall()
-            # In Motherduck workspace mode, we might not have 'motherduck' alias
-            return any(row[0] not in ('main', 'temp', 'system', 'memory') for row in res)
+            # Verify it's actually a Motherduck connection by checking for 'md:' prefix
+            return any(str(row[1]).startswith('md:') for row in res)
         except Exception:
             return False
 
