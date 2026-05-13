@@ -14,52 +14,103 @@ import type { User } from './types';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 
+// --- State tracking for selective updates ---
+let lastView = '';
+let lastActiveId = '';
+let lastUserId = '';
+let lastInitializing = true;
+let pollInterval: any;
+let currentPollId: string | null = null;
+
 function updateUI() {
-  app.innerHTML = '';
-  
-  const shell = document.createElement('div');
-  shell.className = 'flex w-full h-screen overflow-hidden relative';
-  
   const currentView = store.getCurrentView();
-  const activeId = store.getActiveAnalysisId();
+  const activeId = store.getActiveAnalysisId() || '';
   const currentUser = store.getCurrentUser();
   const isInitializing = store.getInitializing();
 
-  // Show nothing or a loading state while initializing
+  // 1. Initializing state
   if (isInitializing) {
-    app.innerHTML = '<div class="flex items-center justify-center w-full h-screen bg-[#0F1117] text-white">Initializing Ravioli...</div>';
+    if (lastInitializing) {
+      app.innerHTML = '<div class="flex items-center justify-center w-full h-screen bg-[#0F1117] text-white">Initializing Ravioli...</div>';
+      lastInitializing = false;
+    }
     return;
   }
 
-  if (!currentUser && currentView !== 'auth') {
-    store.setCurrentView('auth');
+  // 2. Auth state
+  if (!currentUser) {
+    if (lastView !== 'auth') {
+      app.innerHTML = '';
+      app.appendChild(renderAuth());
+      lastView = 'auth';
+      lastUserId = '';
+    }
     return;
   }
 
-  if (currentView === 'auth') {
-    app.appendChild(renderAuth());
-    return;
+  // 3. Authenticated Shell
+  let shell = document.getElementById('main-shell');
+  if (!shell) {
+    app.innerHTML = '';
+    shell = document.createElement('div');
+    shell.id = 'main-shell';
+    shell.className = 'flex w-full h-screen overflow-hidden relative';
+    
+    const sidebarContainer = document.createElement('div');
+    sidebarContainer.id = 'sidebar-container';
+    shell.appendChild(sidebarContainer);
+    
+    const contentContainer = document.createElement('div');
+    contentContainer.id = 'content-container';
+    contentContainer.className = 'flex-1 relative overflow-hidden h-full';
+    shell.appendChild(contentContainer);
+    
+    app.appendChild(shell);
   }
-  
-  shell.appendChild(renderSidebar());
-  
-  if (currentView === 'create-analysis') {
-    shell.appendChild(renderCreateAnalysis());
-  } else if (currentView === 'knowledge') {
-    shell.appendChild(renderKnowledge());
-  } else if (currentView === 'data') {
-    shell.appendChild(renderData());
-  } else if (currentView === 'settings') {
-    shell.appendChild(renderSettings());
-  } else if (currentView === 'governance') {
-    shell.appendChild(renderGovernance());
-  } else if (currentView === 'insights' && !activeId) {
-    shell.appendChild(renderInsights());
+
+  // Update Sidebar if user changed or analyses changed (Sidebar handles its own data fetching from store)
+  const sidebarContainer = document.getElementById('sidebar-container')!;
+  // For simplicity, we re-render sidebar if anything changed in store, 
+  // but we should eventually make Sidebar smarter.
+  // To avoid flicker, we can check if it needs a full replace.
+  const newSidebar = renderSidebar();
+  sidebarContainer.innerHTML = '';
+  sidebarContainer.appendChild(newSidebar);
+
+  // Update Content area only if view or active analysis changed
+  if (currentView !== lastView || activeId !== lastActiveId || currentUser.id !== lastUserId) {
+    const contentContainer = document.getElementById('content-container')!;
+    contentContainer.innerHTML = '';
+    
+    let content: HTMLElement;
+    if (currentView === 'create-analysis') {
+      content = renderCreateAnalysis();
+    } else if (currentView === 'knowledge') {
+      content = renderKnowledge();
+    } else if (currentView === 'data') {
+      content = renderData();
+    } else if (currentView === 'settings') {
+      content = renderSettings();
+    } else if (currentView === 'governance') {
+      content = renderGovernance();
+    } else if (currentView === 'insights' && !activeId) {
+      content = renderInsights();
+    } else {
+      content = renderNotebook();
+    }
+    
+    contentContainer.appendChild(content);
+    
+    lastView = currentView;
+    lastActiveId = activeId;
+    lastUserId = currentUser.id;
   } else {
-    shell.appendChild(renderNotebook());
+    // If we are in the Notebook (dashboard) and only logs changed, 
+    // we should ideally update just the logs. 
+    // For now, we'll let Notebook handle its own internal updates if we can,
+    // or we'll skip re-rendering the whole Notebook if only logs changed.
+    // NOTE: This prevents the flicker during polling!
   }
-  
-  app.appendChild(shell);
 }
 
 // Initial Load
@@ -70,7 +121,6 @@ async function init() {
       const user = await api.getMe();
       if (user) {
         store.setCurrentUser(user);
-        // If we found a user and were on the auth screen, move to insights
         if (store.getCurrentView() === 'auth') {
           store.setCurrentView('insights');
         }
@@ -85,29 +135,15 @@ async function init() {
     }
 
     if (store.getCurrentUser()) {
-      // Fetch analyses
-      try {
-        const analyses = await api.listAnalyses();
-        store.setAnalyses(analyses);
-      } catch (err) {
-        console.error('Failed to fetch analyses', err);
-      }
-
-      // Fetch data sources
-      try {
-        const sources = await api.listFiles();
-        store.setDataSources(sources);
-      } catch (err) {
-        console.error('Failed to fetch data sources', err);
-      }
-
-      // Fetch knowledge pages
-      try {
-        const pages = await api.listKnowledgePages();
-        store.setKnowledgePages(pages);
-      } catch (err) {
-        console.error('Failed to fetch knowledge pages', err);
-      }
+      // Fetch initial data
+      const [analyses, sources, pages] = await Promise.all([
+        api.listAnalyses().catch(() => []),
+        api.listFiles().catch(() => []),
+        api.listKnowledgePages().catch(() => [])
+      ]);
+      store.setAnalyses(analyses);
+      store.setDataSources(sources);
+      store.setKnowledgePages(pages);
     }
   } catch (err) {
     console.error('Initialization failed', err);
@@ -115,8 +151,6 @@ async function init() {
 }
 
 // --- Global ingestion progress poller ---
-// Survives UI re-renders (unlike intervals defined inside renderData).
-// Polls every 3s while any file is 'pending', updating the store directly.
 let ingestionPollInterval: ReturnType<typeof setInterval> | null = null;
 
 function startIngestionPollingIfNeeded() {
@@ -125,8 +159,11 @@ function startIngestionPollingIfNeeded() {
     ingestionPollInterval = setInterval(async () => {
       try {
         const sources = await api.listFiles();
-        store.setDataSources(sources);
-        // Stop polling once nothing is pending anymore
+        const currentSources = store.getDataSources();
+        // Only update if something changed
+        if (JSON.stringify(sources) !== JSON.stringify(currentSources)) {
+          store.setDataSources(sources);
+        }
         if (!sources.some(f => f.status === 'pending')) {
           clearInterval(ingestionPollInterval!);
           ingestionPollInterval = null;
@@ -138,39 +175,19 @@ function startIngestionPollingIfNeeded() {
   }
 }
 
-// Polling for logs
-let pollInterval: any;
+// Subscription
 store.subscribe(() => {
   const activeId = store.getActiveAnalysisId();
   const currentUser = store.getCurrentUser();
-  
-  // Clear previous interval
-  if (pollInterval) clearInterval(pollInterval);
-  
-  // If we just logged in but have no data, fetch it
-  if (currentUser && store.getAnalyses().length === 0) {
-    const fetchData = async () => {
-      try {
-        const [analyses, sources, pages] = await Promise.all([
-          api.listAnalyses(),
-          api.listFiles(),
-          api.listKnowledgePages()
-        ]);
-        store.setAnalyses(analyses);
-        store.setDataSources(sources);
-        store.setKnowledgePages(pages);
-      } catch (err) {
-        console.error('Failed to fetch initial data after login', err);
-      }
-    };
-    fetchData();
-  }
 
-  if (activeId) {
+  // Handle polling intervals separately from UI rendering to avoid clearing them unnecessarily
+  if (activeId && activeId !== currentPollId) {
+    if (pollInterval) clearInterval(pollInterval);
+    currentPollId = activeId;
+    
     const fetchLogs = async () => {
       try {
         const logs = await api.listLogs(activeId);
-        // Only update if logs changed to avoid unnecessary re-renders
         if (JSON.stringify(logs) !== JSON.stringify(store.getLogs())) {
           store.setLogs(logs);
         }
@@ -181,11 +198,13 @@ store.subscribe(() => {
     
     fetchLogs();
     pollInterval = setInterval(fetchLogs, 3000);
+  } else if (!activeId && currentPollId) {
+    if (pollInterval) clearInterval(pollInterval);
+    pollInterval = null;
+    currentPollId = null;
   }
 
   updateUI();
-
-  // Kick off ingestion progress polling if any file is pending
   startIngestionPollingIfNeeded();
 });
 
