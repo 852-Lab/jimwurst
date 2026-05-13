@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ravioli.backend.core.database import get_db
@@ -7,6 +8,8 @@ from ravioli.backend.core.models import SystemSetting as SystemSettingModel
 from ravioli.backend.core.schemas import SystemSetting as SystemSettingSchema, SystemSettingBase
 from ravioli.backend.core.encryption import encrypt_value
 from ravioli.backend.core.ollama import OllamaClient
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -71,7 +74,8 @@ async def push_all_to_motherduck(db: Session = Depends(get_db)):
             duckdb_manager.sync_table(source.schema_name, source.table_name, direction="push")
             results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "success"})
         except Exception as e:
-            results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "failed", "error": str(e)})
+            logger.exception("Failed to push table %s.%s to Motherduck", source.schema_name, source.table_name)
+            results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "failed", "error": "Synchronization failed"})
             
     return {"status": "completed", "results": results}
 
@@ -98,7 +102,8 @@ async def pull_all_from_motherduck(db: Session = Depends(get_db)):
                 source.row_count = res["total_local"]
             results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "success"})
         except Exception as e:
-            results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "failed", "error": str(e)})
+            logger.exception("Failed to pull table %s.%s from Motherduck", source.schema_name, source.table_name)
+            results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "failed", "error": "Synchronization failed"})
             
     db.commit()
     return {"status": "completed", "results": results}

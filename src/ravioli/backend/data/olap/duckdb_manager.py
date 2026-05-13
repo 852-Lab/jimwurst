@@ -116,8 +116,8 @@ class DuckDBManager:
         if self._connection:
             try:
                 self._connection.close()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Failed to close existing DuckDB connection during reconnect: %s", e)
         self._connection = None
 
     def list_tables(self):
