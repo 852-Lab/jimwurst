@@ -70,61 +70,55 @@ class DuckDBManager:
                     if not current_token:
                         self._connection.execute(f"SET motherduck_token='{token}';")
                 except Exception as init_err:
-                    # If current_setting fails or token is already set, we might get an error, which is fine
                     if "can only be set during initialization" not in str(init_err):
                         try:
                             self._connection.execute(f"SET motherduck_token='{token}';")
                         except:
                             pass
-                    
-                    # Force multi-database mode to ensure we can manage the 'ravioli' db specifically
+                
+                # IMPORTANT: The following management logic must run every time
+                # Force multi-database mode so we can see 'ravioli' as a separate DB
+                try:
+                    self._connection.execute("SET motherduck_attach_mode='multi';")
+                except:
+                    pass
+                
+                # 1. Ensure the 'ravioli' database exists in the cloud
+                try:
+                    # In workspace mode, we attach 'md:' directly to run management commands
                     try:
-                        self._connection.execute("SET motherduck_attach_mode='multi';")
-                    except:
-                        pass # Might not be supported in all versions, but we try
+                        self._connection.execute("ATTACH 'md:'")
+                    except Exception as e:
+                        if "already attached" not in str(e).lower():
+                            logger.error(f"Failed to attach workspace root: {e}")
                     
-                    # 1. Ensure we are connected to the workspace to create the database if needed
+                    self._connection.execute("CREATE DATABASE IF NOT EXISTS ravioli")
+                except Exception as create_err:
+                    logger.error(f"Creation of 'ravioli' database failed: {create_err}")
+                
+                # 2. Specifically mount the 'md:ravioli' cloud database locally
+                try:
+                    logger.info("Attempting to ATTACH 'md:ravioli'...")
+                    # We try with an alias first, fallback to canonical name for workspace mode
                     try:
-                        # In workspace mode, we often can't use aliases for 'md:'
-                        # We just attach 'md:' directly
+                        self._connection.execute("ATTACH 'md:ravioli' AS ravioli")
+                    except Exception as alias_err:
+                        if "aliases are not yet supported" in str(alias_err):
+                            self._connection.execute("ATTACH 'md:ravioli'")
+                        else:
+                            raise alias_err
+                    
+                    # Verify Identity & Context
+                    id_info = self._connection.execute("SELECT current_user(), current_database()").fetchone()
+                    logger.info(f"Successfully attached! Cloud Identity: {id_info[0]} | Active DB: {id_info[1]}")
+                except Exception as attach_err:
+                    if "already attached" not in str(attach_err).lower():
+                        logger.error(f"Could not attach 'md:ravioli': {attach_err}")
+                        # Final fallback
                         try:
                             self._connection.execute("ATTACH 'md:'")
-                        except Exception as e:
-                            if "already attached" not in str(e).lower():
-                                logger.error(f"Failed to attach workspace root: {e}")
-                        
-                        self._connection.execute("CREATE DATABASE IF NOT EXISTS ravioli")
-                    except Exception as create_err:
-                        logger.error(f"Creation of 'ravioli' database failed: {create_err}")
-                    
-                    # 2. Specifically attach the 'ravioli' database
-                    try:
-                        logger.info("Attempting to ATTACH 'md:ravioli'...")
-                        # We try with an alias first, but fallback to no alias for workspace mode
-                        try:
-                            self._connection.execute("ATTACH 'md:ravioli' AS ravioli")
-                        except Exception as alias_err:
-                            if "aliases are not yet supported" in str(alias_err):
-                                self._connection.execute("ATTACH 'md:ravioli'")
-                            else:
-                                raise alias_err
-                        
-                        # IDENTITY CHECK: Confirm who we are logged in as
-                        id_info = self._connection.execute("SELECT current_user(), current_database()").fetchone()
-                        logger.info(f"Successfully attached! Cloud Identity: {id_info[0]} | Active DB: {id_info[1]}")
-                        
-                        logger.info("Successfully attached to dedicated 'ravioli' database in Motherduck")
-                    except Exception as attach_err:
-                        err_str = str(attach_err)
-                        if "already attached" in err_str.lower():
-                            logger.info("Motherduck 'ravioli' database already attached.")
-                        else:
-                            logger.error(f"Could not attach 'md:ravioli': {attach_err}")
-                            # Final fallback to default workspace
-                            try:
-                                self._connection.execute("ATTACH 'md:'")
-                            except:
-                                pass
+                        except:
+                            pass
                 except Exception as e:
                     logger.error(f"Failed to attach Motherduck: {e}")
         except Exception as e:
