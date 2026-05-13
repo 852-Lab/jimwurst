@@ -48,9 +48,9 @@ class DuckDBManager:
                         logger.info("Motherduck 'ravioli' database is already connected.")
                         return
                     elif len(row) == 1:
-                        # If only name is present, assume it's our Motherduck DB
-                        logger.info("Database 'ravioli' found, assuming Motherduck.")
-                        return
+                        # If only name is present, it's ambiguous. 
+                        # We'll log it but NOT return early so we can verify with a real ATTACH attempt.
+                        logger.info(f"Database '{row[0]}' found in session, verifying cloud status...")
         except Exception as e:
             logger.error(f"Error checking attached databases: {e}")
             pass
