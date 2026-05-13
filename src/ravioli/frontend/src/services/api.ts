@@ -255,6 +255,15 @@ export const api = {
     return response.json();
   },
 
+  async testMotherduckConnection(): Promise<{status: string, message: string}> {
+    const response = await fetch(`${API_BASE}/settings/motherduck/test`, { credentials: 'include' });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Motherduck connection test failed');
+    }
+    return response.json();
+  },
+
   async getInsightStats(): Promise<InsightStats> {
     const response = await fetch(`${API_BASE}/insights/stats`, { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch insight stats');

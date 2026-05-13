@@ -26,8 +26,31 @@ async def test_ollama_connection(db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/motherduck/test")
+async def test_motherduck_connection(db: Session = Depends(get_db)):
+    """Test connection to Motherduck based on current database settings."""
+    try:
+        from ravioli.backend.data.olap.duckdb_manager import DuckDBManager
+        # We need a temporary manager or a way to test without affecting the global one
+        # For testing, we can just try to connect to md: with the token
+        setting = db.query(SystemSettingModel).filter(SystemSettingModel.key == "motherduck").first()
+        if not setting or "token" not in setting.value or not setting.value["token"]:
+             raise HTTPException(status_code=400, detail="Motherduck token not configured.")
+        
+        token = setting.value["token"]
+        import duckdb
+        # Attempt a temporary connection
+        conn = duckdb.connect(f"md:?motherduck_token={token}")
+        conn.execute("SELECT 1")
+        return {
+            "status": "success",
+            "message": "Successfully connected to Motherduck!"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Motherduck connection failed: {str(e)}")
+
 # Fields within a setting's value dict that should be encrypted at rest
-_SENSITIVE_FIELDS = {"api_key"}
+_SENSITIVE_FIELDS = {"api_key", "token"}
 
 _REDACTED = "••••••••"
 
@@ -115,6 +138,11 @@ def update_setting(
 
     db.commit()
     db.refresh(existing)
+
+    # If Motherduck settings changed, refresh the DuckDB connection
+    if key == "motherduck":
+        from ravioli.backend.data.olap.duckdb_manager import duckdb_manager
+        duckdb_manager.reconnect()
 
     # Return redacted response
     redacted_value = _redact_sensitive(existing.value)
