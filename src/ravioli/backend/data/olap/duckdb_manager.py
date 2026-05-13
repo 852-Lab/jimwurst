@@ -36,6 +36,14 @@ class DuckDBManager:
         Check for Motherduck token in system_settings and attach if found.
         Handles workspace mode where aliases might be restricted.
         """
+        # First check if we are already connected to avoid redundant ATTACH attempts
+        try:
+            if self.is_motherduck_connected():
+                logger.info("Motherduck is already connected.")
+                return
+        except:
+            pass
+
         db = SessionLocal()
         try:
             setting = db.query(SystemSetting).filter(SystemSetting.key == "motherduck").first()
@@ -52,10 +60,19 @@ class DuckDBManager:
                         self._connection.execute("ATTACH 'md:' AS motherduck")
                         logger.info("Successfully attached to Motherduck as 'motherduck'")
                     except Exception as alias_err:
-                        if "Database aliases are not yet supported" in str(alias_err):
+                        err_str = str(alias_err)
+                        if "Database aliases are not yet supported" in err_str:
                             logger.info("Workspace mode detected, attaching 'md:' without alias...")
-                            self._connection.execute("ATTACH 'md:'")
-                            logger.info("Successfully attached to Motherduck (no alias)")
+                            try:
+                                self._connection.execute("ATTACH 'md:'")
+                                logger.info("Successfully attached to Motherduck (no alias)")
+                            except Exception as attach_err:
+                                if "already attached" in str(attach_err).lower():
+                                    logger.info("Motherduck already attached (workspace mode).")
+                                else:
+                                    raise attach_err
+                        elif "already attached" in err_str.lower():
+                            logger.info("Motherduck already attached.")
                         else:
                             raise alias_err
                 except Exception as e:
