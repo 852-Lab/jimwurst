@@ -7,8 +7,10 @@ from ravioli.backend.core import models
 from ravioli.backend.core.models import SystemSetting as SystemSettingModel
 from ravioli.backend.core.schemas import SystemSetting as SystemSettingSchema, SystemSettingBase
 from ravioli.backend.core.encryption import encrypt_value
+import logging
 from ravioli.backend.core.ollama import OllamaClient
 
+logger = logging.getLogger(__name__)
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -97,8 +99,17 @@ async def pull_all_from_motherduck(db: Session = Depends(get_db)):
         if not source.table_name: continue
         try:
             res = duckdb_manager.sync_table(source.schema_name, source.table_name, direction="pull")
-            # Update row count
-            if "total_local" in res:
+        except Exception:
+            logger.exception(
+                "Failed to pull table from Motherduck: %s.%s",
+                source.schema_name,
+                source.table_name,
+            )
+            results.append({
+                "table": f"{source.schema_name}.{source.table_name}",
+                "status": "failed",
+                "error": "Failed to pull table from Motherduck",
+            })
                 source.row_count = res["total_local"]
             results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "success"})
         except Exception as e:
