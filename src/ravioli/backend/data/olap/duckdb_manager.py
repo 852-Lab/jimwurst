@@ -89,18 +89,23 @@ class DuckDBManager:
             # Remote DB is usually the one starting with md: in path or just the one that isn't main/temp/system
             # But more reliably, Motherduck DBs have 'md:' in their source path (if we could see it)
             # For now, let's look for 'motherduck' alias or any db that isn't local
+            remote_name = 'motherduck'
             for row in res:
                 if row[0] == 'motherduck':
-                    return 'motherduck'
+                    remote_name = 'motherduck'
+                    break
             
             # If no alias, look for the first non-standard database
             # Standard: 'main', 'temp', 'system'
             for row in res:
                 if row[0] not in ('main', 'temp', 'system', 'memory'):
-                    return row[0]
+                    remote_name = row[0]
+                    break
             
-            return 'motherduck' # Fallback
-        except:
+            logger.info(f"Using Motherduck remote database: {remote_name}")
+            return remote_name
+        except Exception as e:
+            logger.error(f"Error finding remote db name: {e}")
             return 'motherduck'
 
     def reconnect(self):
@@ -214,12 +219,15 @@ class DuckDBManager:
         remote_table = f'{remote_db}."{schema}"."{table}"'
         
         if direction == "push":
+            logger.info(f"Sync: Pushing {local_table} -> {remote_table}")
             self.connection.execute(f"CREATE SCHEMA IF NOT EXISTS {remote_db}.\"{schema}\"")
             self.connection.execute(f"CREATE OR REPLACE TABLE {remote_table} AS SELECT * FROM {local_table}")
         else:
+            logger.info(f"Sync: Pulling {remote_table} -> {local_table}")
             self.connection.execute(f"CREATE SCHEMA IF NOT EXISTS \"{schema}\"")
             self.connection.execute(f"CREATE OR REPLACE TABLE {local_table} AS SELECT * FROM {remote_table}")
         
+        logger.info(f"Sync: {direction} completed for {schema}.{table}")
         return self.get_table_diff(schema, table)
 
 duckdb_manager = DuckDBManager()
