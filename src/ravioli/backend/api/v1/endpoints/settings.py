@@ -5,7 +5,7 @@ from ravioli.backend.api.v1.endpoints.data import get_current_user
 from ravioli.backend.core import models
 from ravioli.backend.core.models import SystemSetting as SystemSettingModel
 from ravioli.backend.core.schemas import SystemSetting as SystemSettingSchema, SystemSettingBase
-from ravioli.backend.core.encryption import encrypt_value, decrypt_value
+from ravioli.backend.core.encryption import encrypt_value
 from ravioli.backend.core.ollama import OllamaClient
 
 router = APIRouter()

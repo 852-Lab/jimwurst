@@ -18,9 +18,6 @@ export function renderSettings() {
   let isConfiguringOllama = false;
 
   // Motherduck State
-  let motherduckConfig = {
-    token: ''
-  };
   let motherduckTokenIsSet = false;
   let isConfiguringMotherduck = false;
 

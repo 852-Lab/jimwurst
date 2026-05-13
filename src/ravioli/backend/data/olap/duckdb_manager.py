@@ -62,7 +62,7 @@ class DuckDBManager:
         if self._connection:
             try:
                 self._connection.close()
-            except:
+            except Exception:
                 pass
         self._connection = None
 
@@ -98,7 +98,7 @@ class DuckDBManager:
         try:
             res = self.connection.execute("PRAGMA show_databases").fetchall()
             return any(row[0] == 'motherduck' for row in res)
-        except:
+        except Exception:
             return False
 
     def get_table_diff(self, schema: str, table: str):
@@ -119,7 +119,7 @@ class DuckDBManager:
             # We must be careful about remote schema existence
             try:
                 self.connection.execute(f"CREATE SCHEMA IF NOT EXISTS motherduck.\"{schema}\"")
-            except:
+            except Exception:
                 pass # Might fail if read-only or other issues, but we try
 
             remote_exists = self.connection.execute(f"SELECT count(*) FROM information_schema.tables WHERE table_catalog='motherduck' AND table_schema='{schema}' AND table_name='{table}'").fetchone()[0] > 0
