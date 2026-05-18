@@ -112,6 +112,8 @@ class User(Base):
     groups: Mapped[List["UserGroup"]] = relationship(
         "UserGroup",
         secondary="app.user_group_members",
+        primaryjoin="User.id==UserGroupMember.user_id",
+        secondaryjoin="UserGroup.id==UserGroupMember.group_id",
         back_populates="members"
     )
 
@@ -284,6 +286,8 @@ class UserGroup(Base):
     members: Mapped[List["User"]] = relationship(
         "User",
         secondary="app.user_group_members",
+        primaryjoin="UserGroup.id==UserGroupMember.group_id",
+        secondaryjoin="User.id==UserGroupMember.user_id",
         back_populates="groups"
     )
     data_sources: Mapped[List["DataSource"]] = relationship(
