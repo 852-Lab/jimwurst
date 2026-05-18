@@ -160,6 +160,11 @@ class UserGroup(UserGroupBase):
     
     model_config = ConfigDict(from_attributes=True)
 
+
+class UserGroupDetail(UserGroup):
+    owner_user: Optional[User] = None
+    members: List[User] = []
+
 # --- Data Source Schemas ---
 
 class DataSourceBase(BaseModel):

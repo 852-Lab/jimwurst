@@ -129,3 +129,32 @@ def test_analysis_ownership_api(test_client, db_session):
     assert data["created_by"] is not None
     assert data["updated_by"] is not None
     assert data["created_at"] is not None
+
+def test_get_group_by_id(test_client, db_session):
+    # Setup owner, group, and member
+    owner = models.User(id=uuid.uuid4(), name="Steward Owner", email="steward_owner@test.com", role="Steward")
+    group = models.UserGroup(id=uuid.uuid4(), name="Detailed Group", description="Detailed group description", owner_id=owner.id)
+    member = models.User(id=uuid.uuid4(), name="Group Member", email="group_member@test.com")
+    group.members.append(member)
+    
+    db_session.add(owner)
+    db_session.add(group)
+    db_session.add(member)
+    db_session.commit()
+    
+    response = test_client.get(f"/api/v1/users/groups/{group.id}")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "Detailed Group"
+    assert data["description"] == "Detailed group description"
+    assert data["owner_id"] == str(owner.id)
+    assert data["owner_user"]["id"] == str(owner.id)
+    assert len(data["members"]) == 1
+    assert data["members"][0]["id"] == str(member.id)
+
+def test_get_group_by_id_not_found(test_client, db_session):
+    fake_id = uuid.uuid4()
+    response = test_client.get(f"/api/v1/users/groups/{fake_id}")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Group not found"
+

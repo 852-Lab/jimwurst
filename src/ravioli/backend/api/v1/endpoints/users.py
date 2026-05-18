@@ -106,6 +106,14 @@ def delete_group(
     db.commit()
     return {"message": "Group deleted successfully"}
 
+@router.get("/groups/{group_id}", response_model=schemas.UserGroupDetail)
+def get_group(group_id: uuid.UUID, db: Session = Depends(get_db)):
+    group = db.query(models.UserGroup).filter(models.UserGroup.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    return group
+
+
 @router.get("/groups/{group_id}/members", response_model=List[schemas.User])
 
 def list_group_members(group_id: uuid.UUID, db: Session = Depends(get_db)):
