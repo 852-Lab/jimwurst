@@ -551,6 +551,18 @@ export const api = {
       credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to remove member from group');
+  },
+
+  async deleteUser(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE}/users/${id}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.detail || 'Failed to delete user');
+    }
   }
 };
+
 

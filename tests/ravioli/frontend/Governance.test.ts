@@ -9,6 +9,8 @@ vi.mock('../../../src/ravioli/frontend/src/services/api', () => ({
     listUsers: vi.fn(),
     listGroups: vi.fn(),
     createUser: vi.fn(),
+    updateUser: vi.fn(),
+    deleteUser: vi.fn(),
     verifyInsight: vi.fn(),
     rejectInsight: vi.fn(),
   }
@@ -102,6 +104,56 @@ describe('Governance Component', () => {
       expect(modal?.innerHTML).toContain('Edit User Details');
       expect((modal?.querySelector('#new-name') as HTMLInputElement).value).toBe('Jane Doe');
       expect((modal?.querySelector('#new-email') as HTMLInputElement).value).toBe('jane@test.com');
+      
+      // Cleanup modal
+      (modal?.querySelector('#btn-cancel') as HTMLButtonElement).click();
+    });
+
+    it('should show delete button in edit modal for other users and call deleteUser api on confirm', async () => {
+      const confirmMock = vi.fn().mockReturnValue(true);
+      window.confirm = confirmMock;
+      
+      store.setCurrentUser({ id: 'u1', name: 'Admin', email: 'a@test.com', role: 'Admin', status: 'active' });
+      const targetUser = { id: 'u2', name: 'Jane Doe', email: 'jane@test.com', role: 'Viewer', status: 'active' };
+      (api.listUsers as any).mockResolvedValue([targetUser]);
+      (api.deleteUser as any).mockResolvedValue(undefined);
+      
+      store.setGovernanceTab('users');
+      const el = renderGovernance();
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      const editBtn = el.querySelector('.btn-edit-user') as HTMLButtonElement;
+      editBtn.click();
+      
+      const modal = document.body.querySelector('.fixed.inset-0.z-\\[200\\]');
+      expect(modal).not.toBeNull();
+      
+      const deleteBtn = modal?.querySelector('#btn-delete-user') as HTMLButtonElement;
+      expect(deleteBtn).not.toBeNull();
+      
+      deleteBtn.click();
+      
+      expect(confirmMock).toHaveBeenCalled();
+      expect(api.deleteUser).toHaveBeenCalledWith('u2');
+    });
+
+    it('should NOT show delete button in edit modal for the current logged-in user themselves', async () => {
+      const currentUser = { id: 'u1', name: 'Admin', email: 'a@test.com', role: 'Admin', status: 'active' };
+      store.setCurrentUser(currentUser);
+      (api.listUsers as any).mockResolvedValue([currentUser]);
+      
+      store.setGovernanceTab('users');
+      const el = renderGovernance();
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+      const editBtn = el.querySelector('.btn-edit-user') as HTMLButtonElement;
+      editBtn.click();
+      
+      const modal = document.body.querySelector('.fixed.inset-0.z-\\[200\\]');
+      expect(modal).not.toBeNull();
+      
+      const deleteBtn = modal?.querySelector('#btn-delete-user');
+      expect(deleteBtn).toBeNull();
       
       // Cleanup modal
       (modal?.querySelector('#btn-cancel') as HTMLButtonElement).click();

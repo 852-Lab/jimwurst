@@ -153,3 +153,46 @@ def test_update_user_not_found(client, session):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "User not found"
+
+def test_delete_user_success(client, session):
+    """Test successfully deleting a user."""
+    user_id = uuid.uuid4()
+    mock_user = MagicMock(spec=models.User)
+    mock_user.id = user_id
+
+    # Mock the database query returning the target user
+    session.query.return_value.filter.return_value.first.return_value = mock_user
+
+    response = client.delete(f"/api/v1/users/{user_id}")
+
+    assert response.status_code == 200
+    assert response.json()["message"] == "User deleted successfully"
+    session.delete.assert_called_once_with(mock_user)
+    session.commit.assert_called_once()
+
+def test_delete_user_self_failure(client, session, current_user):
+    """Test that a user cannot delete themselves."""
+    mock_user = MagicMock(spec=models.User)
+    mock_user.id = current_user.id
+
+    session.query.return_value.filter.return_value.first.return_value = mock_user
+
+    response = client.delete(f"/api/v1/users/{current_user.id}")
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Cannot delete currently logged-in user"
+    session.delete.assert_not_called()
+    session.commit.assert_not_called()
+
+def test_delete_user_not_found(client, session):
+    """Test deleting a non-existent user."""
+    user_id = uuid.uuid4()
+    session.query.return_value.filter.return_value.first.return_value = None
+
+    response = client.delete(f"/api/v1/users/{user_id}")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "User not found"
+    session.delete.assert_not_called()
+    session.commit.assert_not_called()
+
