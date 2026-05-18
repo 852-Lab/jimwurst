@@ -37,18 +37,22 @@ def signup(data: schemas.UserSignup, response: Response, db: Session = Depends(g
         existing_user.name = data.name
         existing_user.hashed_password = data.password
         existing_user.status = 'active'
+        existing_user.updated_by = existing_user.id
         db.commit()
         db.refresh(existing_user)
         user = existing_user
     else:
         # Create new user (if not invited)
+        new_user_id = uuid.uuid4()
         new_user = models.User(
-            id=uuid.uuid4(),
+            id=new_user_id,
             name=data.name,
             email=data.email,
             hashed_password=data.password,
             role="Viewer", # Default role for self-signup
-            status="active"
+            status="active",
+            created_by=new_user_id,
+            updated_by=new_user_id
         )
         db.add(new_user)
         db.commit()

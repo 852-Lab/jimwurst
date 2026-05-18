@@ -81,7 +81,7 @@ def test_get_insights_feed(client, session):
     assert data[0]["content"] == "Verified"
     assert data[0]["is_verified"] is True
 
-def test_verify_insight(client, session):
+def test_verify_insight(client, session, current_user):
     insight_id = uuid.uuid4()
     mock_insight = create_mock_insight(id=insight_id, is_verified=False)
     session.query.return_value.filter.return_value.first.return_value = mock_insight
@@ -90,6 +90,7 @@ def test_verify_insight(client, session):
     
     assert response.status_code == 200
     assert mock_insight.is_verified is True
+    assert mock_insight.updated_by == current_user.id
     assert session.commit.called
 
 def test_reject_insight(client, session):

@@ -120,7 +120,12 @@ def get_analysis(analysis_id: UUID, db: Session = Depends(get_db)):
     return analysis
 
 @router.patch("/{analysis_id}", response_model=schemas.Analysis)
-def update_analysis(analysis_id: UUID, analysis_in: schemas.AnalysisUpdate, db: Session = Depends(get_db)):
+def update_analysis(
+    analysis_id: UUID, 
+    analysis_in: schemas.AnalysisUpdate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     """
     Update an analysis.
     """
@@ -133,6 +138,7 @@ def update_analysis(analysis_id: UUID, analysis_in: schemas.AnalysisUpdate, db: 
     for field, value in update_data.items():
         setattr(db_analysis, field, value)
     
+    db_analysis.updated_by = current_user.id
     db.commit()
     db.refresh(db_analysis)
     return db_analysis

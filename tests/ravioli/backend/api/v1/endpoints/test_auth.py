@@ -79,14 +79,14 @@ def test_signup_new_user(client, session):
     session.query.return_value.filter.return_value.first.return_value = None
     
     # Mock the User object created during signup
+    created_id = None
     def mock_add(obj):
-        obj.id = uuid.uuid4()
+        nonlocal created_id
+        created_id = obj.id
         obj.created_at = datetime.now(UTC)
         obj.updated_at = datetime.now(UTC)
         obj.role = "Viewer"
         obj.status = "active"
-        obj.created_by = None
-        obj.updated_by = None
         return obj
     session.add.side_effect = mock_add
 
@@ -98,12 +98,15 @@ def test_signup_new_user(client, session):
     assert response.status_code == 200
     assert response.json()["email"] == "new@example.com"
     assert response.json()["role"] == "Viewer"
+    assert response.json()["created_by"] == str(created_id)
+    assert response.json()["updated_by"] == str(created_id)
     assert "ravioli_session" in response.cookies
 
 def test_signup_activate_invited_user(client, session):
     """Test signup which activates an already invited user."""
+    user_id = uuid.uuid4()
     mock_user = MagicMock(spec=models.User)
-    mock_user.id = uuid.uuid4()
+    mock_user.id = user_id
     mock_user.email = "invited@example.com"
     mock_user.name = "Invited User"
     mock_user.status = "invited"
@@ -123,6 +126,7 @@ def test_signup_activate_invited_user(client, session):
     assert response.status_code == 200
     assert mock_user.status == "active"
     assert mock_user.hashed_password == "new_password"
+    assert mock_user.updated_by == user_id
     assert "ravioli_session" in response.cookies
 
 def test_get_me_authenticated_param(client, session):

@@ -9,6 +9,7 @@ from ravioli.backend.core.database import get_db
 from ravioli.backend.core import models, schemas
 from ravioli.ai.Kowalski import KowalskiAgent
 from ravioli.ai.skills import analysis as skill_analysis
+from ravioli.backend.api.v1.endpoints.data import get_current_user
 
 router = APIRouter()
 
@@ -83,13 +84,18 @@ def get_insights_feed(days: int = 30, db: Session = Depends(get_db)):
 
 
 @router.patch("/{insight_id}/verify", response_model=schemas.Insight)
-def verify_insight(insight_id: UUID, db: Session = Depends(get_db)):
+def verify_insight(
+    insight_id: UUID, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     """Mark an insight as verified."""
     insight = db.query(models.Insight).filter(models.Insight.id == insight_id).first()
     if not insight:
         raise HTTPException(status_code=404, detail="Insight not found")
     insight.is_verified = True
     insight.updated_at = datetime.now(UTC)
+    insight.updated_by = current_user.id
     db.commit()
     db.refresh(insight)
     return insight

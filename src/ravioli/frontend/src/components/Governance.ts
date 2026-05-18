@@ -74,8 +74,9 @@ export function renderGovernance() {
       btn.addEventListener('click', () => {
         const tab = btn.getAttribute('data-tab');
         if (tab) {
+          activeTab = tab;
           store.setGovernanceTab(tab);
-          // activeTab will be updated on next render via store notify
+          updateUI();
         }
       });
     });
@@ -143,11 +144,12 @@ async function renderUsersSection(container: HTMLElement) {
               <th class="px-8 py-5 text-[10px] uppercase tracking-[0.2em] font-bold text-outline opacity-40">Email</th>
               <th class="px-8 py-5 text-[10px] uppercase tracking-[0.2em] font-bold text-outline opacity-40">Role</th>
               <th class="px-8 py-5 text-[10px] uppercase tracking-[0.2em] font-bold text-outline opacity-40">Status</th>
+              <th class="px-8 py-5 text-[10px] uppercase tracking-[0.2em] font-bold text-outline opacity-40"></th>
             </tr>
           </thead>
           <tbody id="users-table-body">
             <!-- Loaded via hydrateUsers -->
-            <tr><td colspan="4" class="p-12 text-center opacity-20 animate-pulse">Synchronizing directory...</td></tr>
+            <tr><td colspan="5" class="p-12 text-center opacity-20 animate-pulse">Synchronizing directory...</td></tr>
           </tbody>
         </table>
       </div>
@@ -301,7 +303,7 @@ async function hydrateUsers(container: HTMLElement) {
       });
     });
   } catch {
-    tbody.innerHTML = `<tr><td colspan="4" class="p-12 text-center text-error opacity-60 text-sm">Error loading users directory.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="p-12 text-center text-error opacity-60 text-sm">Error loading users directory.</td></tr>`;
   }
 }
 
@@ -363,15 +365,23 @@ async function hydrateGroups(container: HTMLElement) {
 function showCreateUserModal(userToEdit?: User) {
   const modal = document.createElement('div');
   modal.className = 'fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-xl animate-reveal';
+  const currentUser = store.getCurrentUser();
   modal.innerHTML = `
     <div class="w-full max-w-md p-10 glass-card rounded-[3rem] border-white/10 shadow-2xl space-y-8">
-      <div class="space-y-2">
-        <h2 class="text-2xl font-display-lg tracking-tight text-on-surface">
-          ${userToEdit ? 'Edit User Details' : 'Provision New User'}
-        </h2>
-        <p class="text-xs text-outline opacity-60">
-          ${userToEdit ? `Updating profile for ${userToEdit.email}` : 'This will trigger a signup process for the user.'}
-        </p>
+      <div class="flex items-center justify-between">
+        <div class="space-y-2">
+          <h2 class="text-2xl font-display-lg tracking-tight text-on-surface">
+            ${userToEdit ? 'Edit User Details' : 'Provision New User'}
+          </h2>
+          <p class="text-xs text-outline opacity-60">
+            ${userToEdit ? `Updating profile for ${userToEdit.email}` : 'This will trigger a signup process for the user.'}
+          </p>
+        </div>
+        ${userToEdit && currentUser?.id !== userToEdit.id ? `
+          <button type="button" id="btn-delete-user" class="p-3 rounded-xl bg-error/10 text-error hover:bg-error hover:text-white transition-all group/del">
+            <span class="material-symbols-outlined text-sm" data-icon="delete">delete</span>
+          </button>
+        ` : ''}
       </div>
 
       <form id="create-user-form" class="space-y-6">
@@ -418,6 +428,21 @@ function showCreateUserModal(userToEdit?: User) {
   document.body.appendChild(modal);
 
   modal.querySelector('#btn-cancel')?.addEventListener('click', () => modal.remove());
+
+  if (userToEdit && currentUser?.id !== userToEdit.id) {
+    modal.querySelector('#btn-delete-user')?.addEventListener('click', async () => {
+      if (confirm(`Are you sure you want to remove user "${userToEdit.name}"? This action cannot be undone.`)) {
+        try {
+          await api.deleteUser(userToEdit.id);
+          modal.remove();
+          store.setGovernanceTab('users');
+        } catch (err: any) {
+          alert(err.message);
+        }
+      }
+    });
+  }
+
   modal.querySelector('#create-user-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = (modal.querySelector('#new-name') as HTMLInputElement).value;

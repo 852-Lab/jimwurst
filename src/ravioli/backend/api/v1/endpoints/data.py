@@ -398,7 +398,8 @@ async def delete_file(file_id: uuid.UUID, db: Session = Depends(get_db)):
 async def update_file(
     file_id: uuid.UUID,
     file_update: schemas.DataSourceUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
 ):
     db_source = db.execute(select(DataSource).where(DataSource.id == file_id)).scalar_one_or_none()
     if not db_source:
@@ -408,6 +409,7 @@ async def update_file(
         db_source.description = file_update.description
         
     try:
+        db_source.updated_by = current_user.id
         db.commit()
         db.refresh(db_source)
         return db_source
@@ -419,7 +421,8 @@ async def update_file(
 async def update_file_pii(
     file_id: uuid.UUID,
     pii_update: schemas.DataSourcePIIUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
 ):
     db_source = db.execute(select(DataSource).where(DataSource.id == file_id)).scalar_one_or_none()
     if not db_source:
@@ -427,6 +430,7 @@ async def update_file_pii(
         
     db_source.has_pii = pii_update.has_pii
     try:
+        db_source.updated_by = current_user.id
         db.commit()
         db.refresh(db_source)
         return db_source
@@ -437,7 +441,8 @@ async def update_file_pii(
 @router.post("/files/{file_id}/generate-description", response_model=schemas.DataSource)
 async def generate_file_description(
     file_id: uuid.UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
 ):
     db_source = db.execute(select(DataSource).where(DataSource.id == file_id)).scalar_one_or_none()
     if not db_source:
@@ -459,6 +464,7 @@ async def generate_file_description(
 
         # Update the database
         db_source.description = description
+        db_source.updated_by = current_user.id
         db.commit()
         db.refresh(db_source)
         
