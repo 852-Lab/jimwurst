@@ -78,11 +78,17 @@ def test_push_all_non_pii(mock_duckdb):
         with patch.object(manager, 'is_motherduck_connected', return_value=True):
             # Mock _get_remote_db_name to return 'ravioli'
             with patch.object(manager, '_get_remote_db_name', return_value='ravioli'):
-                # Mock table existence checks: table1 exists, table2 does not
-                mock_duckdb.return_value.execute.return_value.fetchone.side_effect = [
-                    (1,), # table1 exists check
-                    (0,), # table2 exists check
-                ]
+                # Mock table existence checks: table1 exists, table2 does not, and finally block queries
+                calls = []
+                def mock_fetchone():
+                    if len(calls) < 2:
+                        val = (1,) if len(calls) == 0 else (0,)
+                        calls.append(val)
+                        return val
+                    return ("ravioli",)
+                
+                mock_duckdb.return_value.execute.return_value.fetchone.side_effect = mock_fetchone
+                mock_duckdb.return_value.execute.return_value.fetchall.return_value = [("ravioli",)]
                 
                 # Mock uuid.uuid4().hex to return 'mockeduuid'
                 mock_uuid = MagicMock()
