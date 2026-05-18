@@ -67,15 +67,34 @@ async def push_all_to_motherduck(db: Session = Depends(get_db)):
     stmt = select(DataSource).where(DataSource.has_pii == False)
     sources = db.execute(stmt).scalars().all()
     
-    results = []
+    tables_to_push = []
     for source in sources:
-        if not source.table_name: continue
+        if source.schema_name and source.table_name:
+            tables_to_push.append((source.schema_name, source.table_name))
+            
+    results = []
+    if tables_to_push:
         try:
-            duckdb_manager.sync_table(source.schema_name, source.table_name, direction="push")
-            results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "success"})
+            # Trigger our optimized bulk block-level database copy push
+            duckdb_manager.push_all_non_pii(tables_to_push)
+            
+            # Verify which tables were copied
+            for schema, table in tables_to_push:
+                try:
+                    exists = duckdb_manager.connection.execute(
+                        f"SELECT count(*) FROM information_schema.tables "
+                        f"WHERE table_schema='{schema}' AND table_name='{table}'"
+                    ).fetchone()[0] > 0
+                except Exception:
+                    exists = False
+                
+                if exists:
+                    results.append({"table": f"{schema}.{table}", "status": "success"})
+                else:
+                    results.append({"table": f"{schema}.{table}", "status": "skipped", "error": "Table does not exist locally"})
         except Exception as e:
-            logger.error(f"Failed to push {source.table_name}: {e}")
-            results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "failed", "error": str(e)})
+            logger.error(f"Failed to push tables in bulk: {e}")
+            raise HTTPException(status_code=500, detail=f"Bulk push to Motherduck failed: {str(e)}")
             
     logger.info(f"=== PUSH ALL COMPLETED ({len(results)} tables processed) ===")
     return {"status": "completed", "results": results}
