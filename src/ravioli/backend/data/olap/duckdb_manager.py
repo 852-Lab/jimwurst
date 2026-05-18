@@ -134,27 +134,38 @@ class DuckDBManager:
     def _get_remote_db_name(self):
         """Find the name of the attached Motherduck database."""
         try:
-            res = self.connection.execute("PRAGMA show_databases").fetchall()
-            # 1. Look for 'ravioli' (our preferred dedicated db)
+            res = self.connection.execute(
+                "SELECT database_name, path, type FROM duckdb_databases()"
+            ).fetchall()
+            # 1. Look for 'ravioli' (our preferred dedicated db) that is actually a Motherduck database
             for row in res:
-                if row[0] == 'ravioli':
+                db_name = row[0]
+                path = row[1] if len(row) > 1 else None
+                db_type = row[2] if len(row) > 2 else None
+                
+                if db_name == 'ravioli' and (db_type == 'motherduck' or (path and str(path).lower().startswith('md:'))):
                     return 'ravioli'
             
             # 2. Look for 'motherduck' alias
             for row in res:
-                if row[0] == 'motherduck':
+                db_name = row[0]
+                path = row[1] if len(row) > 1 else None
+                db_type = row[2] if len(row) > 2 else None
+                
+                if db_name == 'motherduck' and (db_type == 'motherduck' or (path and str(path).lower().startswith('md:'))):
                     return 'motherduck'
             
-            # 3. If no preferred names, look for the first non-standard database
-            # Standard: 'main', 'temp', 'system'
-            remote_name = 'motherduck'
+            # 3. If no preferred names, look for the first non-standard Motherduck database
             for row in res:
-                if row[0] not in ('main', 'temp', 'system', 'memory'):
-                    remote_name = row[0]
-                    break
+                db_name = row[0]
+                path = row[1] if len(row) > 1 else None
+                db_type = row[2] if len(row) > 2 else None
+                
+                if db_type == 'motherduck' or (path and str(path).lower().startswith('md:')):
+                    return db_name
             
-            logger.info(f"Using Motherduck remote database: {remote_name}")
-            return remote_name
+            logger.info("Using default Motherduck remote database name: motherduck")
+            return 'motherduck'
         except Exception as e:
             logger.error(f"Error finding remote db name: {e}")
             return 'motherduck'
@@ -162,7 +173,7 @@ class DuckDBManager:
     def reconnect(self):
         """
         Close existing connection and force a new one on next access.
-        Used when settings change.
+        Used when settings change or connection state gets corrupted.
         """
         if self._connection:
             try:
@@ -201,17 +212,42 @@ class DuckDBManager:
     def is_motherduck_connected(self):
         """Check if Motherduck database is attached."""
         try:
-            res = self.connection.execute("PRAGMA show_databases").fetchall()
-            # Verify it's actually a Motherduck connection by checking for 'md:' prefix 
-            # or 'ravioli' name (our specific alias)
+            res = self.connection.execute(
+                "SELECT database_name, path, type FROM duckdb_databases()"
+            ).fetchall()
             for row in res:
-                if row[0] in ('ravioli', 'motherduck'):
+                db_name = row[0]
+                path = row[1] if len(row) > 1 else None
+                db_type = row[2] if len(row) > 2 else None
+                
+                if db_type == 'motherduck' or (path and str(path).lower().startswith('md:')):
                     return True
-                if len(row) > 1 and str(row[1]).startswith('md:'):
+                # Legacy / mock testing support
+                if db_name == 'motherduck':
                     return True
             return False
-        except Exception:
-            return False
+        except Exception as e:
+            logger.warning(f"Error checking Motherduck connection, attempting reconnect: {e}")
+            try:
+                # Force close and clear the connection to heal stale/broken state (e.g. remotely dropped databases)
+                self.reconnect()
+                res = self.connection.execute(
+                    "SELECT database_name, path, type FROM duckdb_databases()"
+                ).fetchall()
+                for row in res:
+                    db_name = row[0]
+                    path = row[1] if len(row) > 1 else None
+                    db_type = row[2] if len(row) > 2 else None
+                    
+                    if db_type == 'motherduck' or (path and str(path).lower().startswith('md:')):
+                        return True
+                    # Legacy / mock testing support
+                    if db_name == 'motherduck':
+                        return True
+                return False
+            except Exception as reconnect_err:
+                logger.error(f"Automatic Motherduck reconnection healing failed: {reconnect_err}")
+                return False
 
     def get_table_diff(self, schema: str, table: str):
         """Calculate diff between local and remote Motherduck table."""
