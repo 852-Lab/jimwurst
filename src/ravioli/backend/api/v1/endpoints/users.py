@@ -38,7 +38,7 @@ def create_user(
     db.refresh(new_user)
     return new_user
 
-@router.get("/groups", response_model=List[schemas.UserGroup])
+@router.get("/groups", response_model=List[schemas.UserGroupDetail])
 def list_groups(db: Session = Depends(get_db)):
     return db.query(models.UserGroup).all()
 

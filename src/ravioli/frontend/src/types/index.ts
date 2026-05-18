@@ -34,6 +34,7 @@ export interface UserGroup {
   name: string;
   description?: string;
   created_at: string;
+  members?: User[];
 }
 
 export interface AnalysisLog {
