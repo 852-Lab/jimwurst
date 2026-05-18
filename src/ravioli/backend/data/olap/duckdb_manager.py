@@ -339,7 +339,7 @@ class DuckDBManager:
                 # Copy table structure and data
                 self.connection.execute(
                     f"CREATE TABLE temp_clean_db.\"{schema}\".\"{table}\" AS "
-                    f"SELECT * FROM main.\"{schema}\".\"{table}\""
+                    f"SELECT * FROM \"{schema}\".\"{table}\""
                 )
 
             # 3. Detach the temporary database to flush all changes to disk
