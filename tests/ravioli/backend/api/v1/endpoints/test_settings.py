@@ -240,3 +240,53 @@ def test_push_all_to_motherduck_success(client, session, mocker):
     
     # Verify push_all_non_pii was called with correct parameters
     mock_duckdb.push_all_non_pii.assert_called_once_with([("s_manual", "test_table")])
+
+def test_debug_motherduck_not_connected(client, session, mocker):
+    # Mock duckdb_manager as disconnected
+    mock_duckdb = mocker.patch("ravioli.backend.api.v1.endpoints.settings.duckdb_manager")
+    mock_duckdb.is_motherduck_connected.return_value = False
+    
+    response = client.get("/api/v1/settings/md-debug")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "error"
+    assert "not connected" in data["message"]
+
+def test_debug_motherduck_success(client, session, mocker):
+    # Mock duckdb_manager as connected
+    mock_duckdb = mocker.patch("ravioli.backend.api.v1.endpoints.settings.duckdb_manager")
+    mock_duckdb.is_motherduck_connected.return_value = True
+    
+    # Mock queries to identity, databases, schemas, tables
+    mock_conn = MagicMock()
+    mock_duckdb.connection = mock_conn
+    
+    # Set up return values for sequential connection execute calls
+    mock_identity = MagicMock()
+    mock_identity.fetchone.return_value = ("davnnis", "ravioli", ["main"])
+    
+    mock_databases = MagicMock()
+    mock_databases.fetchall.return_value = [("ravioli", "N/A")]
+    
+    mock_schemas = MagicMock()
+    mock_schemas.fetchall.return_value = [("s_manual",)]
+    
+    mock_tables = MagicMock()
+    mock_tables.fetchall.return_value = [("s_manual", "content_table")]
+    
+    mock_conn.execute.side_effect = [
+        mock_identity,    # 1. SELECT current_user()...
+        mock_databases,   # 2. PRAGMA show_databases
+        mock_schemas,     # 3. SELECT schema_name FROM duckdb_schemas()
+        mock_tables       # 4. SELECT schema_name, table_name FROM duckdb_tables()
+    ]
+    
+    response = client.get("/api/v1/settings/md-debug")
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data["identity"]["user"] == "davnnis"
+    assert data["identity"]["database"] == "ravioli"
+    assert data["databases"][0]["name"] == "ravioli"
+    assert data["ravioli_schemas"] == ["s_manual"]
+    assert data["ravioli_tables"][0]["table"] == "content_table"
