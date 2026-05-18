@@ -193,8 +193,10 @@ async def test_test_ollama_connection_success(client, session, mocker):
     assert "Successfully connected" in response.json()["message"]
 
 def test_push_all_to_motherduck_success(client, session, mocker):
+    from ravioli.backend.core.models import DataSource
+
     # Mock duckdb_manager
-    mock_duckdb = mocker.patch("ravioli.backend.api.v1.endpoints.settings.duckdb_manager")
+    mock_duckdb = mocker.patch("ravioli.backend.data.olap.duckdb_manager.duckdb_manager")
     mock_duckdb.is_motherduck_connected.return_value = True
     mock_duckdb._get_remote_db_name.return_value = "ravioli"
     mock_duckdb.push_all_non_pii = MagicMock()
@@ -226,9 +228,6 @@ def test_push_all_to_motherduck_success(client, session, mocker):
     mock_result = MagicMock()
     session.execute.return_value = mock_result
     mock_result.scalars.return_value.all.return_value = [mock_source]
-
-    # Import DataSource so we can mock its imports or use it directly
-    from ravioli.backend.core.models import DataSource
 
     response = client.post("/api/v1/settings/motherduck/push")
 
