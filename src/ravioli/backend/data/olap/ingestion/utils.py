@@ -62,8 +62,36 @@ pii_scanner = PIIScanner()
 # --- XLSX Processing Utils ---
 def process_sheet_with_analysis(df: pd.DataFrame, analysis: dict) -> pd.DataFrame:
     """Apply structural fixes discovered by AI analysis."""
-    h_idx = int(analysis.get("header_row", 0))
-    d_idx = int(analysis.get("data_start_row", h_idx + 1))
+    raw_h = analysis.get("header_row", 0)
+    if isinstance(raw_h, list):
+        if len(raw_h) > 0 and isinstance(raw_h[0], int):
+            h_idx = int(raw_h[0])
+        else:
+            h_idx = 0
+    elif isinstance(raw_h, str):
+        digits = re.findall(r'\d+', raw_h)
+        h_idx = int(digits[0]) if digits else 0
+    else:
+        try:
+            h_idx = int(raw_h)
+        except (ValueError, TypeError):
+            h_idx = 0
+
+    raw_d = analysis.get("data_start_row", h_idx + 1)
+    if isinstance(raw_d, list):
+        if len(raw_d) > 0 and isinstance(raw_d[0], int):
+            d_idx = int(raw_d[0])
+        else:
+            d_idx = h_idx + 1
+    elif isinstance(raw_d, str):
+        digits = re.findall(r'\d+', raw_d)
+        d_idx = int(digits[0]) if digits else h_idx + 1
+    else:
+        try:
+            d_idx = int(raw_d)
+        except (ValueError, TypeError):
+            d_idx = h_idx + 1
+
     is_split = analysis.get("is_split", False)
     offsets = analysis.get("split_offsets", [])
     
@@ -72,13 +100,17 @@ def process_sheet_with_analysis(df: pd.DataFrame, analysis: dict) -> pd.DataFram
         seen = set()
         for i, val in enumerate(h):
             v = str(val).lower().strip()
-            if v and "unnamed" not in v and v in seen:
+            if v and v != "nan" and "unnamed" not in v and v in seen:
                 is_split = True
                 offsets = [j for j, x in enumerate(h) if str(x).lower().strip() == str(h[0]).lower().strip() and j > 0]
                 break
             seen.add(v)
             
-    if is_split:
+    if is_split and not offsets:
+        h = df.iloc[h_idx].tolist()
+        offsets = [j for j, x in enumerate(h) if str(x).lower().strip() == str(h[0]).lower().strip() and j > 0]
+
+    if is_split and offsets:
         data = reconcile_split_table(df, h_idx, d_idx, offsets)
     else:
         data = df.iloc[d_idx:].copy()
