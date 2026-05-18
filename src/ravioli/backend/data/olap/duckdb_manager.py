@@ -99,7 +99,8 @@ class DuckDBManager:
                         if "already attached" not in str(e).lower():
                             logger.error(f"Failed to attach workspace root: {e}")
                     
-                    self._connection.execute("CREATE DATABASE IF NOT EXISTS ravioli")
+                    # Use 'md:ravioli' to avoid local naming conflicts with local 'ravioli' catalog
+                    self._connection.execute("CREATE DATABASE IF NOT EXISTS md:ravioli")
                 except Exception as create_err:
                     logger.error(f"Creation of 'ravioli' database failed: {create_err}")
                 
@@ -117,8 +118,38 @@ class DuckDBManager:
                     
                     # Verify Identity & Context
                     id_info = self._connection.execute("SELECT current_user(), current_database()").fetchone()
-                    logger.info(f"Successfully attached! Cloud Identity: {id_info[0]} | Active DB: {id_info[1]}")
+                    if id_info and len(id_info) >= 2:
+                        logger.info(f"Successfully attached! Cloud Identity: {id_info[0]} | Active DB: {id_info[1]}")
+                    else:
+                        logger.info("Successfully attached to Motherduck!")
                 except Exception as attach_err:
+                    err_msg = str(attach_err).lower()
+                    if "deleted" in err_msg or "does not exist" in err_msg or "not found" in err_msg:
+                        logger.info("Motherduck remote database 'ravioli' was deleted or is missing. Recreating from scratch...")
+                        try:
+                            # Attach 'md:' workspace root if not already attached
+                            try:
+                                self._connection.execute("ATTACH 'md:'")
+                            except Exception:
+                                pass
+                            
+                            # Force recreate the remote database on Motherduck
+                            try:
+                                self._connection.execute("DROP DATABASE IF EXISTS md:ravioli")
+                            except Exception:
+                                pass
+                            self._connection.execute("CREATE DATABASE md:ravioli")
+                            
+                            # Try to attach again
+                            try:
+                                self._connection.execute("ATTACH 'md:ravioli' AS ravioli")
+                            except Exception:
+                                self._connection.execute("ATTACH 'md:ravioli'")
+                            logger.info("Successfully recreated and attached 'md:ravioli' from scratch!")
+                            return
+                        except Exception as recreate_err:
+                            logger.error(f"Failed to recreate Motherduck database from scratch: {recreate_err}")
+
                     if "already attached" not in str(attach_err).lower():
                         logger.error(f"Could not attach 'md:ravioli': {attach_err}")
                         # Final fallback
