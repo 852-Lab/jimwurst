@@ -84,25 +84,28 @@ def test_push_all_non_pii(mock_duckdb):
                     (0,), # table2 exists check
                 ]
                 
-                # Mock NamedTemporaryFile
-                with patch("tempfile.NamedTemporaryFile") as mock_temp:
-                    mock_file = MagicMock()
-                    mock_file.name = "/mock/path/temp.duckdb"
-                    mock_temp.return_value = mock_file
-                    
+                # Mock uuid.uuid4().hex to return 'mockeduuid'
+                mock_uuid = MagicMock()
+                mock_uuid.hex = "mockeduuid"
+                with patch("uuid.uuid4", return_value=mock_uuid):
                     # Mock os.path.exists and os.remove
                     with patch("os.path.exists", return_value=True), patch("os.remove") as mock_remove:
+                        import os
+                        from ravioli.backend.core.config import settings
+                        temp_dir = os.path.dirname(settings.duckdb_path)
+                        expected_path = os.path.join(temp_dir, "temp_mockeduuid.duckdb")
+
                         tables = [("s_manual", "table1"), ("s_manual", "table2")]
                         manager.push_all_non_pii(tables)
                         
                         # Verify temporary file cleanup was triggered
-                        mock_remove.assert_called_once_with("/mock/path/temp.duckdb")
+                        mock_remove.assert_called_once_with(expected_path)
                         
                         # Verify executed queries
                         execute_calls = [call[0][0] for call in mock_duckdb.return_value.execute.call_args_list]
                         
                         # Verify we attached the temp db
-                        assert any("ATTACH '/mock/path/temp.duckdb' AS temp_clean_db" in cmd for cmd in execute_calls)
+                        assert any(f"ATTACH '{expected_path}' AS temp_clean_db" in cmd for cmd in execute_calls)
                         # Verify we checked existence of both tables
                         assert any("WHERE table_schema='s_manual' AND table_name='table1'" in cmd for cmd in execute_calls)
                         assert any("WHERE table_schema='s_manual' AND table_name='table2'" in cmd for cmd in execute_calls)
@@ -111,4 +114,4 @@ def test_push_all_non_pii(mock_duckdb):
                         assert not any("CREATE TABLE temp_clean_db.\"s_manual\".\"table2\"" in cmd for cmd in execute_calls)
                         # Verify detach and block push
                         assert any("DETACH temp_clean_db" in cmd for cmd in execute_calls)
-                        assert any("CREATE OR REPLACE DATABASE \"ravioli\" FROM '/mock/path/temp.duckdb'" in cmd for cmd in execute_calls)
+                        assert any(f"CREATE OR REPLACE DATABASE \"ravioli\" FROM '{expected_path}'" in cmd for cmd in execute_calls)

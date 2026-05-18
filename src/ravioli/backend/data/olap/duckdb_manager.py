@@ -2,6 +2,8 @@ import duckdb
 import os
 import pandas as pd
 import logging
+import uuid
+
 from ravioli.backend.core.config import settings
 from ravioli.backend.core.database import SessionLocal
 from ravioli.backend.core.models import SystemSetting
@@ -304,16 +306,11 @@ class DuckDBManager:
         if not self.is_motherduck_connected():
             raise Exception("Motherduck not connected")
 
-        import tempfile
-        # Create a temporary file path inside the same directory as settings.duckdb_path
+        # Generate a unique non-existent temporary file path inside the same directory as settings.duckdb_path
         # to ensure it's on the same filesystem/volume and has write access
         temp_dir = os.path.dirname(settings.duckdb_path)
         os.makedirs(temp_dir, exist_ok=True)
-        
-        # We close the file right away so DuckDB can open it exclusively
-        temp_file = tempfile.NamedTemporaryFile(dir=temp_dir, suffix=".duckdb", delete=False)
-        temp_path = temp_file.name
-        temp_file.close()
+        temp_path = os.path.join(temp_dir, f"temp_{uuid.uuid4().hex}.duckdb")
 
         try:
             logger.info(f"MotherDuck Bulk Push: Creating sanitized local copy at {temp_path}...")
