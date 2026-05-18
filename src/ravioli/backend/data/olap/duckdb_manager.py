@@ -296,5 +296,72 @@ class DuckDBManager:
         
         return self.get_table_diff(schema, table)
 
+    def push_all_non_pii(self, tables: list[tuple[str, str]]):
+        """
+        Create a temporary local DuckDB file containing only the selected non-PII tables,
+        and upload/push it to MotherDuck in a single, block-level operation.
+        """
+        if not self.is_motherduck_connected():
+            raise Exception("Motherduck not connected")
+
+        import tempfile
+        # Create a temporary file path inside the same directory as settings.duckdb_path
+        # to ensure it's on the same filesystem/volume and has write access
+        temp_dir = os.path.dirname(settings.duckdb_path)
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        # We close the file right away so DuckDB can open it exclusively
+        temp_file = tempfile.NamedTemporaryFile(dir=temp_dir, suffix=".duckdb", delete=False)
+        temp_path = temp_file.name
+        temp_file.close()
+
+        try:
+            logger.info(f"MotherDuck Bulk Push: Creating sanitized local copy at {temp_path}...")
+            # 1. Attach the temporary database to our active connection
+            self.connection.execute(f"ATTACH '{temp_path}' AS temp_clean_db")
+
+            # 2. Replicate only the specified non-PII tables into the temp database
+            for schema, table in tables:
+                logger.info(f"MotherDuck Bulk Push: Exporting table \"{schema}\".\"{table}\"...")
+                # Verify that the table exists locally before attempting to copy
+                try:
+                    exists = self.connection.execute(
+                        f"SELECT count(*) FROM information_schema.tables "
+                        f"WHERE table_schema='{schema}' AND table_name='{table}'"
+                    ).fetchone()[0] > 0
+                except Exception as check_err:
+                    logger.warning(f"Error checking existence of {schema}.{table}: {check_err}")
+                    exists = False
+
+                if not exists:
+                    logger.warning(f"Table \"{schema}\".\"{table}\" does not exist in local DuckDB. Skipping.")
+                    continue
+
+                # Ensure the schema exists in the temp database
+                self.connection.execute(f"CREATE SCHEMA IF NOT EXISTS temp_clean_db.\"{schema}\"")
+                # Copy table structure and data
+                self.connection.execute(
+                    f"CREATE TABLE temp_clean_db.\"{schema}\".\"{table}\" AS "
+                    f"SELECT * FROM main.\"{schema}\".\"{table}\""
+                )
+
+            # 3. Detach the temporary database to flush all changes to disk
+            self.connection.execute("DETACH temp_clean_db")
+
+            # 4. Push the temporary database file directly to Motherduck in a single block upload
+            remote_db = self._get_remote_db_name()
+            logger.info(f"MotherDuck Bulk Push: Uploading copy to remote database '{remote_db}'...")
+            self.connection.execute(f"CREATE OR REPLACE DATABASE \"{remote_db}\" FROM '{temp_path}'")
+            logger.info("MotherDuck Bulk Push: Success! Upload completed.")
+
+        finally:
+            # 5. Always clean up the temporary file from the disk
+            if os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                    logger.info("MotherDuck Bulk Push: Cleaned up temporary DuckDB file.")
+                except Exception as clean_err:
+                    logger.warning(f"Failed to remove temp DuckDB file {temp_path}: {clean_err}")
+
 duckdb_manager = DuckDBManager()
 data_ingestor = DataIngestor(duckdb_manager)

@@ -67,3 +67,48 @@ def test_duckdb_manager_reconnect(mock_db_session, mock_duckdb, mock_decrypt):
         # mock_duckdb is the connect mock, so it should be called twice
         assert mock_duckdb.called
         assert mock_duckdb.call_count == 2
+
+def test_push_all_non_pii(mock_duckdb):
+    with patch.object(DuckDBManager, '_instance', None):
+        manager = DuckDBManager()
+        # Mock connection property to avoid attachment logic
+        manager._connection = mock_duckdb.return_value
+        
+        # Mock is_motherduck_connected to return True
+        with patch.object(manager, 'is_motherduck_connected', return_value=True):
+            # Mock _get_remote_db_name to return 'ravioli'
+            with patch.object(manager, '_get_remote_db_name', return_value='ravioli'):
+                # Mock table existence checks: table1 exists, table2 does not
+                mock_duckdb.return_value.execute.return_value.fetchone.side_effect = [
+                    (1,), # table1 exists check
+                    (0,), # table2 exists check
+                ]
+                
+                # Mock NamedTemporaryFile
+                with patch("tempfile.NamedTemporaryFile") as mock_temp:
+                    mock_file = MagicMock()
+                    mock_file.name = "/mock/path/temp.duckdb"
+                    mock_temp.return_value = mock_file
+                    
+                    # Mock os.path.exists and os.remove
+                    with patch("os.path.exists", return_value=True), patch("os.remove") as mock_remove:
+                        tables = [("s_manual", "table1"), ("s_manual", "table2")]
+                        manager.push_all_non_pii(tables)
+                        
+                        # Verify temporary file cleanup was triggered
+                        mock_remove.assert_called_once_with("/mock/path/temp.duckdb")
+                        
+                        # Verify executed queries
+                        execute_calls = [call[0][0] for call in mock_duckdb.return_value.execute.call_args_list]
+                        
+                        # Verify we attached the temp db
+                        assert any("ATTACH '/mock/path/temp.duckdb' AS temp_clean_db" in cmd for cmd in execute_calls)
+                        # Verify we checked existence of both tables
+                        assert any("WHERE table_schema='s_manual' AND table_name='table1'" in cmd for cmd in execute_calls)
+                        assert any("WHERE table_schema='s_manual' AND table_name='table2'" in cmd for cmd in execute_calls)
+                        # Verify table1 was copied, but table2 was skipped
+                        assert any("CREATE TABLE temp_clean_db.\"s_manual\".\"table1\"" in cmd for cmd in execute_calls)
+                        assert not any("CREATE TABLE temp_clean_db.\"s_manual\".\"table2\"" in cmd for cmd in execute_calls)
+                        # Verify detach and block push
+                        assert any("DETACH temp_clean_db" in cmd for cmd in execute_calls)
+                        assert any("CREATE OR REPLACE DATABASE \"ravioli\" FROM '/mock/path/temp.duckdb'" in cmd for cmd in execute_calls)

@@ -191,3 +191,53 @@ async def test_test_ollama_connection_success(client, session, mocker):
     assert response.status_code == 200
     assert response.json()["status"] == "success"
     assert "Successfully connected" in response.json()["message"]
+
+def test_push_all_to_motherduck_success(client, session, mocker):
+    # Mock duckdb_manager
+    mock_duckdb = mocker.patch("ravioli.backend.api.v1.endpoints.settings.duckdb_manager")
+    mock_duckdb.is_motherduck_connected.return_value = True
+    mock_duckdb._get_remote_db_name.return_value = "ravioli"
+    mock_duckdb.push_all_non_pii = MagicMock()
+    
+    # Mock table existence check in local DuckDB (execute returns True for existence check)
+    mock_duckdb.connection.execute.return_value.fetchone.return_value = (1,)
+
+    # Mock DataSource query results
+    mock_source = DataSource(
+        id=uuid.uuid4(),
+        filename="test.csv",
+        original_filename="test.csv",
+        content_type="text/csv",
+        size_bytes=100,
+        table_name="test_table",
+        schema_name="s_manual",
+        status="completed",
+        source_type="file",
+        has_pii=False,
+        owner_type="user",
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+        created_by=None,
+        updated_by=None,
+        owner=None,
+        owner_id=None
+    )
+    
+    mock_result = MagicMock()
+    session.execute.return_value = mock_result
+    mock_result.scalars.return_value.all.return_value = [mock_source]
+
+    # Import DataSource so we can mock its imports or use it directly
+    from ravioli.backend.core.models import DataSource
+
+    response = client.post("/api/v1/settings/motherduck/push")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "completed"
+    assert len(data["results"]) == 1
+    assert data["results"][0]["table"] == "s_manual.test_table"
+    assert data["results"][0]["status"] == "success"
+    
+    # Verify push_all_non_pii was called with correct parameters
+    mock_duckdb.push_all_non_pii.assert_called_once_with([("s_manual", "test_table")])
