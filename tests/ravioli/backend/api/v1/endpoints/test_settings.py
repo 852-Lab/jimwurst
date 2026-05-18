@@ -191,3 +191,102 @@ async def test_test_ollama_connection_success(client, session, mocker):
     assert response.status_code == 200
     assert response.json()["status"] == "success"
     assert "Successfully connected" in response.json()["message"]
+
+def test_push_all_to_motherduck_success(client, session, mocker):
+    from ravioli.backend.core.models import DataSource
+
+    # Mock duckdb_manager
+    mock_duckdb = mocker.patch("ravioli.backend.data.olap.duckdb_manager.duckdb_manager")
+    mock_duckdb.is_motherduck_connected.return_value = True
+    mock_duckdb._get_remote_db_name.return_value = "ravioli"
+    mock_duckdb.push_all_non_pii = MagicMock()
+    
+    # Mock table existence check in local DuckDB (execute returns True for existence check)
+    mock_duckdb.connection.execute.return_value.fetchone.return_value = (1,)
+
+    # Mock DataSource query results
+    mock_source = DataSource(
+        id=uuid.uuid4(),
+        filename="test.csv",
+        original_filename="test.csv",
+        content_type="text/csv",
+        size_bytes=100,
+        table_name="test_table",
+        schema_name="s_manual",
+        status="completed",
+        source_type="file",
+        has_pii=False,
+        owner_type="user",
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+        created_by=None,
+        updated_by=None,
+        owner=None,
+        owner_id=None
+    )
+    
+    mock_result = MagicMock()
+    session.execute.return_value = mock_result
+    mock_result.scalars.return_value.all.return_value = [mock_source]
+
+    response = client.post("/api/v1/settings/motherduck/push")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "completed"
+    assert len(data["results"]) == 1
+    assert data["results"][0]["table"] == "s_manual.test_table"
+    assert data["results"][0]["status"] == "success"
+    
+    # Verify push_all_non_pii was called with correct parameters
+    mock_duckdb.push_all_non_pii.assert_called_once_with([("s_manual", "test_table")])
+
+def test_debug_motherduck_not_connected(client, session, mocker):
+    # Mock duckdb_manager as disconnected
+    mock_duckdb = mocker.patch("ravioli.backend.api.v1.endpoints.settings.duckdb_manager")
+    mock_duckdb.is_motherduck_connected.return_value = False
+    
+    response = client.get("/api/v1/settings/md-debug")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "error"
+    assert "not connected" in data["message"]
+
+def test_debug_motherduck_success(client, session, mocker):
+    # Mock duckdb_manager as connected
+    mock_duckdb = mocker.patch("ravioli.backend.api.v1.endpoints.settings.duckdb_manager")
+    mock_duckdb.is_motherduck_connected.return_value = True
+    
+    # Mock queries to identity, databases, schemas, tables
+    mock_conn = MagicMock()
+    mock_duckdb.connection = mock_conn
+    
+    # Set up return values for sequential connection execute calls
+    mock_identity = MagicMock()
+    mock_identity.fetchone.return_value = ("davnnis", "ravioli", ["main"])
+    
+    mock_databases = MagicMock()
+    mock_databases.fetchall.return_value = [("ravioli", "N/A")]
+    
+    mock_schemas = MagicMock()
+    mock_schemas.fetchall.return_value = [("s_manual",)]
+    
+    mock_tables = MagicMock()
+    mock_tables.fetchall.return_value = [("s_manual", "content_table")]
+    
+    mock_conn.execute.side_effect = [
+        mock_identity,    # 1. SELECT current_user()...
+        mock_databases,   # 2. PRAGMA show_databases
+        mock_schemas,     # 3. SELECT schema_name FROM duckdb_schemas()
+        mock_tables       # 4. SELECT schema_name, table_name FROM duckdb_tables()
+    ]
+    
+    response = client.get("/api/v1/settings/md-debug")
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data["identity"]["user"] == "davnnis"
+    assert data["identity"]["database"] == "ravioli"
+    assert data["databases"][0]["name"] == "ravioli"
+    assert data["ravioli_schemas"] == ["s_manual"]
+    assert data["ravioli_tables"][0]["table"] == "content_table"

@@ -67,3 +67,62 @@ def test_duckdb_manager_reconnect(mock_db_session, mock_duckdb, mock_decrypt):
         # mock_duckdb is the connect mock, so it should be called twice
         assert mock_duckdb.called
         assert mock_duckdb.call_count == 2
+
+def test_push_all_non_pii(mock_duckdb):
+    with patch.object(DuckDBManager, '_instance', None):
+        manager = DuckDBManager()
+        # Mock connection property to avoid attachment logic
+        manager._connection = mock_duckdb.return_value
+        
+        # Mock is_motherduck_connected to return True
+        with patch.object(manager, 'is_motherduck_connected', return_value=True):
+            # Mock _get_remote_db_name to return 'ravioli'
+            with patch.object(manager, '_get_remote_db_name', return_value='ravioli'):
+                # Mock table existence checks: table1 exists, table2 does not, and finally block queries
+                calls = []
+                def mock_fetchone():
+                    if len(calls) < 2:
+                        val = (1,) if len(calls) == 0 else (0,)
+                        calls.append(val)
+                        return val
+                    return ("ravioli",)
+                
+                mock_duckdb.return_value.execute.return_value.fetchone.side_effect = mock_fetchone
+                mock_duckdb.return_value.execute.return_value.fetchall.return_value = [("ravioli",)]
+                
+                # Mock uuid.uuid4().hex to return 'mockeduuid'
+                mock_uuid = MagicMock()
+                mock_uuid.hex = "mockeduuid"
+                with patch("uuid.uuid4", return_value=mock_uuid):
+                    # Mock os.path.exists and os.remove
+                    with patch("os.path.exists", return_value=True), patch("os.remove") as mock_remove:
+                        import os
+                        from ravioli.backend.core.config import settings
+                        temp_dir = os.path.dirname(settings.duckdb_path)
+                        expected_path = os.path.join(temp_dir, "temp_mockeduuid.duckdb")
+
+                        tables = [("s_manual", "table1"), ("s_manual", "table2")]
+                        manager.push_all_non_pii(tables)
+                        
+                        # Verify temporary file cleanup was triggered
+                        mock_remove.assert_called_once_with(expected_path)
+                        
+                        # Verify executed queries
+                        execute_calls = [call[0][0] for call in mock_duckdb.return_value.execute.call_args_list]
+                        
+                        # Verify we attached the temp db
+                        assert any(f"ATTACH '{expected_path}' AS temp_clean_db" in cmd for cmd in execute_calls)
+                        # Verify we checked existence of both tables
+                        assert any("WHERE table_schema='s_manual' AND table_name='table1'" in cmd for cmd in execute_calls)
+                        assert any("WHERE table_schema='s_manual' AND table_name='table2'" in cmd for cmd in execute_calls)
+                        # Verify table1 was copied, but table2 was skipped
+                        assert any("CREATE TABLE temp_clean_db.\"s_manual\".\"table1\"" in cmd for cmd in execute_calls)
+                        assert not any("CREATE TABLE temp_clean_db.\"s_manual\".\"table2\"" in cmd for cmd in execute_calls)
+                        # Verify detach and block push
+                        assert any("DETACH temp_clean_db" in cmd for cmd in execute_calls)
+                        assert any(f"CREATE OR REPLACE DATABASE \"ravioli\" FROM '{expected_path}'" in cmd for cmd in execute_calls)
+                        # Verify dummy database lifecycle switching
+                        assert any("ATTACH ':memory:' AS dummy_db" in cmd for cmd in execute_calls)
+                        assert any("USE dummy_db" in cmd for cmd in execute_calls)
+                        assert any("USE \"ravioli\"" in cmd for cmd in execute_calls)
+                        assert any("DETACH dummy_db" in cmd for cmd in execute_calls)

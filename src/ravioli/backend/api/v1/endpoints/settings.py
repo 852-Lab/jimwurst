@@ -67,15 +67,34 @@ async def push_all_to_motherduck(db: Session = Depends(get_db)):
     stmt = select(DataSource).where(DataSource.has_pii == False)
     sources = db.execute(stmt).scalars().all()
     
-    results = []
+    tables_to_push = []
     for source in sources:
-        if not source.table_name: continue
+        if source.schema_name and source.table_name:
+            tables_to_push.append((source.schema_name, source.table_name))
+            
+    results = []
+    if tables_to_push:
         try:
-            duckdb_manager.sync_table(source.schema_name, source.table_name, direction="push")
-            results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "success"})
+            # Trigger our optimized bulk block-level database copy push
+            duckdb_manager.push_all_non_pii(tables_to_push)
+            
+            # Verify which tables were copied
+            for schema, table in tables_to_push:
+                try:
+                    exists = duckdb_manager.connection.execute(
+                        f"SELECT count(*) FROM information_schema.tables "
+                        f"WHERE table_schema='{schema}' AND table_name='{table}'"
+                    ).fetchone()[0] > 0
+                except Exception:
+                    exists = False
+                
+                if exists:
+                    results.append({"table": f"{schema}.{table}", "status": "success"})
+                else:
+                    results.append({"table": f"{schema}.{table}", "status": "skipped", "error": "Table does not exist locally"})
         except Exception as e:
-            logger.error(f"Failed to push {source.table_name}: {e}")
-            results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "failed", "error": str(e)})
+            logger.error(f"Failed to push tables in bulk: {e}")
+            raise HTTPException(status_code=500, detail=f"Bulk push to Motherduck failed: {str(e)}")
             
     logger.info(f"=== PUSH ALL COMPLETED ({len(results)} tables processed) ===")
     return {"status": "completed", "results": results}
@@ -133,15 +152,16 @@ async def debug_motherduck(db: Session = Depends(get_db)):
     
     try:
         conn = duckdb_manager.connection
-        identity = conn.execute("SELECT current_user(), current_database(), current_schemas()").fetchone()
+        identity = conn.execute("SELECT current_user(), current_database(), current_schemas(true)").fetchone()
         databases = conn.execute("PRAGMA show_databases").fetchall()
         
         # Look specifically at 'ravioli' database
         try:
-            schemas = conn.execute("SELECT schema_name FROM ravioli.information_schema.schemata").fetchall()
-            tables = conn.execute("SELECT table_schema, table_name FROM ravioli.information_schema.tables").fetchall()
-        except Exception:
-            schemas = ["Error: Could not query ravioli database schemas"]
+            schemas = conn.execute("SELECT schema_name FROM duckdb_schemas() WHERE database_name = 'ravioli'").fetchall()
+            tables = conn.execute("SELECT schema_name, table_name FROM duckdb_tables() WHERE database_name = 'ravioli'").fetchall()
+        except Exception as query_err:
+            logger.error(f"Error querying ravioli schemas/tables: {query_err}", exc_info=True)
+            schemas = [(f"Error: {str(query_err)}",)]
             tables = []
 
         return {

@@ -2,6 +2,8 @@ import duckdb
 import os
 import pandas as pd
 import logging
+import uuid
+
 from ravioli.backend.core.config import settings
 from ravioli.backend.core.database import SessionLocal
 from ravioli.backend.core.models import SystemSetting
@@ -97,7 +99,8 @@ class DuckDBManager:
                         if "already attached" not in str(e).lower():
                             logger.error(f"Failed to attach workspace root: {e}")
                     
-                    self._connection.execute("CREATE DATABASE IF NOT EXISTS ravioli")
+                    # Use 'md:ravioli' to avoid local naming conflicts with local 'ravioli' catalog
+                    self._connection.execute("CREATE DATABASE IF NOT EXISTS md:ravioli")
                 except Exception as create_err:
                     logger.error(f"Creation of 'ravioli' database failed: {create_err}")
                 
@@ -115,8 +118,45 @@ class DuckDBManager:
                     
                     # Verify Identity & Context
                     id_info = self._connection.execute("SELECT current_user(), current_database()").fetchone()
-                    logger.info(f"Successfully attached! Cloud Identity: {id_info[0]} | Active DB: {id_info[1]}")
+                    if id_info and len(id_info) >= 2:
+                        logger.info(f"Successfully attached! Cloud Identity: {id_info[0]} | Active DB: {id_info[1]}")
+                    else:
+                        logger.info("Successfully attached to Motherduck!")
                 except Exception as attach_err:
+                    err_msg = str(attach_err).lower()
+                    if "deleted" in err_msg or "does not exist" in err_msg or "not found" in err_msg:
+                        logger.info("Motherduck remote database 'ravioli' was deleted or is missing. Recreating from scratch...")
+                        try:
+                            # Attach 'md:' workspace root if not already attached
+                            try:
+                                self._connection.execute("ATTACH 'md:'")
+                            except Exception as workspace_attach_err:
+                                logger.debug(
+                                    "Ignoring failure while attaching optional Motherduck workspace root 'md:' "
+                                    "during recreate flow: %s",
+                                    workspace_attach_err,
+                                )
+                            
+                            # Force recreate the remote database on Motherduck
+                            try:
+                                self._connection.execute("DROP DATABASE IF EXISTS md:ravioli")
+                            except Exception as drop_err:
+                                logger.debug(
+                                    "Ignoring non-fatal failure while dropping 'md:ravioli' during recreate flow: %s",
+                                    drop_err,
+                                )
+                            self._connection.execute("CREATE DATABASE md:ravioli")
+                            
+                            # Try to attach again
+                            try:
+                                self._connection.execute("ATTACH 'md:ravioli' AS ravioli")
+                            except Exception:
+                                self._connection.execute("ATTACH 'md:ravioli'")
+                            logger.info("Successfully recreated and attached 'md:ravioli' from scratch!")
+                            return
+                        except Exception as recreate_err:
+                            logger.error(f"Failed to recreate Motherduck database from scratch: {recreate_err}")
+
                     if "already attached" not in str(attach_err).lower():
                         logger.error(f"Could not attach 'md:ravioli': {attach_err}")
                         # Final fallback
@@ -131,36 +171,13 @@ class DuckDBManager:
 
     def _get_remote_db_name(self):
         """Find the name of the attached Motherduck database."""
-        try:
-            res = self.connection.execute("PRAGMA show_databases").fetchall()
-            # 1. Look for 'ravioli' (our preferred dedicated db)
-            for row in res:
-                if row[0] == 'ravioli':
-                    return 'ravioli'
-            
-            # 2. Look for 'motherduck' alias
-            for row in res:
-                if row[0] == 'motherduck':
-                    return 'motherduck'
-            
-            # 3. If no preferred names, look for the first non-standard database
-            # Standard: 'main', 'temp', 'system'
-            remote_name = 'motherduck'
-            for row in res:
-                if row[0] not in ('main', 'temp', 'system', 'memory'):
-                    remote_name = row[0]
-                    break
-            
-            logger.info(f"Using Motherduck remote database: {remote_name}")
-            return remote_name
-        except Exception as e:
-            logger.error(f"Error finding remote db name: {e}")
-            return 'motherduck'
+        # The canonical remote Motherduck database for our application is always 'ravioli'
+        return 'ravioli'
 
     def reconnect(self):
         """
         Close existing connection and force a new one on next access.
-        Used when settings change.
+        Used when settings change or connection state gets corrupted.
         """
         if self._connection:
             try:
@@ -199,17 +216,42 @@ class DuckDBManager:
     def is_motherduck_connected(self):
         """Check if Motherduck database is attached."""
         try:
-            res = self.connection.execute("PRAGMA show_databases").fetchall()
-            # Verify it's actually a Motherduck connection by checking for 'md:' prefix 
-            # or 'ravioli' name (our specific alias)
+            res = self.connection.execute(
+                "SELECT database_name, path, type FROM duckdb_databases()"
+            ).fetchall()
             for row in res:
-                if row[0] in ('ravioli', 'motherduck'):
+                db_name = row[0]
+                path = row[1] if len(row) > 1 else None
+                db_type = row[2] if len(row) > 2 else None
+                
+                if db_type == 'motherduck' or (path and str(path).lower().startswith('md:')):
                     return True
-                if len(row) > 1 and str(row[1]).startswith('md:'):
+                # Legacy / mock testing support
+                if db_name == 'motherduck':
                     return True
             return False
-        except Exception:
-            return False
+        except Exception as e:
+            logger.warning(f"Error checking Motherduck connection, attempting reconnect: {e}")
+            try:
+                # Force close and clear the connection to heal stale/broken state (e.g. remotely dropped databases)
+                self.reconnect()
+                res = self.connection.execute(
+                    "SELECT database_name, path, type FROM duckdb_databases()"
+                ).fetchall()
+                for row in res:
+                    db_name = row[0]
+                    path = row[1] if len(row) > 1 else None
+                    db_type = row[2] if len(row) > 2 else None
+                    
+                    if db_type == 'motherduck' or (path and str(path).lower().startswith('md:')):
+                        return True
+                    # Legacy / mock testing support
+                    if db_name == 'motherduck':
+                        return True
+                return False
+            except Exception as reconnect_err:
+                logger.error(f"Automatic Motherduck reconnection healing failed: {reconnect_err}")
+                return False
 
     def get_table_diff(self, schema: str, table: str):
         """Calculate diff between local and remote Motherduck table."""
@@ -295,6 +337,103 @@ class DuckDBManager:
             logger.info(f"Sync: Pull completed. Verified {local_count} rows locally for {local_table}")
         
         return self.get_table_diff(schema, table)
+
+    def push_all_non_pii(self, tables: list[tuple[str, str]]):
+        """
+        Create a temporary local DuckDB file containing only the selected non-PII tables,
+        and upload/push it to MotherDuck in a single, block-level operation.
+        """
+        if not self.is_motherduck_connected():
+            raise Exception("Motherduck not connected")
+
+        # Generate a unique non-existent temporary file path inside the same directory as settings.duckdb_path
+        # to ensure it's on the same filesystem/volume and has write access
+        temp_dir = os.path.dirname(settings.duckdb_path)
+        os.makedirs(temp_dir, exist_ok=True)
+        temp_path = os.path.join(temp_dir, f"temp_{uuid.uuid4().hex}.duckdb")
+
+        try:
+            logger.info(f"MotherDuck Bulk Push: Creating sanitized local copy at {temp_path}...")
+            # 1. Attach the temporary database to our active connection
+            self.connection.execute(f"ATTACH '{temp_path}' AS temp_clean_db")
+
+            # 2. Replicate only the specified non-PII tables into the temp database
+            for schema, table in tables:
+                logger.info(f"MotherDuck Bulk Push: Exporting table \"{schema}\".\"{table}\"...")
+                # Verify that the table exists locally before attempting to copy
+                try:
+                    exists = self.connection.execute(
+                        f"SELECT count(*) FROM information_schema.tables "
+                        f"WHERE table_schema='{schema}' AND table_name='{table}'"
+                    ).fetchone()[0] > 0
+                except Exception as check_err:
+                    logger.warning(f"Error checking existence of {schema}.{table}: {check_err}")
+                    exists = False
+
+                if not exists:
+                    logger.warning(f"Table \"{schema}\".\"{table}\" does not exist in local DuckDB. Skipping.")
+                    continue
+
+                # Ensure the schema exists in the temp database
+                self.connection.execute(f"CREATE SCHEMA IF NOT EXISTS temp_clean_db.\"{schema}\"")
+                # Copy table structure and data
+                self.connection.execute(
+                    f"CREATE TABLE temp_clean_db.\"{schema}\".\"{table}\" AS "
+                    f"SELECT * FROM \"{schema}\".\"{table}\""
+                )
+
+            # 3. Detach the temporary database early to release file locks and avoid file handle conflicts
+            self.connection.execute("DETACH temp_clean_db")
+
+            # 4. Attach a dummy in-memory database to allow detaching/replacing 'ravioli' (the default database)
+            self.connection.execute("ATTACH ':memory:' AS dummy_db")
+            self.connection.execute("USE dummy_db")
+
+            # 5. Push the temporary database file directly to Motherduck in a single block upload
+            remote_db = self._get_remote_db_name()
+            logger.info(f"MotherDuck Bulk Push: Uploading copy to remote database '{remote_db}'...")
+            self.connection.execute(f"CREATE OR REPLACE DATABASE \"{remote_db}\" FROM '{temp_path}'")
+            logger.info("MotherDuck Bulk Push: Success! Upload completed.")
+
+            # 6. Switch default database context back to the primary local/remote database
+            self.connection.execute(f"USE \"{remote_db}\"")
+
+            # 7. Detach the dummy database
+            self.connection.execute("DETACH dummy_db")
+
+        finally:
+            # 8. Safely restore the primary database context if left switched
+            try:
+                current_db = self.connection.execute("SELECT current_database()").fetchone()[0]
+                if current_db in ("temp_clean_db", "dummy_db"):
+                    remote_db = self._get_remote_db_name()
+                    self.connection.execute(f"USE \"{remote_db}\"")
+            except Exception as reset_err:
+                logger.warning(f"Could not restore default database context: {reset_err}")
+
+            # 9. Safely detach dummy_db if it is still attached
+            try:
+                attached_dbs = [row[0] for row in self.connection.execute("PRAGMA show_databases").fetchall()]
+                if "dummy_db" in attached_dbs:
+                    self.connection.execute("DETACH dummy_db")
+            except Exception as detach_err:
+                logger.warning(f"Could not detach dummy_db: {detach_err}")
+
+            # 10. Safely detach temp_clean_db if it is still attached
+            try:
+                attached_dbs = [row[0] for row in self.connection.execute("PRAGMA show_databases").fetchall()]
+                if "temp_clean_db" in attached_dbs:
+                    self.connection.execute("DETACH temp_clean_db")
+            except Exception as detach_err:
+                logger.warning(f"Could not detach temp_clean_db: {detach_err}")
+
+            # 11. Always clean up the temporary file from the disk
+            if os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                    logger.info("MotherDuck Bulk Push: Cleaned up temporary DuckDB file.")
+                except Exception as clean_err:
+                    logger.warning(f"Failed to remove temp DuckDB file {temp_path}: {clean_err}")
 
 duckdb_manager = DuckDBManager()
 data_ingestor = DataIngestor(duckdb_manager)
