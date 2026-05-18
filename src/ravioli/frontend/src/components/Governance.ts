@@ -647,7 +647,10 @@ async function showManageGroupMembersModal(group: UserGroup) {
     modal.innerHTML = renderContent();
 
     const bindEvents = () => {
-      modal.querySelector('#btn-close-members')?.addEventListener('click', () => modal.remove());
+      modal.querySelector('#btn-close-members')?.addEventListener('click', () => {
+        modal.remove();
+        hydrateGroups(document.body);
+      });
       
       modal.querySelectorAll('.btn-remove-member').forEach(btn => {
         btn.addEventListener('click', async () => {
