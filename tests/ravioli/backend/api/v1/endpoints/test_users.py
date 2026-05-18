@@ -90,6 +90,8 @@ def test_list_groups(client, session):
     mock_group.created_by = None
     mock_group.updated_by = None
     mock_group.owner_id = None
+    mock_group.owner_user = None
+    mock_group.members = []
 
     session.query.return_value.all.return_value = [mock_group]
 

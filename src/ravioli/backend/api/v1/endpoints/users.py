@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ravioli.backend.core import models, schemas
@@ -38,7 +38,7 @@ def create_user(
     db.refresh(new_user)
     return new_user
 
-@router.get("/groups", response_model=List[schemas.UserGroup])
+@router.get("/groups", response_model=List[schemas.UserGroupDetail])
 def list_groups(db: Session = Depends(get_db)):
     return db.query(models.UserGroup).all()
 
@@ -106,6 +106,14 @@ def delete_group(
     db.commit()
     return {"message": "Group deleted successfully"}
 
+@router.get("/groups/{group_id}", response_model=schemas.UserGroupDetail)
+def get_group(group_id: uuid.UUID, db: Session = Depends(get_db)):
+    group = db.query(models.UserGroup).filter(models.UserGroup.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+    return group
+
+
 @router.get("/groups/{group_id}/members", response_model=List[schemas.User])
 
 def list_group_members(group_id: uuid.UUID, db: Session = Depends(get_db)):
@@ -115,7 +123,13 @@ def list_group_members(group_id: uuid.UUID, db: Session = Depends(get_db)):
     return group.members
 
 @router.post("/groups/{group_id}/members/{user_id}")
-def add_group_member(group_id: uuid.UUID, user_id: uuid.UUID, db: Session = Depends(get_db)):
+def add_group_member(
+    group_id: uuid.UUID,
+    user_id: uuid.UUID,
+    role: Optional[str] = "Member",
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     group = db.query(models.UserGroup).filter(models.UserGroup.id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
@@ -124,15 +138,31 @@ def add_group_member(group_id: uuid.UUID, user_id: uuid.UUID, db: Session = Depe
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    if user in group.members:
+    membership = db.query(models.UserGroupMember).filter(
+        models.UserGroupMember.group_id == group_id,
+        models.UserGroupMember.user_id == user_id
+    ).first()
+    
+    if membership:
         return {"message": "User already in group"}
     
-    group.members.append(user)
+    new_membership = models.UserGroupMember(
+        user_id=user_id,
+        group_id=group_id,
+        role_in_group=role,
+        updated_by=current_user.id
+    )
+    db.add(new_membership)
     db.commit()
     return {"message": "User added to group"}
 
 @router.delete("/groups/{group_id}/members/{user_id}")
-def remove_group_member(group_id: uuid.UUID, user_id: uuid.UUID, db: Session = Depends(get_db)):
+def remove_group_member(
+    group_id: uuid.UUID,
+    user_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     group = db.query(models.UserGroup).filter(models.UserGroup.id == group_id).first()
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
@@ -141,12 +171,38 @@ def remove_group_member(group_id: uuid.UUID, user_id: uuid.UUID, db: Session = D
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    if user not in group.members:
+    membership = db.query(models.UserGroupMember).filter(
+        models.UserGroupMember.group_id == group_id,
+        models.UserGroupMember.user_id == user_id
+    ).first()
+    
+    if not membership:
         raise HTTPException(status_code=400, detail="User not in group")
     
-    group.members.remove(user)
+    db.delete(membership)
     db.commit()
     return {"message": "User removed from group"}
+
+@router.patch("/groups/{group_id}/members/{user_id}")
+def update_group_member(
+    group_id: uuid.UUID,
+    user_id: uuid.UUID,
+    role_in_group: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    membership = db.query(models.UserGroupMember).filter(
+        models.UserGroupMember.group_id == group_id,
+        models.UserGroupMember.user_id == user_id
+    ).first()
+    
+    if not membership:
+        raise HTTPException(status_code=404, detail="Membership not found")
+        
+    membership.role_in_group = role_in_group
+    membership.updated_by = current_user.id
+    db.commit()
+    return {"message": "Membership updated successfully"}
 
 @router.patch("/{user_id}", response_model=schemas.User)
 def update_user(

@@ -332,6 +332,32 @@ async function hydrateGroups(container: HTMLElement) {
           </div>
         </div>
         <p class="text-sm text-outline opacity-60 line-clamp-2 mb-6 h-10 font-body-md">${group.description || 'No description provided.'}</p>
+        
+        ${group.members && group.members.length > 0 ? `
+          <div class="flex items-center gap-2 mb-6">
+            <div class="flex -space-x-2">
+              ${group.members.slice(0, 4).map(m => `
+                <div class="w-7 h-7 rounded-full bg-secondary/20 flex items-center justify-center border border-[#1C1C1E] text-[10px] font-bold text-secondary z-10" title="${m.name} (${m.role})">
+                  ${m.name.charAt(0).toUpperCase()}
+                </div>
+              `).join('')}
+              ${group.members.length > 4 ? `
+                <div class="w-7 h-7 rounded-full bg-surface-container-high flex items-center justify-center border border-[#1C1C1E] text-[9px] font-bold text-outline z-0">
+                  +${group.members.length - 4}
+                </div>
+              ` : ''}
+            </div>
+            <span class="text-[10px] text-outline opacity-40 ml-2 font-bold">${group.members.length} Member${group.members.length === 1 ? '' : 's'}</span>
+          </div>
+        ` : `
+          <div class="mb-6 flex items-center gap-2">
+            <div class="w-7 h-7 rounded-full border border-dashed border-white/10 flex items-center justify-center">
+              <span class="material-symbols-outlined text-[14px] text-outline opacity-30" data-icon="person_add">person_add</span>
+            </div>
+            <span class="text-[10px] text-outline opacity-40 font-bold">No members yet</span>
+          </div>
+        `}
+
         <div class="pt-6 border-t border-white/5 flex items-center justify-between">
           <button class="btn-edit-group text-[10px] uppercase tracking-widest font-bold text-outline hover:text-secondary opacity-0 group-hover:opacity-100 transition-all" data-group-id="${group.id}">Edit Details</button>
           <button class="btn-manage-members text-[10px] uppercase tracking-widest font-bold text-secondary opacity-0 group-hover:opacity-100 transition-all" data-group-id="${group.id}">Manage Members →</button>
@@ -436,6 +462,7 @@ function showCreateUserModal(userToEdit?: User) {
           await api.deleteUser(userToEdit.id);
           modal.remove();
           store.setGovernanceTab('users');
+          hydrateUsers(document.body);
         } catch (err: any) {
           alert(err.message);
         }
@@ -459,6 +486,7 @@ function showCreateUserModal(userToEdit?: User) {
       modal.remove();
       // Store ensures re-render with 'users' tab active
       store.setGovernanceTab('users');
+      hydrateUsers(document.body);
     } catch (err: any) {
       alert(err.message);
     }
@@ -518,6 +546,7 @@ function showCreateGroupModal(groupToEdit?: UserGroup) {
           await api.deleteGroup(groupToEdit.id);
           modal.remove();
           store.setGovernanceTab('groups');
+          hydrateGroups(document.body);
         } catch (err: any) {
           alert(err.message);
         }
@@ -538,6 +567,7 @@ function showCreateGroupModal(groupToEdit?: UserGroup) {
       }
       modal.remove();
       store.setGovernanceTab('groups');
+      hydrateGroups(document.body);
     } catch (err: any) {
       alert(err.message);
     }
@@ -617,7 +647,10 @@ async function showManageGroupMembersModal(group: UserGroup) {
     modal.innerHTML = renderContent();
 
     const bindEvents = () => {
-      modal.querySelector('#btn-close-members')?.addEventListener('click', () => modal.remove());
+      modal.querySelector('#btn-close-members')?.addEventListener('click', () => {
+        modal.remove();
+        hydrateGroups(document.body);
+      });
       
       modal.querySelectorAll('.btn-remove-member').forEach(btn => {
         btn.addEventListener('click', async () => {

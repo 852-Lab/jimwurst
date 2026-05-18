@@ -125,6 +125,8 @@ def _migrate_columns():
         "ALTER TABLE app.users ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES app.users(id)",
         # Safe type migration for content: wraps existing text in a paragraph block
         "ALTER TABLE app.knowledge_pages ALTER COLUMN content TYPE JSONB USING CASE WHEN content IS NULL THEN '[]'::JSONB WHEN content::text ~ '^[\\[\\{]' THEN content::JSONB ELSE jsonb_build_array(jsonb_build_object('type', 'paragraph', 'paragraph', jsonb_build_object('rich_text', jsonb_build_array(jsonb_build_object('type', 'text', 'text', jsonb_build_object('content', content)))))) END",
+        "ALTER TABLE app.user_group_members ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP",
+        "ALTER TABLE app.user_group_members ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES app.users(id)",
     ]
     with engine.begin() as conn:
         for stmt in migrations:

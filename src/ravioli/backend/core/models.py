@@ -112,6 +112,8 @@ class User(Base):
     groups: Mapped[List["UserGroup"]] = relationship(
         "UserGroup",
         secondary="app.user_group_members",
+        primaryjoin="User.id==UserGroupMember.user_id",
+        secondaryjoin="UserGroup.id==UserGroupMember.group_id",
         back_populates="members"
     )
 
@@ -284,6 +286,8 @@ class UserGroup(Base):
     members: Mapped[List["User"]] = relationship(
         "User",
         secondary="app.user_group_members",
+        primaryjoin="UserGroup.id==UserGroupMember.group_id",
+        secondaryjoin="User.id==UserGroupMember.user_id",
         back_populates="groups"
     )
     data_sources: Mapped[List["DataSource"]] = relationship(
@@ -314,3 +318,5 @@ class UserGroupMember(Base):
     group_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("app.user_groups.id"), primary_key=True)
     role_in_group: Mapped[Optional[str]] = mapped_column(String(50)) # e.g., 'Lead', 'Member'
     joined_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+    updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
