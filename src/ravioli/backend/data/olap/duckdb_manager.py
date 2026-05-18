@@ -133,42 +133,8 @@ class DuckDBManager:
 
     def _get_remote_db_name(self):
         """Find the name of the attached Motherduck database."""
-        try:
-            res = self.connection.execute(
-                "SELECT database_name, path, type FROM duckdb_databases()"
-            ).fetchall()
-            # 1. Look for 'ravioli' (our preferred dedicated db) that is actually a Motherduck database
-            for row in res:
-                db_name = row[0]
-                path = row[1] if len(row) > 1 else None
-                db_type = row[2] if len(row) > 2 else None
-                
-                if db_name == 'ravioli' and (db_type == 'motherduck' or (path and str(path).lower().startswith('md:'))):
-                    return 'ravioli'
-            
-            # 2. Look for 'motherduck' alias
-            for row in res:
-                db_name = row[0]
-                path = row[1] if len(row) > 1 else None
-                db_type = row[2] if len(row) > 2 else None
-                
-                if db_name == 'motherduck' and (db_type == 'motherduck' or (path and str(path).lower().startswith('md:'))):
-                    return 'motherduck'
-            
-            # 3. If no preferred names, look for the first non-standard Motherduck database
-            for row in res:
-                db_name = row[0]
-                path = row[1] if len(row) > 1 else None
-                db_type = row[2] if len(row) > 2 else None
-                
-                if db_type == 'motherduck' or (path and str(path).lower().startswith('md:')):
-                    return db_name
-            
-            logger.info("Using default Motherduck remote database name: motherduck")
-            return 'motherduck'
-        except Exception as e:
-            logger.error(f"Error finding remote db name: {e}")
-            return 'motherduck'
+        # The canonical remote Motherduck database for our application is always 'ravioli'
+        return 'ravioli'
 
     def reconnect(self):
         """
