@@ -314,3 +314,5 @@ class UserGroupMember(Base):
     group_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("app.user_groups.id"), primary_key=True)
     role_in_group: Mapped[Optional[str]] = mapped_column(String(50)) # e.g., 'Lead', 'Member'
     joined_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+    updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
