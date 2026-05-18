@@ -436,6 +436,7 @@ function showCreateUserModal(userToEdit?: User) {
           await api.deleteUser(userToEdit.id);
           modal.remove();
           store.setGovernanceTab('users');
+          hydrateUsers(document.body);
         } catch (err: any) {
           alert(err.message);
         }
@@ -459,6 +460,7 @@ function showCreateUserModal(userToEdit?: User) {
       modal.remove();
       // Store ensures re-render with 'users' tab active
       store.setGovernanceTab('users');
+      hydrateUsers(document.body);
     } catch (err: any) {
       alert(err.message);
     }
@@ -518,6 +520,7 @@ function showCreateGroupModal(groupToEdit?: UserGroup) {
           await api.deleteGroup(groupToEdit.id);
           modal.remove();
           store.setGovernanceTab('groups');
+          hydrateGroups(document.body);
         } catch (err: any) {
           alert(err.message);
         }
@@ -538,6 +541,7 @@ function showCreateGroupModal(groupToEdit?: UserGroup) {
       }
       modal.remove();
       store.setGovernanceTab('groups');
+      hydrateGroups(document.body);
     } catch (err: any) {
       alert(err.message);
     }
