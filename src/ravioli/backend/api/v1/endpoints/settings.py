@@ -100,7 +100,10 @@ async def push_all_to_motherduck(db: Session = Depends(get_db)):
     return {"status": "completed", "results": results}
 
 @router.post("/motherduck/pull")
-async def pull_all_from_motherduck(db: Session = Depends(get_db)):
+async def pull_all_from_motherduck(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     """Pull all tables from Motherduck to local."""
     from ravioli.backend.data.olap.duckdb_manager import duckdb_manager
     from ravioli.backend.core.models import DataSource
@@ -119,6 +122,7 @@ async def pull_all_from_motherduck(db: Session = Depends(get_db)):
             res = duckdb_manager.sync_table(source.schema_name, source.table_name, direction="pull")
             if "total_local" in res:
                 source.row_count = res["total_local"]
+                source.updated_by = current_user.id
             results.append({"table": f"{source.schema_name}.{source.table_name}", "status": "success"})
         except Exception:
             logger.exception(f"Failed to pull {source.schema_name}.{source.table_name} from Motherduck")
