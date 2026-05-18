@@ -86,7 +86,7 @@ def test_delete_file(client, session, mocker):
     mock_unlink.assert_called_once()
     mock_duckdb.connection.execute.assert_called_once_with('DROP TABLE IF EXISTS "s_manual"."test_table"')
 
-def test_update_file_pii(client, session):
+def test_update_file_pii(client, session, current_user):
     file_id = uuid.uuid4()
     mock_file = DataSource(
         id=file_id,
@@ -116,9 +116,10 @@ def test_update_file_pii(client, session):
 
     assert response.status_code == 200
     assert mock_file.has_pii is True
+    assert mock_file.updated_by == current_user.id
     assert session.commit.called
 
-def test_update_file_description(client, session):
+def test_update_file_description(client, session, current_user):
     file_id = uuid.uuid4()
     mock_file = DataSource(
         id=file_id,
@@ -149,6 +150,7 @@ def test_update_file_description(client, session):
 
     assert response.status_code == 200
     assert mock_file.description == "New description"
+    assert mock_file.updated_by == current_user.id
 
 @pytest.mark.anyio
 async def test_list_wfs_layers(client, mocker):

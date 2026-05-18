@@ -2,7 +2,7 @@ import uuid
 from unittest.mock import AsyncMock
 from datetime import datetime, UTC
 
-def test_create_analysis(client, session):
+def test_create_analysis(client, session, current_user):
     # Prepare mock data
     analysis_id = uuid.uuid4()
     analysis_data = {
@@ -20,8 +20,8 @@ def test_create_analysis(client, session):
         obj.created_at = datetime.now(UTC)
         obj.updated_at = datetime.now(UTC)
         obj.owner = None
-        obj.created_by = None
-        obj.updated_by = None
+        obj.created_by = current_user.id
+        obj.updated_by = current_user.id
 
     session.refresh.side_effect = mock_refresh
 
@@ -33,6 +33,8 @@ def test_create_analysis(client, session):
     data = response.json()
     assert data["title"] == "Test Analysis"
     assert data["id"] == str(analysis_id)
+    assert data["created_by"] == str(current_user.id)
+    assert data["updated_by"] == str(current_user.id)
     assert session.add.called
     assert session.commit.called
 
@@ -76,7 +78,7 @@ def test_get_analysis_not_found(client, session):
     assert response.status_code == 404
     assert response.json()["detail"] == "Analysis not found"
 
-def test_create_analysis_with_notebook(client, session):
+def test_create_analysis_with_notebook(client, session, current_user):
     # Prepare mock data with notebook
     analysis_id = uuid.uuid4()
     notebook_content = {
@@ -103,8 +105,8 @@ def test_create_analysis_with_notebook(client, session):
         obj.created_at = datetime.now(UTC)
         obj.updated_at = datetime.now(UTC)
         obj.owner = None
-        obj.created_by = None
-        obj.updated_by = None
+        obj.created_by = current_user.id
+        obj.updated_by = current_user.id
         obj.notebook = notebook_content
 
     session.refresh.side_effect = mock_refresh
@@ -117,6 +119,8 @@ def test_create_analysis_with_notebook(client, session):
     data = response.json()
     assert data["title"] == "Notebook Analysis"
     assert data["notebook"] == notebook_content
+    assert data["created_by"] == str(current_user.id)
+    assert data["updated_by"] == str(current_user.id)
     assert data["notebook"]["cells"][0]["source"] == ["# Test Notebook"]
 
 def test_get_suggested_prompts(client, session, mocker):
