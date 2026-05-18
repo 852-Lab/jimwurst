@@ -130,14 +130,21 @@ class DuckDBManager:
                             # Attach 'md:' workspace root if not already attached
                             try:
                                 self._connection.execute("ATTACH 'md:'")
-                            except Exception:
-                                pass
+                            except Exception as workspace_attach_err:
+                                logger.debug(
+                                    "Ignoring failure while attaching optional Motherduck workspace root 'md:' "
+                                    "during recreate flow: %s",
+                                    workspace_attach_err,
+                                )
                             
                             # Force recreate the remote database on Motherduck
                             try:
                                 self._connection.execute("DROP DATABASE IF EXISTS md:ravioli")
-                            except Exception:
-                                pass
+                            except Exception as drop_err:
+                                logger.debug(
+                                    "Ignoring non-fatal failure while dropping 'md:ravioli' during recreate flow: %s",
+                                    drop_err,
+                                )
                             self._connection.execute("CREATE DATABASE md:ravioli")
                             
                             # Try to attach again
