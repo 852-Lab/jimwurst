@@ -152,7 +152,7 @@ async def debug_motherduck(db: Session = Depends(get_db)):
     
     try:
         conn = duckdb_manager.connection
-        identity = conn.execute("SELECT current_user(), current_database(), current_schemas()").fetchone()
+        identity = conn.execute("SELECT current_user(), current_database(), current_schemas(true)").fetchone()
         databases = conn.execute("PRAGMA show_databases").fetchall()
         
         # Look specifically at 'ravioli' database
