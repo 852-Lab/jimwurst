@@ -342,32 +342,44 @@ class DuckDBManager:
                     f"SELECT * FROM \"{schema}\".\"{table}\""
                 )
 
-            # 3. Switch default database context to temp_clean_db to allow detaching/replacing the primary 'ravioli' database
-            self.connection.execute("USE temp_clean_db")
+            # 3. Detach the temporary database early to release file locks and avoid file handle conflicts
+            self.connection.execute("DETACH temp_clean_db")
 
-            # 4. Push the temporary database file directly to Motherduck in a single block upload
+            # 4. Attach a dummy in-memory database to allow detaching/replacing 'ravioli' (the default database)
+            self.connection.execute("ATTACH ':memory:' AS dummy_db")
+            self.connection.execute("USE dummy_db")
+
+            # 5. Push the temporary database file directly to Motherduck in a single block upload
             remote_db = self._get_remote_db_name()
             logger.info(f"MotherDuck Bulk Push: Uploading copy to remote database '{remote_db}'...")
             self.connection.execute(f"CREATE OR REPLACE DATABASE \"{remote_db}\" FROM '{temp_path}'")
             logger.info("MotherDuck Bulk Push: Success! Upload completed.")
 
-            # 5. Switch default database context back to the primary local/remote database
+            # 6. Switch default database context back to the primary local/remote database
             self.connection.execute(f"USE \"{remote_db}\"")
 
-            # 6. Detach the temporary database to flush all changes to disk
-            self.connection.execute("DETACH temp_clean_db")
+            # 7. Detach the dummy database
+            self.connection.execute("DETACH dummy_db")
 
         finally:
-            # 7. Safely restore the primary database context if left switched
+            # 8. Safely restore the primary database context if left switched
             try:
                 current_db = self.connection.execute("SELECT current_database()").fetchone()[0]
-                if current_db == "temp_clean_db":
+                if current_db in ("temp_clean_db", "dummy_db"):
                     remote_db = self._get_remote_db_name()
                     self.connection.execute(f"USE \"{remote_db}\"")
             except Exception as reset_err:
                 logger.warning(f"Could not restore default database context: {reset_err}")
 
-            # 8. Safely detach temp_clean_db if it is still attached
+            # 9. Safely detach dummy_db if it is still attached
+            try:
+                attached_dbs = [row[0] for row in self.connection.execute("PRAGMA show_databases").fetchall()]
+                if "dummy_db" in attached_dbs:
+                    self.connection.execute("DETACH dummy_db")
+            except Exception as detach_err:
+                logger.warning(f"Could not detach dummy_db: {detach_err}")
+
+            # 10. Safely detach temp_clean_db if it is still attached
             try:
                 attached_dbs = [row[0] for row in self.connection.execute("PRAGMA show_databases").fetchall()]
                 if "temp_clean_db" in attached_dbs:
@@ -375,7 +387,7 @@ class DuckDBManager:
             except Exception as detach_err:
                 logger.warning(f"Could not detach temp_clean_db: {detach_err}")
 
-            # 9. Always clean up the temporary file from the disk
+            # 11. Always clean up the temporary file from the disk
             if os.path.exists(temp_path):
                 try:
                     os.remove(temp_path)

@@ -121,3 +121,8 @@ def test_push_all_non_pii(mock_duckdb):
                         # Verify detach and block push
                         assert any("DETACH temp_clean_db" in cmd for cmd in execute_calls)
                         assert any(f"CREATE OR REPLACE DATABASE \"ravioli\" FROM '{expected_path}'" in cmd for cmd in execute_calls)
+                        # Verify dummy database lifecycle switching
+                        assert any("ATTACH ':memory:' AS dummy_db" in cmd for cmd in execute_calls)
+                        assert any("USE dummy_db" in cmd for cmd in execute_calls)
+                        assert any("USE \"ravioli\"" in cmd for cmd in execute_calls)
+                        assert any("DETACH dummy_db" in cmd for cmd in execute_calls)
