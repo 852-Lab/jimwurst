@@ -196,6 +196,17 @@ class DataSourceUpdate(BaseModel):
 class DataSourcePIIUpdate(BaseModel):
     has_pii: bool
 
+class DataDiff(BaseModel):
+    total_local: int
+    total_remote: int
+    added: int
+    removed: int
+    status: str
+    error: Optional[str] = None
+
+class DataSyncRequest(BaseModel):
+    direction: str # "push" or "pull"
+
 # --- WFS Schemas ---
 
 class WFSLayer(BaseModel):
@@ -234,6 +245,7 @@ class KnowledgePageBase(BaseModel):
     owner: Optional[UUID] = None
     owner_type: str = "user"
     owner_id: Optional[str] = None
+    ownership_type: str = "individual"
     parent_id: Optional[UUID] = None
     source: str = "manual"
     source_id: Optional[str] = None
@@ -264,6 +276,7 @@ class KnowledgePageUpdate(BaseModel):
     cover: Optional[dict] = None
     owner_type: Optional[str] = None
     owner_id: Optional[str] = None
+    ownership_type: Optional[str] = None
     parent_id: Optional[UUID] = None
 
 class KnowledgePage(KnowledgePageBase):

@@ -2,13 +2,19 @@ import { store } from '../store';
 import { api } from '../services/api';
 
 export function renderSidebar() {
+  const container = document.createElement('aside');
+  container.id = 'sidebar-aside';
+  container.className = 'fixed left-0 top-0 flex flex-col h-full py-8 w-64 bg-surface-container-low font-display-lg text-sm tracking-tight z-50';
+  
+  updateSidebarUI(container);
+  return container;
+}
+
+export function updateSidebarUI(container: HTMLElement) {
   const analyses = store.getAnalyses() || [];
   const activeId = store.getActiveAnalysisId();
   const currentView = store.getCurrentView();
   const user = store.getCurrentUser();
-
-  const container = document.createElement('aside');
-  container.className = 'fixed left-0 top-0 flex flex-col h-full py-8 w-64 bg-surface-container-low font-display-lg text-sm tracking-tight z-50';
 
   let analysesListHtml = '';
   if (analyses.length === 0) {
@@ -29,61 +35,115 @@ export function renderSidebar() {
     }).join('');
   }
 
-  container.innerHTML = `
-    <!-- Brand Header -->
-    <div class="px-8 mb-12 flex items-center justify-between">
-      <div class="flex items-center gap-3 cursor-pointer" id="brand-header">
-        <img src="/ravioli-logo.png" alt="Ravioli Logo" class="w-8 h-8 rounded-lg shadow-lg shadow-primary/20">
-        <div class="flex flex-col">
-          <div class="text-xl font-medium tracking-tight text-neutral-100">Ravioli</div>
-          <div class="text-[9px] uppercase tracking-[0.2em] text-primary-fixed-dim opacity-70 -mt-0.5">AI Analytics Platform</div>
+  // To avoid flickering, we only update the innerHTML if the shell is empty or if we need a full refresh.
+  // But since sidebar is relatively static except for the list and active states, 
+  // we can be a bit more clever.
+  
+  const hasBrand = container.querySelector('#brand-header');
+  if (!hasBrand) {
+    container.innerHTML = `
+      <!-- Brand Header -->
+      <div class="px-8 mb-12 flex items-center justify-between">
+        <div class="flex items-center gap-3 cursor-pointer" id="brand-header">
+          <img src="/ravioli-logo.png" alt="Ravioli Logo" class="w-8 h-8 rounded-lg shadow-lg shadow-primary/20">
+          <div class="flex flex-col">
+            <div class="text-xl font-medium tracking-tight text-neutral-100">Ravioli</div>
+            <div class="text-[9px] uppercase tracking-[0.2em] text-primary-fixed-dim opacity-70 -mt-0.5">AI Analytics Platform</div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Navigation Links -->
-    <nav class="flex-1 space-y-2 overflow-y-auto">
-      <section class="mb-8">
-        <p class="text-[10px] uppercase tracking-[0.2em] text-outline px-8 mb-4 opacity-50 font-medium">Vibe Analytics</p>
-        <div class="space-y-1">
-          <button class="nav-item ${currentView === 'insights' || (currentView === 'dashboard' && !activeId) ? 'active' : ''} w-full" data-nav="insights">
-            <span class="material-symbols-outlined text-primary-fixed-dim" data-icon="auto_awesome">auto_awesome</span>
-            <span>Insights</span>
-          </button>
-          <button class="nav-item ${currentView === 'knowledge' ? 'active' : ''} w-full" data-nav="knowledge">
-            <span class="material-symbols-outlined" data-icon="local_library">local_library</span>
-            <span>Knowledge</span>
-          </button>
-          <button class="nav-item ${currentView === 'data' ? 'active' : ''} w-full" data-nav="data">
-            <span class="material-symbols-outlined" data-icon="storage">storage</span>
-            <span>Data</span>
-          </button>
-          <button class="nav-item ${currentView === 'governance' ? 'active' : ''} w-full" data-nav="governance">
-            <span class="material-symbols-outlined" data-icon="policy">policy</span>
-            <span>Governance</span>
-          </button>
-          <button class="nav-item ${currentView === 'settings' ? 'active' : ''} w-full" data-nav="settings">
-            <span class="material-symbols-outlined" data-icon="settings">settings</span>
-            <span>Settings</span>
-          </button>
-        </div>
-      </section>
+      <!-- Navigation Links -->
+      <nav class="flex-1 space-y-2 overflow-y-auto" id="sidebar-nav">
+        <section class="mb-8">
+          <p class="text-[10px] uppercase tracking-[0.2em] text-outline px-8 mb-4 opacity-50 font-medium">Vibe Analytics</p>
+          <div class="space-y-1" id="nav-links">
+            <!-- Nav buttons here -->
+          </div>
+        </section>
 
-      <section class="mt-4">
-        <div class="flex items-center justify-between px-8 mb-4 border-t border-outline-variant/10 pt-8">
-          <p class="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant opacity-80 font-bold">Historical Analyses</p>
-          <button class="text-primary-fixed-dim hover:text-white transition-colors" id="btn-new-analysis">
-            <span class="material-symbols-outlined text-sm" data-icon="add">add</span>
-          </button>
-        </div>
-        <ul class="space-y-1 px-4" id="analysis-list">
-          ${analysesListHtml}
-        </ul>
-      </section>
-    </nav>
+        <section class="mt-4">
+          <div class="flex items-center justify-between px-8 mb-4 border-t border-outline-variant/10 pt-8">
+            <p class="text-[10px] uppercase tracking-[0.2em] text-on-surface-variant opacity-80 font-bold">Historical Analyses</p>
+            <button class="text-primary-fixed-dim hover:text-white transition-colors" id="btn-new-analysis">
+              <span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+            </button>
+          </div>
+          <ul class="space-y-1 px-4" id="analysis-list">
+            ${analysesListHtml}
+          </ul>
+        </section>
+      </nav>
 
-    <!-- User Context -->
-    <div class="px-8 mt-auto group relative">
+      <!-- User Context -->
+      <div class="px-8 mt-auto group relative" id="user-context">
+        <!-- User info here -->
+      </div>
+    `;
+    
+    // Initial Event Listeners
+    container.querySelector('#brand-header')?.addEventListener('click', () => {
+      store.setCurrentView('insights');
+      store.setActiveAnalysisId(undefined);
+    });
+    
+    container.querySelector('#btn-new-analysis')?.addEventListener('click', () => {
+      store.setCurrentView('create-analysis');
+    });
+  }
+
+  // Update Nav Links (Active States)
+  const navLinksContainer = container.querySelector('#nav-links');
+  if (navLinksContainer) {
+    const navs = [
+      { id: 'insights', icon: 'auto_awesome', label: 'Insights' },
+      { id: 'knowledge', icon: 'local_library', label: 'Knowledge' },
+      { id: 'data', icon: 'storage', label: 'Data' },
+      { id: 'governance', icon: 'policy', label: 'Governance' },
+      { id: 'settings', icon: 'settings', label: 'Settings' }
+    ];
+    
+    navLinksContainer.innerHTML = navs.map(nav => {
+      const isActive = currentView === nav.id || (nav.id === 'insights' && currentView === 'dashboard' && !activeId);
+      return `
+        <button class="nav-item ${isActive ? 'active' : ''} w-full" data-nav="${nav.id}">
+          <span class="material-symbols-outlined ${isActive ? 'text-primary-fixed-dim' : ''}" data-icon="${nav.icon}">${nav.icon}</span>
+          <span>${nav.label}</span>
+        </button>
+      `;
+    }).join('');
+    
+    // Re-bind nav listeners
+    navLinksContainer.querySelectorAll('[data-nav]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const nav = btn.getAttribute('data-nav') as any;
+        if (nav) {
+          store.setCurrentView(nav);
+          store.setActiveAnalysisId(undefined);
+        }
+      });
+    });
+  }
+
+  // Update Analysis List
+  const analysisList = container.querySelector('#analysis-list');
+  if (analysisList) {
+    analysisList.innerHTML = analysesListHtml;
+    // Re-bind analysis listeners
+    analysisList.querySelectorAll('[data-analysis-id]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-analysis-id');
+        if (id) {
+          store.setActiveAnalysisId(id);
+        }
+      });
+    });
+  }
+
+  // Update User Context
+  const userContext = container.querySelector('#user-context');
+  if (userContext) {
+    userContext.innerHTML = `
       <div class="flex items-center gap-3">
         <div class="w-8 h-8 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center border border-primary/20">
           <span class="material-symbols-outlined text-primary text-sm" data-icon="person">person</span>
@@ -96,47 +156,13 @@ export function renderSidebar() {
           <span class="material-symbols-outlined text-sm" data-icon="logout">logout</span>
         </button>
       </div>
-    </div>
-  `;
-
-  // Brand header listener
-  container.querySelector('#brand-header')?.addEventListener('click', () => {
-    store.setCurrentView('insights');
-    store.setActiveAnalysisId(undefined);
-  });
-
-  // Navigation listeners
-  container.querySelectorAll('[data-nav]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const nav = btn.getAttribute('data-nav') as any;
-      if (nav) {
-        store.setCurrentView(nav);
-        store.setActiveAnalysisId(undefined);
-      }
+    `;
+    
+    userContext.querySelector('#btn-logout')?.addEventListener('click', () => {
+      api.logout();
+      store.setCurrentUser(null);
+      store.setCurrentView('auth');
     });
-  });
-
-  // Analysis item listeners
-  container.querySelectorAll('[data-analysis-id]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.getAttribute('data-analysis-id');
-      if (id) {
-        store.setActiveAnalysisId(id);
-      }
-    });
-  });
-
-  // New analysis listener
-  container.querySelector('#btn-new-analysis')?.addEventListener('click', () => {
-    store.setCurrentView('create-analysis');
-  });
-
-  // Logout listener
-  container.querySelector('#btn-logout')?.addEventListener('click', () => {
-    api.logout();
-    store.setCurrentUser(null);
-    store.setCurrentView('auth');
-  });
-
-  return container;
+  }
 }
+

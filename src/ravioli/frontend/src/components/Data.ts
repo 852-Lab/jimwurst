@@ -284,6 +284,7 @@ export function renderData() {
         </div>
       </div>
     </div>
+
   `;
   
   let isIngesting = false;
@@ -727,6 +728,7 @@ export function renderData() {
       }
     });
   });
+
 
   return container;
 }

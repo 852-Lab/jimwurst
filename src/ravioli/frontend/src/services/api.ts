@@ -228,6 +228,23 @@ export const api = {
     return response.json();
   },
 
+  async getFileDiff(fileId: string): Promise<{total_local: number, total_remote: number, added: number, removed: number, status: string, error?: string}> {
+    const response = await fetch(`${API_BASE}/data/files/${fileId}/diff`, { credentials: 'include' });
+    if (!response.ok) throw new Error('Failed to fetch file diff');
+    return response.json();
+  },
+
+  async syncFile(fileId: string, direction: 'push' | 'pull'): Promise<{total_local: number, total_remote: number, added: number, removed: number, status: string, error?: string}> {
+    const response = await fetch(`${API_BASE}/data/files/${fileId}/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ direction }),
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Sync failed');
+    return response.json();
+  },
+
   async getSetting(key: string): Promise<any> {
     const response = await fetch(`${API_BASE}/settings/${key}`, { credentials: 'include' });
     if (response.status === 404) return { key, value: {} };
@@ -260,6 +277,33 @@ export const api = {
       const errorData = await response.json();
       throw new Error(errorData.detail || 'Connection test failed');
     }
+    return response.json();
+  },
+
+  async testMotherduckConnection(): Promise<{status: string, message: string}> {
+    const response = await fetch(`${API_BASE}/settings/motherduck/test`, { credentials: 'include' });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Motherduck connection test failed');
+    }
+    return response.json();
+  },
+
+  async pushAllToMotherduck(): Promise<any> {
+    const response = await fetch(`${API_BASE}/settings/motherduck/push`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Push all failed');
+    return response.json();
+  },
+
+  async pullAllFromMotherduck(): Promise<any> {
+    const response = await fetch(`${API_BASE}/settings/motherduck/pull`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Pull all failed');
     return response.json();
   },
 

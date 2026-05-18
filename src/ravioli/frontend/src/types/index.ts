@@ -118,6 +118,7 @@ export interface InsightStats {
 export interface InsightsSummary {
   summary: string;
   insight_count: number;
+  total_verified_count: number;
   days: number;
 }
 
