@@ -157,10 +157,11 @@ async def debug_motherduck(db: Session = Depends(get_db)):
         
         # Look specifically at 'ravioli' database
         try:
-            schemas = conn.execute("SELECT schema_name FROM ravioli.information_schema.schemata").fetchall()
-            tables = conn.execute("SELECT table_schema, table_name FROM ravioli.information_schema.tables").fetchall()
-        except Exception:
-            schemas = ["Error: Could not query ravioli database schemas"]
+            schemas = conn.execute("SELECT schema_name FROM duckdb_schemas() WHERE database_name = 'ravioli'").fetchall()
+            tables = conn.execute("SELECT schema_name, table_name FROM duckdb_tables() WHERE database_name = 'ravioli'").fetchall()
+        except Exception as query_err:
+            logger.error(f"Error querying ravioli schemas/tables: {query_err}", exc_info=True)
+            schemas = [(f"Error: {str(query_err)}",)]
             tables = []
 
         return {
