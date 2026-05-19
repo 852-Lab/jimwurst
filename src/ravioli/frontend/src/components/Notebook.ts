@@ -923,7 +923,7 @@ function bindInteractions(container: HTMLElement) {
            container.querySelector(`#cell-divider-${idx}`)?.classList.remove('opacity-0');
 
            const newLogs = await api.listLogs(activeId);
-           lastLogsJson = JSON.stringify(newLogs);
+           lastLogsJson = '';
            store.setLogs(newLogs);
         } catch (e) {
            console.error(e);
