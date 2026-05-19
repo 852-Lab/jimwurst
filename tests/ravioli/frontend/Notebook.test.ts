@@ -6,6 +6,7 @@ import { store } from '../../../src/ravioli/frontend/src/store';
 vi.mock('../../../src/ravioli/frontend/src/services/api', () => ({
   api: {
     listLogs: vi.fn(),
+    getJupyterStatus: vi.fn().mockResolvedValue({ status: 'connected' }),
   }
 }));
 

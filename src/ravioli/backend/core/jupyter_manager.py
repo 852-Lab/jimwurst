@@ -14,6 +14,19 @@ class JupyterManager:
         self.kernels: Dict[str, jupyter_client.KernelManager] = {}
         self.clients: Dict[str, jupyter_client.KernelClient] = {}
 
+    def get_kernel_status(self, analysis_id: uuid.UUID) -> str:
+        aid_str = str(analysis_id)
+        if aid_str not in self.kernels:
+            return "not_started"
+        km = self.kernels[aid_str]
+        try:
+            if km.is_alive():
+                return "connected"
+            else:
+                return "dead"
+        except Exception:
+            return "unknown"
+
     def get_or_create_kernel(self, analysis_id: uuid.UUID) -> jupyter_client.KernelClient:
         aid_str = str(analysis_id)
         if aid_str not in self.kernels:

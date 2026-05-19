@@ -1030,3 +1030,12 @@ def execute_sql_cell(
     db.refresh(agent_log)
     
     return {"status": "success", "outputs": outputs, "log_id": str(user_log.id)}
+
+@router.get("/{analysis_id}/jupyter-status")
+def get_jupyter_status(analysis_id: UUID, db: Session = Depends(get_db)):
+    """
+    Get the status of the Jupyter IPython kernel for this analysis.
+    """
+    from ravioli.backend.core.jupyter_manager import jupyter_manager
+    status_str = jupyter_manager.get_kernel_status(analysis_id)
+    return {"status": status_str}

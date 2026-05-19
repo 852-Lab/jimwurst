@@ -114,6 +114,12 @@ export const api = {
     return response.json();
   },
 
+  async getJupyterStatus(analysisId: string): Promise<{ status: string }> {
+    const response = await fetch(`${API_BASE}/analyses/${analysisId}/jupyter-status`, { credentials: 'include' });
+    if (!response.ok) return { status: 'not_started' };
+    return response.json();
+  },
+
   async generateQuickInsight(file: File): Promise<QuickInsightResponse> {
     const formData = new FormData();
     formData.append('file', file);

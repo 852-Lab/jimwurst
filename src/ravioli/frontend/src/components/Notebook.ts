@@ -314,7 +314,38 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
         <span class="material-symbols-outlined text-[12px]" data-icon="history">history</span>
         <span class="text-[10px] font-medium">${formattedDate}</span>
       </div>
+
+      <!-- Jupyter Kernel Status -->
+      <div id="kernel-status-pill" class="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border bg-surface-container-highest border-outline-variant/10 text-outline select-none transition-all duration-300" title="IPython Kernel Status">
+        <span class="w-1.5 h-1.5 rounded-full bg-outline/40" id="kernel-status-dot"></span>
+        <span class="text-[10px] font-medium font-mono uppercase tracking-wide" id="kernel-status-text">Kernel: Checking...</span>
+      </div>
     `;
+
+    // Asynchronously fetch and update the kernel status
+    if (activeId) {
+      api.getJupyterStatus(activeId).then(res => {
+        const pill = container.querySelector('#kernel-status-pill');
+        const dot = container.querySelector('#kernel-status-dot');
+        const txt = container.querySelector('#kernel-status-text');
+        if (!pill || !dot || !txt) return;
+
+        if (res.status === 'connected') {
+          pill.className = 'flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border bg-emerald-500/5 border-emerald-500/20 text-emerald-400 select-none transition-all duration-300';
+          dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-emerald-400/50 shadow-sm animate-pulse';
+          txt.textContent = 'Kernel: Connected';
+        } else if (res.status === 'dead') {
+          pill.className = 'flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border bg-error/5 border-error/20 text-error select-none transition-all duration-300';
+          dot.className = 'w-1.5 h-1.5 rounded-full bg-error animate-pulse';
+          txt.textContent = 'Kernel: Dead';
+        } else {
+          // not_started / inactive
+          pill.className = 'flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border bg-surface-container-highest border-outline-variant/10 text-outline/80 select-none transition-all duration-300';
+          dot.className = 'w-1.5 h-1.5 rounded-full bg-outline/40';
+          txt.textContent = 'Kernel: Inactive';
+        }
+      }).catch(() => {});
+    }
   }
 
   // Update Active Input Cell Tag
