@@ -644,7 +644,11 @@ function bindInteractions(container: HTMLElement) {
       const staticView = container.querySelector(`#cell-static-${idx}`);
       if (staticView) {
         staticView.classList.remove('hidden');
-        staticView.innerHTML = `<div class="pr-8">${question}</div>`; // Lock new text without edit button during execution
+        staticView.textContent = '';
+        const questionEl = document.createElement('div');
+        questionEl.className = 'pr-8';
+        questionEl.textContent = question; // Lock new text without edit button during execution
+        staticView.appendChild(questionEl);
       }
       container.querySelector(`#cell-divider-${idx}`)?.classList.remove('opacity-0');
       
@@ -659,7 +663,15 @@ function bindInteractions(container: HTMLElement) {
       
       const outBody = outGutter?.nextElementSibling;
       if (outBody) {
-        outBody.innerHTML = `<div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg animate-pulse" id="streaming-content-${idx}"><span class="inline-block w-1 h-4 bg-primary animate-pulse"></span></div>`;
+        const streamingDiv = document.createElement('div');
+        streamingDiv.className = 'prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg animate-pulse';
+        streamingDiv.id = `streaming-content-${idx}`;
+
+        const cursor = document.createElement('span');
+        cursor.className = 'inline-block w-1 h-4 bg-primary animate-pulse';
+        streamingDiv.appendChild(cursor);
+
+        outBody.replaceChildren(streamingDiv);
       }
       
       let fullText = "";
@@ -678,7 +690,7 @@ function bindInteractions(container: HTMLElement) {
             streamingContent.classList.remove('animate-pulse');
           }
           if (outGutter) {
-            outGutter.innerHTML = `Out [${idx}]:`;
+            outGutter.textContent = `Out [${idx}]:`;
             outGutter.classList.remove('flex', 'items-center', 'justify-end', 'gap-1');
           }
           
@@ -689,7 +701,7 @@ function bindInteractions(container: HTMLElement) {
         (err) => {
           console.error('Rerun error', err);
           if (outGutter) {
-             outGutter.innerHTML = `Out [${idx}]:`;
+             outGutter.textContent = `Out [${idx}]:`;
              outGutter.classList.remove('flex', 'items-center', 'justify-end', 'gap-1');
           }
         }
