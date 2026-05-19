@@ -74,6 +74,9 @@ export interface DataSource {
   updated_at: string;
   owner_id?: string;
   owner?: User;
+  owner_user?: User;
+  owner_group?: UserGroup;
+  creator_user?: User;
 }
 
 
@@ -105,6 +108,11 @@ export interface Insight {
   is_published: boolean;
   created_at: string;
   updated_at: string;
+  reviewed_by?: string;
+  owner_user?: User;
+  owner_group?: UserGroup;
+  creator_user?: User;
+  reviewer_user?: User;
 }
 
 export interface InsightStats {
@@ -151,6 +159,11 @@ export interface KnowledgePage {
   source_id?: string;
   created_at: string;
   updated_at: string;
+  reviewed_by?: string;
+  owner_user?: User;
+  owner_group?: UserGroup;
+  creator_user?: User;
+  reviewer_user?: User;
 }
 
 export interface KnowledgePageCreate {

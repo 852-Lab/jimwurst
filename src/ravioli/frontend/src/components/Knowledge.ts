@@ -152,9 +152,29 @@ export function renderKnowledge() {
               </div>
 
               <h3 class="text-2xl font-headline-md text-white mb-3 group-hover:text-primary transition-colors duration-300">${escapeHTML(page.title)}</h3>
-              <p class="text-on-surface-variant line-clamp-3 text-sm leading-relaxed mb-8 flex-1 group-hover:text-on-surface transition-colors">
+              <p class="text-on-surface-variant line-clamp-3 text-sm leading-relaxed mb-6 flex-1 group-hover:text-on-surface transition-colors">
                 ${escapeHTML(getBlocksPreview(page.content))}
               </p>
+              
+              <!-- Owner, Creator, Reviewer row -->
+              <div class="flex flex-col gap-2 mb-6 pt-4 border-t border-outline-variant/5">
+                <div class="flex flex-wrap gap-x-4 gap-y-1.5 items-center text-[10px] uppercase tracking-[0.1em] text-neutral-400">
+                  <span class="flex items-center gap-1" title="Owner (${escapeHTML(page.ownership_type)})">
+                    <span class="material-symbols-outlined text-[12px] text-primary">shield</span>
+                    <span class="font-bold">${escapeHTML(page.owner_user?.name || page.owner_group?.name || 'Admin')}</span>
+                  </span>
+                  <span class="flex items-center gap-1" title="Creator">
+                    <span class="material-symbols-outlined text-[12px] text-secondary">person</span>
+                    <span class="font-bold">${escapeHTML(page.creator_user?.name || 'Admin')}</span>
+                  </span>
+                  ${page.reviewer_user?.name ? `
+                    <span class="flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 font-bold border border-green-500/20" title="Approved by Reviewer">
+                      <span class="material-symbols-outlined text-[10px]">fact_check</span>
+                      <span>Approved: ${escapeHTML(page.reviewer_user.name)}</span>
+                    </span>
+                  ` : ''}
+                </div>
+              </div>
               
               <div class="flex items-center justify-between mt-auto pt-6 border-t border-outline-variant/10 text-[10px] text-outline uppercase tracking-[0.2em] font-medium">
                 <span class="flex items-center gap-2">
