@@ -1153,6 +1153,18 @@ function setupLineageInteractions(container: HTMLElement, data: LineageResponse)
     nodeEl.addEventListener('mousedown', onMouseDown);
     nodeEl.addEventListener('touchstart', onTouchStart, { passive: true });
 
+    // Double click to focus and explore node recursively
+    nodeEl.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      const nodeId = nodeEl.getAttribute('data-node-id');
+      if (nodeId) {
+        focusedInsightId = nodeId;
+        maxUpstreamCount = 5;
+        maxDownstreamCount = 5;
+        hydrateLineage(container);
+      }
+    });
+
     // Hover Highlight Traces
     nodeEl.addEventListener('mouseenter', () => {
       const nodeId = nodeEl.getAttribute('data-node-id');
@@ -1300,6 +1312,20 @@ function openNodeDetailsDrawer(container: HTMLElement, node: LineageNode) {
     actions.querySelector('#drawer-view-knowledge')?.addEventListener('click', () => {
       window.location.hash = `#knowledge/${meta.id || ''}`;
     });
+  }
+
+  if (node.id !== focusedInsightId) {
+    const focusBtn = document.createElement('button');
+    focusBtn.className = 'px-5 py-2.5 rounded-full bg-primary/10 border border-primary/20 hover:bg-primary/20 text-[10px] font-bold uppercase tracking-[0.15em] text-primary transition-all duration-300 flex items-center gap-1.5';
+    focusBtn.id = 'drawer-focus-node';
+    focusBtn.innerHTML = `<span class="material-symbols-outlined text-[12px]" data-icon="center_focus_strong">center_focus_strong</span> Focus`;
+    focusBtn.addEventListener('click', () => {
+      focusedInsightId = node.id;
+      maxUpstreamCount = 5;
+      maxDownstreamCount = 5;
+      hydrateLineage(container);
+    });
+    actions.appendChild(focusBtn);
   }
 
   // Slide drawer up and reveal
