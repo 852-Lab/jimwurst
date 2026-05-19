@@ -465,6 +465,56 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
     `).join('');
 
     cellContainer.innerHTML = html;
+
+    // If notebook is brand new (no cells rendered), show an inviting first-cell placeholder
+    if (!html.trim()) {
+      cellContainer.innerHTML = `
+        <div class="flex flex-col items-center justify-center min-h-[60vh] select-none animate-in fade-in duration-500" id="notebook-welcome">
+          <div class="w-20 h-20 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-6 shadow-lg shadow-primary/10">
+            <span class="material-symbols-outlined text-4xl text-primary">deployed_code</span>
+          </div>
+          <h3 class="text-2xl font-headline-sm text-white mb-2">Start your analysis</h3>
+          <p class="text-sm text-outline text-center max-w-sm mb-10 leading-relaxed">Choose a cell type to begin. You can mix Python, SQL, and AI chat freely — just like Jupyter.</p>
+
+          <div class="flex items-center gap-4">
+            <button class="btn-first-cell group flex flex-col items-center gap-3 px-8 py-6 rounded-3xl bg-surface-container-low border border-outline-variant/15 hover:border-primary/40 hover:bg-primary/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10" data-type="python">
+              <div class="w-12 h-12 rounded-2xl bg-primary/15 group-hover:bg-primary/25 flex items-center justify-center transition-colors">
+                <span class="material-symbols-outlined text-2xl text-primary" data-icon="code">code</span>
+              </div>
+              <div class="text-center">
+                <div class="text-sm font-bold text-primary tracking-wide">Python</div>
+                <div class="text-[11px] text-outline mt-0.5">Pandas, NumPy, Matplotlib</div>
+              </div>
+            </button>
+
+            <button class="btn-first-cell group flex flex-col items-center gap-3 px-8 py-6 rounded-3xl bg-surface-container-low border border-outline-variant/15 hover:border-secondary/40 hover:bg-secondary/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-secondary/10" data-type="sql">
+              <div class="w-12 h-12 rounded-2xl bg-secondary/15 group-hover:bg-secondary/25 flex items-center justify-center transition-colors">
+                <span class="material-symbols-outlined text-2xl text-secondary" data-icon="database">database</span>
+              </div>
+              <div class="text-center">
+                <div class="text-sm font-bold text-secondary tracking-wide">SQL</div>
+                <div class="text-[11px] text-outline mt-0.5">Query with DuckDB</div>
+              </div>
+            </button>
+
+            <button class="btn-first-cell group flex flex-col items-center gap-3 px-8 py-6 rounded-3xl bg-surface-container-low border border-outline-variant/15 hover:border-tertiary/40 hover:bg-tertiary/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-tertiary/10" data-type="chat">
+              <div class="w-12 h-12 rounded-2xl bg-tertiary/15 group-hover:bg-tertiary/25 flex items-center justify-center transition-colors">
+                <span class="material-symbols-outlined text-2xl text-tertiary" data-icon="smart_toy">smart_toy</span>
+              </div>
+              <div class="text-center">
+                <div class="text-sm font-bold text-tertiary tracking-wide">Chat AI</div>
+                <div class="text-[11px] text-outline mt-0.5">Ask a question in plain English</div>
+              </div>
+            </button>
+          </div>
+
+          <div class="mt-10 flex items-center gap-2 text-[11px] text-outline/50">
+            <span class="material-symbols-outlined text-[14px]">keyboard</span>
+            <span>Or use the <span class="font-mono text-outline/80">+ Python / SQL / Chat AI</span> bar below</span>
+          </div>
+        </div>
+      `;
+    }
     
     // Initialize charts
     setTimeout(() => {
@@ -553,6 +603,85 @@ function bindInteractions(container: HTMLElement) {
   // Delegated events for In-place Cell Editing
   container.addEventListener('click', async (e) => {
     const target = e.target as HTMLElement;
+
+    // "First Cell" welcome screen chooser
+    const firstCellBtn = target.closest('.btn-first-cell') as HTMLElement;
+    if (firstCellBtn) {
+      const type = firstCellBtn.getAttribute('data-type') as 'python' | 'sql' | 'chat';
+      if (!type) return;
+      const cellContainer = container.querySelector('#cell-container');
+      if (!cellContainer) return;
+
+      // Remove the welcome screen
+      const welcome = cellContainer.querySelector('#notebook-welcome');
+      welcome?.remove();
+
+      // Inject a fresh editable cell
+      const tempId = `first-${Date.now()}`;
+      const colors: Record<string, string> = { python: 'text-primary', sql: 'text-secondary', chat: 'text-tertiary' };
+      const icons: Record<string, string> = { python: 'code', sql: 'database', chat: 'smart_toy' };
+      const labels: Record<string, string> = { python: 'Python', sql: 'SQL', chat: 'Chat AI' };
+      const placeholders: Record<string, string> = {
+        python: '# Write Python here…\nimport pandas as pd\n',
+        sql: '-- Write SQL here…\nSELECT * FROM my_table LIMIT 10',
+        chat: 'Ask a question about your data…'
+      };
+
+      const newCell = document.createElement('div');
+      newCell.className = 'glass-panel p-6 rounded-3xl bg-surface-container-low/30 border-primary/20 animate-in fade-in duration-300 new-cell-block';
+      newCell.innerHTML = `
+        <div class="flex items-start gap-4" id="cell-edit-wrapper-${tempId}">
+          <div class="font-mono text-xs font-bold ${colors[type]}/50 pt-2.5 select-none w-14 text-right shrink-0 flex items-center justify-end gap-1">
+            <span class="material-symbols-outlined text-[14px]" data-icon="${icons[type]}">${icons[type]}</span>
+            <span>In [*]:</span>
+          </div>
+          <div class="flex-1 glass-panel p-1.5 rounded-xl border-${type === 'chat' ? 'tertiary' : type === 'sql' ? 'secondary' : 'primary'}/30 bg-surface-container-low/80 focus-within:border-opacity-60 transition-all" id="cell-edit-${tempId}">
+            <div class="flex items-start gap-3 px-3">
+              <div class="flex-1 min-w-0 py-1.5">
+                <textarea id="cell-input-${tempId}" 
+                  class="w-full bg-transparent border-none ${colors[type].replace('text-', 'text-')} focus:ring-0 resize-none py-0 text-sm font-mono max-h-64 custom-scrollbar" 
+                  rows="3" 
+                  placeholder="${placeholders[type]}"
+                  autofocus></textarea>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0 pt-0.5">
+                <button class="btn-cancel-insert px-3 h-7 rounded-full bg-surface-container-highest text-outline text-[11px] flex items-center gap-1 hover:bg-error/20 hover:text-error transition-colors" title="Remove">
+                  <span class="material-symbols-outlined text-[13px]">close</span>
+                </button>
+                <button class="btn-execute-new-cell px-3 h-7 rounded-full bg-primary text-on-primary text-[11px] font-bold flex items-center gap-1.5 hover:scale-105 transition-transform shadow-md shadow-primary/20"
+                  data-type="${type}" data-after="__first__" data-temp-id="${tempId}" title="Run (Shift+Enter)">
+                  <span class="material-symbols-outlined text-[13px]">play_arrow</span>
+                  Run
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      cellContainer.appendChild(newCell);
+
+      // Auto-focus the textarea
+      const ta = newCell.querySelector(`#cell-input-${tempId}`) as HTMLTextAreaElement;
+      ta?.focus();
+
+      // Shift+Enter to run
+      ta?.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' && ev.shiftKey) {
+          ev.preventDefault();
+          newCell.querySelector('.btn-execute-new-cell')?.dispatchEvent(new Event('click', { bubbles: true }));
+        }
+      });
+
+      // Cancel
+      newCell.querySelector('.btn-cancel-insert')?.addEventListener('click', () => {
+        newCell.remove();
+        // If nothing else in the container, restore welcome screen
+        if (!cellContainer.querySelector('.glass-panel')) {
+          updateNotebookUI(container);
+        }
+      });
+      return;
+    }
     
     // Toggle Edit Mode
     const editBtn = target.closest('.btn-edit-cell') as HTMLElement;
@@ -738,10 +867,12 @@ function bindInteractions(container: HTMLElement) {
     const runNewBtn = target.closest('.btn-execute-new-cell') as HTMLButtonElement;
     if (runNewBtn && activeId) {
        const type = runNewBtn.getAttribute('data-type');
-       const afterLogId = runNewBtn.getAttribute('data-after');
+       const rawAfter = runNewBtn.getAttribute('data-after');
+       // '__first__' is a sentinel meaning "no anchor — just append"
+       const afterLogId = (rawAfter && rawAfter !== '__first__') ? rawAfter : null;
        const tempId = runNewBtn.getAttribute('data-temp-id');
        
-       if (!type || !afterLogId || !tempId) return;
+       if (!type || !tempId) return;
        
        const txt = container.querySelector(`#cell-input-${tempId}`) as HTMLTextAreaElement;
        const question = txt?.value;
