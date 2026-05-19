@@ -12,10 +12,18 @@ let currentLineageData: LineageResponse | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let selectedNodeId: string | null = null;
 
+// Focused Subgraph Lineage State
+let focusedInsightId: string | null = null;
+let maxUpstreamCount = 5;
+let maxDownstreamCount = 5;
+
 export const clearInsightsCache = () => {
   summaryCache.clear();
   currentLineageData = null;
   selectedNodeId = null;
+  focusedInsightId = null;
+  maxUpstreamCount = 5;
+  maxDownstreamCount = 5;
 };
 
 function banCard(value: number | string, label: string, icon: string, accent = 'text-primary') {
@@ -197,9 +205,12 @@ export function renderInsights() {
               <p class="text-[10px] uppercase tracking-[0.3em] text-outline opacity-30 font-bold mt-0.5">GENEALOGY AND PROPAGATION OF INSIGHT SIGNALS (DAG)</p>
             </div>
           </div>
-          <button class="px-5 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-[10px] font-bold uppercase tracking-[0.15em] rounded-full transition-all duration-300 flex items-center gap-2" id="refresh-lineage">
-            <span class="material-symbols-outlined text-xs animate-spin-hover" data-icon="refresh">refresh</span> Refresh Map
-          </button>
+          <div class="flex items-center gap-3" id="lineage-header-controls">
+            <!-- Dynamic button will be placed here -->
+            <button class="px-5 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-[10px] font-bold uppercase tracking-[0.15em] rounded-full transition-all duration-300 flex items-center gap-2" id="refresh-lineage">
+              <span class="material-symbols-outlined text-xs animate-spin-hover" data-icon="refresh">refresh</span> Refresh Map
+            </button>
+          </div>
         </div>
 
         <!-- Scrollable and Pannable Unified DAG Canvas -->
@@ -457,15 +468,15 @@ async function hydrateFeed(container: HTMLElement) {
         const insightId = btn.getAttribute('data-insight-id');
         if (!insightId) return;
 
+        // Switch to Focused Lineage Mode for this Insight!
+        focusedInsightId = insightId;
+        maxUpstreamCount = 5;
+        maxDownstreamCount = 5;
+
         // Switch to Lineage Map view
         const lineageTabBtn = container.querySelector('[data-view="lineage"]') as HTMLElement;
         if (lineageTabBtn) {
           lineageTabBtn.click();
-          
-          // Wait a tick for graph coordinates to render, then auto-scroll and highlight
-          setTimeout(() => {
-            selectAndHighlightInsightNode(container, insightId);
-          }, 150);
         }
       });
     });
@@ -478,6 +489,67 @@ async function hydrateFeed(container: HTMLElement) {
 /* =========================================================================
    GENEALOGY AND PEDIGREE LINEAGE DAG GRAPH LOGIC (VIEW 2)
    ========================================================================= */
+
+function renderNodeElement(parent: HTMLElement, node: LineageNode, x: number, y: number, animDelay: number) {
+  let icon = 'description';
+  let accentClass = 'text-sky-400';
+  if (node.type === 'analysis') {
+    icon = 'analytics';
+    accentClass = 'text-purple-400';
+  } else if (node.type === 'insight') {
+    icon = 'auto_awesome';
+    accentClass = 'text-rose-400';
+  } else if (node.type === 'knowledge') {
+    icon = 'article';
+    accentClass = 'text-emerald-400';
+  }
+
+  const nodeEl = document.createElement('div');
+  nodeEl.className = 'lineage-node glass-card p-4 rounded-2xl border border-white/5 hover:border-white/20 hover:scale-[1.02] cursor-pointer transition-all duration-300 absolute group flex flex-col gap-2 opacity-0 animate-reveal';
+  nodeEl.style.left = `${x}px`;
+  nodeEl.style.top = `${y}px`;
+  nodeEl.style.width = `220px`;
+  nodeEl.style.zIndex = '10';
+  nodeEl.style.animationDelay = `${animDelay}s`;
+  
+  nodeEl.setAttribute('data-node-id', node.id);
+  nodeEl.setAttribute('data-node-type', node.type);
+
+  nodeEl.innerHTML = `
+    <div class="flex items-center justify-between pointer-events-none">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[13px] ${accentClass}" data-icon="${icon}">${icon}</span>
+        <span class="text-[8px] uppercase tracking-[0.2em] font-bold text-outline opacity-40">${node.type}</span>
+      </div>
+      ${node.metadata?.is_verified ? `<span class="material-symbols-outlined text-[11px] text-primary" data-icon="verified">verified</span>` : ''}
+    </div>
+    <p class="text-[11px] text-on-surface leading-snug font-medium line-clamp-2 pr-1 pointer-events-none group-hover:text-white transition-colors duration-300">${node.label}</p>
+  `;
+
+  parent.appendChild(nodeEl);
+}
+
+function renderExpandButton(parent: HTMLElement, x: number, y: number, type: 'upstream' | 'downstream', count: number, onClick: () => void) {
+  const btn = document.createElement('div');
+  btn.className = 'lineage-node expand-node glass-card px-4 py-3.5 rounded-full border border-primary/20 hover:bg-primary/10 hover:border-primary/40 text-center cursor-pointer transition-all duration-300 flex items-center justify-center gap-1.5';
+  btn.style.position = 'absolute';
+  btn.style.left = `${x}px`;
+  btn.style.top = `${y}px`;
+  btn.style.width = `220px`;
+  btn.style.zIndex = '15';
+
+  btn.innerHTML = `
+    <span class="material-symbols-outlined text-[12px] text-primary" data-icon="add">add</span>
+    <span class="text-[9px] uppercase tracking-[0.2em] font-bold text-primary">Expand (${count} more)</span>
+  `;
+
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    onClick();
+  });
+
+  parent.appendChild(btn);
+}
 
 async function hydrateLineage(container: HTMLElement, forceRefresh = false) {
   const graphContainer = container.querySelector('#lineage-graph-container');
@@ -515,110 +587,240 @@ async function hydrateLineage(container: HTMLElement, forceRefresh = false) {
       return;
     }
 
-    // 3. Classify nodes by layer
-    const layerNodes = {
-      datasource: data.nodes.filter(n => n.type === 'datasource'),
-      analysis: data.nodes.filter(n => n.type === 'analysis'),
-      insight: data.nodes.filter(n => n.type === 'insight'),
-      knowledge: data.nodes.filter(n => n.type === 'knowledge'),
-    };
-
-    const maxInLayer = Math.max(
-      layerNodes.datasource.length,
-      layerNodes.analysis.length,
-      layerNodes.insight.length,
-      layerNodes.knowledge.length
-    );
-
-    // Dynamic layout coordinates
-    const vSpace = 120;
-    const canvasHeight = Math.max(650, maxInLayer * vSpace + 140);
-    const canvasWidth = 1240;
-    const centerY = canvasHeight / 2;
-
-    // Apply dimensions to SVG, container, and headers
-    svg.style.minWidth = `${canvasWidth}px`;
-    svg.style.minHeight = `${canvasHeight}px`;
-    svg.style.width = `${canvasWidth}px`;
-    svg.style.height = `${canvasHeight}px`;
-
-    nodesContainer.style.minWidth = `${canvasWidth}px`;
-    nodesContainer.style.minHeight = `${canvasHeight}px`;
-    nodesContainer.style.width = `${canvasWidth}px`;
-    nodesContainer.style.height = `${canvasHeight}px`;
-
-    if (headers) {
-      headers.style.width = `${canvasWidth}px`;
-    }
-
-    // Placement coordinates
-    const layerKeys: ('datasource' | 'analysis' | 'insight' | 'knowledge')[] = ['datasource', 'analysis', 'insight', 'knowledge'];
-    const startX = 60;
-    const layerSpacing = 300;
-    const nodeWidth = 220;
-
-    layerKeys.forEach((key, lIdx) => {
-      const list = layerNodes[key];
-      const K = list.length;
-      if (K === 0) return;
-
-      const x = startX + lIdx * layerSpacing;
-      const totalHeight = (K - 1) * vSpace;
-      const yStart = centerY - (totalHeight / 2);
-
-      list.forEach((node, idx) => {
-        const nodeY = yStart + idx * vSpace - 36; // offset center height approx
-        
-        let icon = 'description';
-        let accentClass = 'text-sky-400';
-        if (node.type === 'analysis') {
-          icon = 'analytics';
-          accentClass = 'text-purple-400';
-        } else if (node.type === 'insight') {
-          icon = 'auto_awesome';
-          accentClass = 'text-rose-400';
-        } else if (node.type === 'knowledge') {
-          icon = 'article';
-          accentClass = 'text-emerald-400';
-        }
-
-        const nodeEl = document.createElement('div');
-        nodeEl.className = 'lineage-node glass-card p-4 rounded-2xl border border-white/5 hover:border-white/20 hover:scale-[1.02] cursor-pointer transition-all duration-300 relative group flex flex-col gap-2 opacity-0 animate-reveal';
-        nodeEl.style.position = 'absolute';
-        nodeEl.style.left = `${x}px`;
-        nodeEl.style.top = `${nodeY}px`;
-        nodeEl.style.width = `${nodeWidth}px`;
-        nodeEl.style.zIndex = '10';
-        nodeEl.style.animationDelay = `${(lIdx * 3 + idx) * 0.03}s`;
-        
-        nodeEl.setAttribute('data-node-id', node.id);
-        nodeEl.setAttribute('data-node-type', node.type);
-
-        nodeEl.innerHTML = `
-          <div class="flex items-center justify-between pointer-events-none">
-            <div class="flex items-center gap-2">
-              <span class="material-symbols-outlined text-[13px] ${accentClass}" data-icon="${icon}">${icon}</span>
-              <span class="text-[8px] uppercase tracking-[0.2em] font-bold text-outline opacity-40">${node.type}</span>
-            </div>
-            ${node.metadata?.is_verified ? `<span class="material-symbols-outlined text-[11px] text-primary" data-icon="verified">verified</span>` : ''}
-          </div>
-          <p class="text-[11px] text-on-surface leading-snug font-medium line-clamp-2 pr-1 pointer-events-none group-hover:text-white transition-colors duration-300">${node.label}</p>
-        `;
-
-        nodesContainer.appendChild(nodeEl);
-      });
-    });
-
-    // 4. Trigger relative connections painting
-    setTimeout(() => {
-      drawLineageConnectors(container, data);
-      setupLineageInteractions(container, data);
-      
-      // If a node was pre-selected, apply highlights
-      if (selectedNodeId) {
-        applyLineageHighlights(container, selectedNodeId);
+    if (focusedInsightId) {
+      // FOCUSED LINEAGE SUBGRAPH MODE
+      const centralNode = data.nodes.find(n => n.id === focusedInsightId);
+      if (!centralNode) {
+        focusedInsightId = null;
+        hydrateLineage(container, forceRefresh);
+        return;
       }
-    }, 80);
+
+      // Find direct upstream (top 5) and downstream (top 5)
+      const directUpstreamNodes: LineageNode[] = [];
+      const directDownstreamNodes: LineageNode[] = [];
+
+      data.edges.forEach(edge => {
+        if (edge.target === focusedInsightId) {
+          const srcNode = data.nodes.find(n => n.id === edge.source);
+          if (srcNode && !directUpstreamNodes.some(n => n.id === srcNode.id)) {
+            directUpstreamNodes.push(srcNode);
+          }
+        }
+        if (edge.source === focusedInsightId) {
+          const tgtNode = data.nodes.find(n => n.id === edge.target);
+          if (tgtNode && !directDownstreamNodes.some(n => n.id === tgtNode.id)) {
+            directDownstreamNodes.push(tgtNode);
+          }
+        }
+      });
+
+      const totalUpstreamsCount = directUpstreamNodes.length;
+      const totalDownstreamsCount = directDownstreamNodes.length;
+
+      const visibleUpstreams = directUpstreamNodes.slice(0, maxUpstreamCount);
+      const visibleDownstreams = directDownstreamNodes.slice(0, maxDownstreamCount);
+
+      const hasMoreUpstreams = totalUpstreamsCount > maxUpstreamCount;
+      const hasMoreDownstreams = totalDownstreamsCount > maxDownstreamCount;
+
+      const col1Count = visibleUpstreams.length + (hasMoreUpstreams ? 1 : 0);
+      const col2Count = 1;
+      const col3Count = visibleDownstreams.length + (hasMoreDownstreams ? 1 : 0);
+
+      const maxInLayer = Math.max(col1Count, col2Count, col3Count);
+      const vSpace = 120;
+      const canvasHeight = Math.max(650, maxInLayer * vSpace + 140);
+      const canvasWidth = 1240;
+      const centerY = canvasHeight / 2;
+
+      // Apply dynamic layout bounds
+      svg.style.minWidth = `${canvasWidth}px`;
+      svg.style.minHeight = `${canvasHeight}px`;
+      svg.style.width = `${canvasWidth}px`;
+      svg.style.height = `${canvasHeight}px`;
+
+      nodesContainer.style.minWidth = `${canvasWidth}px`;
+      nodesContainer.style.minHeight = `${canvasHeight}px`;
+      nodesContainer.style.width = `${canvasWidth}px`;
+      nodesContainer.style.height = `${canvasHeight}px`;
+
+      if (headers) {
+        headers.style.width = `${canvasWidth}px`;
+        headers.innerHTML = `
+          <div style="position: absolute; left: 100px; width: 220px;" class="text-center">
+            <span class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold px-3 py-1.5 bg-[#101012] border border-white/5 rounded-full">Direct Upstream</span>
+          </div>
+          <div style="position: absolute; left: 520px; width: 220px;" class="text-center">
+            <span class="text-[9px] uppercase tracking-[0.3em] text-primary font-bold px-4 py-1.5 bg-[#101012] border border-primary/20 rounded-full shadow-[0_0_10px_rgba(var(--primary-rgb),0.1)]">Target Insight</span>
+          </div>
+          <div style="position: absolute; left: 940px; width: 220px;" class="text-center">
+            <span class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold px-3 py-1.5 bg-[#101012] border border-white/5 rounded-full">Direct Downstream</span>
+          </div>
+        `;
+      }
+
+      // Dynamically display "Show Full Map" button
+      const headerControls = container.querySelector('#lineage-header-controls');
+      if (headerControls) {
+        let fullMapBtn = headerControls.querySelector('#btn-show-full-map');
+        if (!fullMapBtn) {
+          fullMapBtn = document.createElement('button');
+          fullMapBtn.id = 'btn-show-full-map';
+          fullMapBtn.className = 'px-5 py-2.5 bg-primary/10 border border-primary/20 hover:bg-primary/20 text-[10px] font-bold uppercase tracking-[0.15em] rounded-full text-primary transition-all duration-300 flex items-center gap-2';
+          fullMapBtn.innerHTML = `<span class="material-symbols-outlined text-xs" data-icon="grid_view">grid_view</span> Show Full Map`;
+          headerControls.insertBefore(fullMapBtn, headerControls.firstChild);
+          fullMapBtn.addEventListener('click', () => {
+            focusedInsightId = null;
+            fullMapBtn?.remove();
+            hydrateLineage(container);
+          });
+        }
+      }
+
+      // Draw Column 1: Upstream nodes
+      const x1 = 100;
+      const col1Height = (col1Count - 1) * vSpace;
+      const col1YStart = centerY - (col1Height / 2);
+
+      visibleUpstreams.forEach((node, idx) => {
+        const nodeY = col1YStart + idx * vSpace - 36;
+        renderNodeElement(nodesContainer, node, x1, nodeY, idx * 0.03);
+      });
+
+      if (hasMoreUpstreams) {
+        const nodeY = col1YStart + visibleUpstreams.length * vSpace - 36;
+        renderExpandButton(nodesContainer, x1, nodeY, 'upstream', totalUpstreamsCount - maxUpstreamCount, () => {
+          maxUpstreamCount = 999;
+          hydrateLineage(container);
+        });
+      }
+
+      // Draw Column 2: Central target node
+      const x2 = 520;
+      const nodeY = centerY - 36;
+      renderNodeElement(nodesContainer, centralNode, x2, nodeY, 0.05);
+
+      // Draw Column 3: Downstream nodes
+      const x3 = 940;
+      const col3Height = (col3Count - 1) * vSpace;
+      const col3YStart = centerY - (col3Height / 2);
+
+      visibleDownstreams.forEach((node, idx) => {
+        const nodeY = col3YStart + idx * vSpace - 36;
+        renderNodeElement(nodesContainer, node, x3, nodeY, idx * 0.03);
+      });
+
+      if (hasMoreDownstreams) {
+        const nodeY = col3YStart + visibleDownstreams.length * vSpace - 36;
+        renderExpandButton(nodesContainer, x3, nodeY, 'downstream', totalDownstreamsCount - maxDownstreamCount, () => {
+          maxDownstreamCount = 999;
+          hydrateLineage(container);
+        });
+      }
+
+      // Filter visible edges
+      const visibleNodes = [
+        centralNode,
+        ...visibleUpstreams,
+        ...visibleDownstreams
+      ];
+      
+      const filteredEdges = data.edges.filter(e => {
+        return visibleNodes.some(n => n.id === e.source) && visibleNodes.some(n => n.id === e.target);
+      });
+
+      setTimeout(() => {
+        drawLineageConnectorsForList(container, filteredEdges);
+        setupLineageInteractions(container, data);
+        
+        // Auto-select central node and scroll pan to center
+        selectAndHighlightInsightNode(container, focusedInsightId);
+      }, 80);
+
+    } else {
+      // FULL MAP OVERVIEW (Original logic)
+      const layerNodes = {
+        datasource: data.nodes.filter(n => n.type === 'datasource'),
+        analysis: data.nodes.filter(n => n.type === 'analysis'),
+        insight: data.nodes.filter(n => n.type === 'insight'),
+        knowledge: data.nodes.filter(n => n.type === 'knowledge'),
+      };
+
+      const maxInLayer = Math.max(
+        layerNodes.datasource.length,
+        layerNodes.analysis.length,
+        layerNodes.insight.length,
+        layerNodes.knowledge.length
+      );
+
+      const vSpace = 120;
+      const canvasHeight = Math.max(650, maxInLayer * vSpace + 140);
+      const canvasWidth = 1240;
+      const centerY = canvasHeight / 2;
+
+      // Apply dynamic bounds
+      svg.style.minWidth = `${canvasWidth}px`;
+      svg.style.minHeight = `${canvasHeight}px`;
+      svg.style.width = `${canvasWidth}px`;
+      svg.style.height = `${canvasHeight}px`;
+
+      nodesContainer.style.minWidth = `${canvasWidth}px`;
+      nodesContainer.style.minHeight = `${canvasHeight}px`;
+      nodesContainer.style.width = `${canvasWidth}px`;
+      nodesContainer.style.height = `${canvasHeight}px`;
+
+      if (headers) {
+        headers.style.width = `${canvasWidth}px`;
+        headers.innerHTML = `
+          <div style="position: absolute; left: 60px; width: 220px;" class="text-center">
+            <span class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold px-3 py-1.5 bg-[#101012] border border-white/5 rounded-full">Data Sources</span>
+          </div>
+          <div style="position: absolute; left: 360px; width: 220px;" class="text-center">
+            <span class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold px-3 py-1.5 bg-[#101012] border border-white/5 rounded-full">Analyses</span>
+          </div>
+          <div style="position: absolute; left: 660px; width: 220px;" class="text-center">
+            <span class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold px-3 py-1.5 bg-[#101012] border border-white/5 rounded-full">Insights</span>
+          </div>
+          <div style="position: absolute; left: 960px; width: 220px;" class="text-center">
+            <span class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold px-3 py-1.5 bg-[#101012] border border-white/5 rounded-full">Knowledge Pages</span>
+          </div>
+        `;
+      }
+
+      // Remove "Show Full Map" button if exists
+      container.querySelector('#btn-show-full-map')?.remove();
+
+      // Placement coordinates
+      const layerKeys: ('datasource' | 'analysis' | 'insight' | 'knowledge')[] = ['datasource', 'analysis', 'insight', 'knowledge'];
+      const startX = 60;
+      const layerSpacing = 300;
+
+      layerKeys.forEach((key, lIdx) => {
+        const list = layerNodes[key];
+        const K = list.length;
+        if (K === 0) return;
+
+        const x = startX + lIdx * layerSpacing;
+        const totalHeight = (K - 1) * vSpace;
+        const yStart = centerY - (totalHeight / 2);
+
+        list.forEach((node, idx) => {
+          const nodeY = yStart + idx * vSpace - 36;
+          renderNodeElement(nodesContainer, node, x, nodeY, (lIdx * 3 + idx) * 0.03);
+        });
+      });
+
+      setTimeout(() => {
+        drawLineageConnectorsForList(container, data.edges);
+        setupLineageInteractions(container, data);
+        
+        // If a node was pre-selected, apply highlights
+        if (selectedNodeId) {
+          applyLineageHighlights(container, selectedNodeId);
+        }
+      }, 80);
+    }
 
   } catch (err) {
     console.error('Failed to load lineage graph:', err);
@@ -626,7 +828,7 @@ async function hydrateLineage(container: HTMLElement, forceRefresh = false) {
   }
 }
 
-function drawLineageConnectors(container: HTMLElement, data: LineageResponse, retryCount = 0) {
+function drawLineageConnectorsForList(container: HTMLElement, edges: LineageEdge[], retryCount = 0) {
   const svg = container.querySelector('#lineage-connectors') as SVGElement;
   const graphContainer = container.querySelector('#lineage-graph-container');
   if (!svg || !graphContainer) return;
@@ -635,7 +837,7 @@ function drawLineageConnectors(container: HTMLElement, data: LineageResponse, re
 
   let hasZeroOffset = false;
 
-  data.edges.forEach(edge => {
+  edges.forEach(edge => {
     const sourceEl = graphContainer.querySelector(`[data-node-id="${edge.source}"]`) as HTMLElement;
     const targetEl = graphContainer.querySelector(`[data-node-id="${edge.target}"]`) as HTMLElement;
 
@@ -669,7 +871,7 @@ function drawLineageConnectors(container: HTMLElement, data: LineageResponse, re
   // Defensive Retry: If offsets are zero (due to layout lag), retry in 100ms
   if (hasZeroOffset && retryCount < 3) {
     setTimeout(() => {
-      drawLineageConnectors(container, data, retryCount + 1);
+      drawLineageConnectorsForList(container, edges, retryCount + 1);
     }, 100);
   }
 }
@@ -790,7 +992,7 @@ function selectAndHighlightInsightNode(container: HTMLElement, nodeId: string) {
 }
 
 function setupLineageInteractions(container: HTMLElement, data: LineageResponse) {
-  const nodes = container.querySelectorAll('.lineage-node');
+  const nodes = container.querySelectorAll('.lineage-node:not(.expand-node)');
   const detailsPanel = container.querySelector('#node-details-panel') as HTMLElement;
   const graphContainer = container.querySelector('#lineage-graph-container') as HTMLElement;
 
@@ -844,7 +1046,13 @@ function setupLineageInteractions(container: HTMLElement, data: LineageResponse)
       nodeEl.style.top = `${newTop}px`;
 
       // Live update Bezier curves at 60fps
-      drawLineageConnectors(container, data);
+      if (focusedInsightId) {
+        const visibleNodes = Array.from(container.querySelectorAll('.lineage-node:not(.expand-node)')).map(el => el.getAttribute('data-node-id'));
+        const filteredEdges = data.edges.filter(e => visibleNodes.includes(e.source) && visibleNodes.includes(e.target));
+        drawLineageConnectorsForList(container, filteredEdges);
+      } else {
+        drawLineageConnectorsForList(container, data.edges);
+      }
     };
 
     const onMouseUp = (e: MouseEvent) => {
@@ -909,7 +1117,13 @@ function setupLineageInteractions(container: HTMLElement, data: LineageResponse)
       nodeEl.style.left = `${newLeft}px`;
       nodeEl.style.top = `${newTop}px`;
 
-      drawLineageConnectors(container, data);
+      if (focusedInsightId) {
+        const visibleNodes = Array.from(container.querySelectorAll('.lineage-node:not(.expand-node)')).map(el => el.getAttribute('data-node-id'));
+        const filteredEdges = data.edges.filter(e => visibleNodes.includes(e.source) && visibleNodes.includes(e.target));
+        drawLineageConnectorsForList(container, filteredEdges);
+      } else {
+        drawLineageConnectorsForList(container, data.edges);
+      }
     };
 
     const onTouchEnd = () => {
@@ -1048,7 +1262,7 @@ function openNodeDetailsDrawer(container: HTMLElement, node: LineageNode) {
 
   } else if (node.type === 'insight') {
     tag.classList.add('bg-rose-500/10', 'border-rose-500/20', 'text-rose-400');
-    title.textContent = meta.content;
+    title.textContent = meta.content || node.label;
 
     grid.innerHTML = `
       <div class="flex flex-col gap-0.5">
