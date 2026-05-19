@@ -178,8 +178,9 @@ async def debug_motherduck(db: Session = Depends(get_db)):
             "ravioli_schemas": [s[0] for s in schemas],
             "ravioli_tables": [{"schema": t[0], "table": t[1]} for t in tables]
         }
-    except Exception as e:
-        return {"status": "error", "error": str(e)}
+    except Exception:
+        logger.exception("Error while debugging Motherduck connection/state")
+        return {"status": "error", "error": "An internal error occurred"}
 
 @router.get("/{key}", response_model=SystemSettingSchema)
 def get_setting(key: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
