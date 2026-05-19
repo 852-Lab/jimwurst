@@ -175,8 +175,8 @@ export function renderInsights() {
         </section>
       </div>
 
-      <!-- VIEW 2: Pedigree Lineage DAG Graph -->
-      <div id="lineage-view" class="${activeView === 'lineage' ? 'flex flex-col' : 'hidden'} h-full min-h-[600px] animate-reveal">
+      <!-- VIEW 2: Pedigree Lineage DAG Graph (Airflow Style) -->
+      <div id="lineage-view" class="${activeView === 'lineage' ? 'flex flex-col' : 'hidden'} h-full min-h-[600px] relative animate-reveal">
         <div class="flex items-center justify-between mb-6">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-[1rem] bg-secondary/10 flex items-center justify-center border border-secondary/20 shadow-lg shadow-secondary/5">
@@ -184,7 +184,7 @@ export function renderInsights() {
             </div>
             <div>
               <h2 class="text-xl font-headline-sm text-on-surface uppercase tracking-[0.2em] font-medium">Lineage Map</h2>
-              <p class="text-[10px] uppercase tracking-[0.3em] text-outline opacity-30 font-bold mt-0.5">GENEALOGY AND PROPAGATION OF INSIGHT SIGNALS</p>
+              <p class="text-[10px] uppercase tracking-[0.3em] text-outline opacity-30 font-bold mt-0.5">GENEALOGY AND PROPAGATION OF INSIGHT SIGNALS (DAG)</p>
             </div>
           </div>
           <button class="px-5 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-[10px] font-bold uppercase tracking-[0.15em] rounded-full transition-all duration-300 flex items-center gap-2" id="refresh-lineage">
@@ -192,50 +192,47 @@ export function renderInsights() {
           </button>
         </div>
 
-        <div class="grid grid-cols-4 gap-8 h-[650px] relative overflow-hidden glass-card rounded-[2.5rem] p-8 border-white/5" id="lineage-graph-container">
-          <!-- Absolute SVG Overlay for connectors -->
-          <svg class="absolute inset-0 pointer-events-none w-full h-full" id="lineage-connectors" style="z-index: 1;"></svg>
+        <!-- Scrollable and Pannable Unified DAG Canvas -->
+        <div class="relative w-full h-[650px] overflow-auto glass-card rounded-[2.5rem] border border-white/5 bg-[#080809] dag-canvas custom-scrollbar" id="lineage-graph-container" style="scrollbar-color: rgba(255,255,255,0.1) transparent;">
           
-          <!-- Column 1: Data Sources -->
-          <div class="lineage-column flex flex-col gap-6 overflow-y-auto relative z-10" data-col="datasource">
-            <h3 class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold sticky top-0 bg-[#131313]/90 py-2 border-b border-white/5 mb-2">Data Sources</h3>
-            <div class="column-nodes flex flex-col gap-4"></div>
-          </div>
-          
-          <!-- Column 2: Analyses -->
-          <div class="lineage-column flex flex-col gap-6 overflow-y-auto relative z-10" data-col="analysis">
-            <h3 class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold sticky top-0 bg-[#131313]/90 py-2 border-b border-white/5 mb-2">Analyses</h3>
-            <div class="column-nodes flex flex-col gap-4"></div>
-          </div>
-          
-          <!-- Column 3: Insights -->
-          <div class="lineage-column flex flex-col gap-6 overflow-y-auto relative z-10" data-col="insight">
-            <h3 class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold sticky top-0 bg-[#131313]/90 py-2 border-b border-white/5 mb-2">Insights</h3>
-            <div class="column-nodes flex flex-col gap-4"></div>
-          </div>
-          
-          <!-- Column 4: Knowledge -->
-          <div class="lineage-column flex flex-col gap-6 overflow-y-auto relative z-10" data-col="knowledge">
-            <h3 class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold sticky top-0 bg-[#131313]/90 py-2 border-b border-white/5 mb-2">Knowledge Pages</h3>
-            <div class="column-nodes flex flex-col gap-4"></div>
-          </div>
-          
-          <!-- Node Details Drawer overlay card -->
-          <div id="node-details-panel" class="absolute bottom-6 right-6 w-[26rem] p-8 rounded-[2rem] glass-card border-white/10 shadow-2xl translate-y-12 opacity-0 pointer-events-none transition-all duration-500 z-30 flex flex-col gap-4">
-            <div class="flex items-start justify-between">
-              <span class="node-tag text-[9px] uppercase tracking-[0.25em] font-bold px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary">Node</span>
-              <button class="text-outline hover:text-white p-1 hover:bg-white/5 rounded-full transition-all" id="close-details-btn">
-                <span class="material-symbols-outlined text-base">close</span>
-              </button>
+          <!-- Floating Category Header Labels at the top of the canvas -->
+          <div class="absolute top-6 left-0 w-full h-8 pointer-events-none flex z-20" id="dag-headers" style="width: 1240px;">
+            <div style="position: absolute; left: 60px; width: 220px;" class="text-center">
+              <span class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold px-3 py-1.5 bg-[#101012] border border-white/5 rounded-full">Data Sources</span>
             </div>
-            <h4 class="node-title text-lg font-semibold text-white tracking-tight leading-snug">Node Title</h4>
-            <div class="node-meta-grid grid grid-cols-2 gap-4 border-y border-white/5 py-4 my-1">
-              <!-- Grid items injected -->
+            <div style="position: absolute; left: 360px; width: 220px;" class="text-center">
+              <span class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold px-3 py-1.5 bg-[#101012] border border-white/5 rounded-full">Analyses</span>
             </div>
-            <p class="node-desc text-xs text-on-surface-variant font-body-md leading-relaxed">Select any node in the pedigree lanes to reveal structural dependencies and propagation logs.</p>
-            <div class="node-actions flex items-center justify-end gap-3 mt-1">
-              <!-- Action buttons -->
+            <div style="position: absolute; left: 660px; width: 220px;" class="text-center">
+              <span class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold px-3 py-1.5 bg-[#101012] border border-white/5 rounded-full">Insights</span>
             </div>
+            <div style="position: absolute; left: 960px; width: 220px;" class="text-center">
+              <span class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold px-3 py-1.5 bg-[#101012] border border-white/5 rounded-full">Knowledge Pages</span>
+            </div>
+          </div>
+
+          <!-- SVG connectors overlay (stretching across complete scroll dimensions) -->
+          <svg class="absolute inset-0 pointer-events-none" id="lineage-connectors" style="z-index: 1; min-width: 1240px; min-height: 650px;"></svg>
+
+          <!-- Absolutely positioned nodes container -->
+          <div class="absolute inset-0" id="dag-nodes-container" style="z-index: 10; min-width: 1240px; min-height: 650px;"></div>
+        </div>
+
+        <!-- Node Details Drawer overlay card (floating fixed above scroll viewport bottom-right) -->
+        <div id="node-details-panel" class="absolute bottom-6 right-6 w-[26rem] p-8 rounded-[2rem] glass-card border-white/10 shadow-2xl translate-y-12 opacity-0 pointer-events-none transition-all duration-500 z-30 flex flex-col gap-4">
+          <div class="flex items-start justify-between">
+            <span class="node-tag text-[9px] uppercase tracking-[0.25em] font-bold px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary">Node</span>
+            <button class="text-outline hover:text-white p-1 hover:bg-white/5 rounded-full transition-all" id="close-details-btn">
+              <span class="material-symbols-outlined text-base">close</span>
+            </button>
+          </div>
+          <h4 class="node-title text-lg font-semibold text-white tracking-tight leading-snug">Node Title</h4>
+          <div class="node-meta-grid grid grid-cols-2 gap-4 border-y border-white/5 py-4 my-1">
+            <!-- Grid items injected -->
+          </div>
+          <p class="node-desc text-xs text-on-surface-variant font-body-md leading-relaxed">Select any node in the pedigree lanes to reveal structural dependencies and propagation logs.</p>
+          <div class="node-actions flex items-center justify-end gap-3 mt-1">
+            <!-- Action buttons -->
           </div>
         </div>
       </div>
@@ -448,33 +445,27 @@ async function hydrateFeed(container: HTMLElement) {
 }
 
 /* =========================================================================
-   GENEALOGY AND PEDIGREE LINEAGE GRAPH LOGIC (VIEW 2)
+   GENEALOGY AND PEDIGREE LINEAGE DAG GRAPH LOGIC (VIEW 2)
    ========================================================================= */
 
 async function hydrateLineage(container: HTMLElement, forceRefresh = false) {
   const graphContainer = container.querySelector('#lineage-graph-container');
   if (!graphContainer) return;
 
-  const cols = {
-    datasource: graphContainer.querySelector('[data-col="datasource"] .column-nodes') as HTMLElement,
-    analysis: graphContainer.querySelector('[data-col="analysis"] .column-nodes') as HTMLElement,
-    insight: graphContainer.querySelector('[data-col="insight"] .column-nodes') as HTMLElement,
-    knowledge: graphContainer.querySelector('[data-col="knowledge"] .column-nodes') as HTMLElement,
-  };
-
+  const nodesContainer = graphContainer.querySelector('#dag-nodes-container') as HTMLElement;
   const svg = graphContainer.querySelector('#lineage-connectors') as SVGElement;
+  const headers = graphContainer.querySelector('#dag-headers') as HTMLElement;
 
-  // 1. Show loading skeleton inside columns
-  Object.values(cols).forEach(col => {
-    if (col) {
-      col.innerHTML = `
-        <div class="rounded-xl bg-surface-container-low/20 animate-pulse h-16 border border-white/5 mb-3"></div>
-        <div class="rounded-xl bg-surface-container-low/20 animate-pulse h-16 border border-white/5 mb-3"></div>
-        <div class="rounded-xl bg-surface-container-low/20 animate-pulse h-16 border border-white/5"></div>
-      `;
-    }
-  });
-  if (svg) svg.innerHTML = '';
+  if (!nodesContainer || !svg) return;
+
+  // 1. Show loading indicator
+  nodesContainer.innerHTML = `
+    <div class="absolute inset-0 flex items-center justify-center gap-3 opacity-40">
+      <span class="material-symbols-outlined animate-spin text-primary text-3xl" data-icon="progress_activity">progress_activity</span>
+      <span class="text-xs uppercase tracking-[0.3em] font-bold">Assembling intelligence DAG…</span>
+    </div>
+  `;
+  svg.innerHTML = '';
 
   try {
     // 2. Fetch lineage map
@@ -482,84 +473,121 @@ async function hydrateLineage(container: HTMLElement, forceRefresh = false) {
       currentLineageData = await api.getInsightsLineage();
     }
     const data = currentLineageData;
-
-    // Clear column contents
-    Object.values(cols).forEach(col => { if (col) col.innerHTML = ''; });
+    nodesContainer.innerHTML = '';
 
     if (data.nodes.length === 0) {
-      Object.values(cols).forEach(col => {
-        if (col) col.innerHTML = `<p class="text-[9px] text-outline opacity-30 p-4 text-center">Empty</p>`;
-      });
+      nodesContainer.innerHTML = `
+        <div class="absolute inset-0 flex items-center justify-center gap-3 opacity-30">
+          <span class="text-xs uppercase tracking-[0.3em] font-bold">No lineage records found</span>
+        </div>
+      `;
       return;
     }
 
-    // 3. Render Node Cards
-    data.nodes.forEach((node, index) => {
-      const colEl = cols[node.type];
-      if (!colEl) return;
+    // 3. Classify nodes by layer
+    const layerNodes = {
+      datasource: data.nodes.filter(n => n.type === 'datasource'),
+      analysis: data.nodes.filter(n => n.type === 'analysis'),
+      insight: data.nodes.filter(n => n.type === 'insight'),
+      knowledge: data.nodes.filter(n => n.type === 'knowledge'),
+    };
 
-      let icon = 'description';
-      let accentClass = 'text-sky-400';
-      if (node.type === 'analysis') {
-        icon = 'analytics';
-        accentClass = 'text-purple-400';
-      } else if (node.type === 'insight') {
-        icon = 'auto_awesome';
-        accentClass = 'text-rose-400';
-      } else if (node.type === 'knowledge') {
-        icon = 'article';
-        accentClass = 'text-emerald-400';
-      }
+    const maxInLayer = Math.max(
+      layerNodes.datasource.length,
+      layerNodes.analysis.length,
+      layerNodes.insight.length,
+      layerNodes.knowledge.length
+    );
 
-      const nodeEl = document.createElement('div');
-      nodeEl.className = 'lineage-node glass-card p-5 rounded-2xl border border-white/5 hover:border-white/20 hover:scale-[1.02] cursor-pointer transition-all duration-300 relative group flex flex-col gap-3 opacity-0 animate-reveal';
-      nodeEl.style.animationDelay = `${index * 0.03}s`;
-      nodeEl.setAttribute('data-node-id', node.id);
-      nodeEl.setAttribute('data-node-type', node.type);
+    // Dynamic layout coordinates
+    const vSpace = 120;
+    const canvasHeight = Math.max(650, maxInLayer * vSpace + 140);
+    const canvasWidth = 1240;
+    const centerY = canvasHeight / 2;
 
-      nodeEl.innerHTML = `
-        <div class="flex items-center justify-between pointer-events-none">
-          <div class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-[14px] ${accentClass}" data-icon="${icon}">${icon}</span>
-            <span class="text-[8px] uppercase tracking-[0.2em] font-bold text-outline opacity-40">${node.type}</span>
+    // Apply dimensions to SVG, container, and headers
+    svg.style.minWidth = `${canvasWidth}px`;
+    svg.style.minHeight = `${canvasHeight}px`;
+    svg.style.width = `${canvasWidth}px`;
+    svg.style.height = `${canvasHeight}px`;
+
+    nodesContainer.style.minWidth = `${canvasWidth}px`;
+    nodesContainer.style.minHeight = `${canvasHeight}px`;
+    nodesContainer.style.width = `${canvasWidth}px`;
+    nodesContainer.style.height = `${canvasHeight}px`;
+
+    if (headers) {
+      headers.style.width = `${canvasWidth}px`;
+    }
+
+    // Placement coordinates
+    const layerKeys: ('datasource' | 'analysis' | 'insight' | 'knowledge')[] = ['datasource', 'analysis', 'insight', 'knowledge'];
+    const startX = 60;
+    const layerSpacing = 300;
+    const nodeWidth = 220;
+
+    layerKeys.forEach((key, lIdx) => {
+      const list = layerNodes[key];
+      const K = list.length;
+      if (K === 0) return;
+
+      const x = startX + lIdx * layerSpacing;
+      const totalHeight = (K - 1) * vSpace;
+      const yStart = centerY - (totalHeight / 2);
+
+      list.forEach((node, idx) => {
+        const nodeY = yStart + idx * vSpace - 36; // offset center height approx
+        
+        let icon = 'description';
+        let accentClass = 'text-sky-400';
+        if (node.type === 'analysis') {
+          icon = 'analytics';
+          accentClass = 'text-purple-400';
+        } else if (node.type === 'insight') {
+          icon = 'auto_awesome';
+          accentClass = 'text-rose-400';
+        } else if (node.type === 'knowledge') {
+          icon = 'article';
+          accentClass = 'text-emerald-400';
+        }
+
+        const nodeEl = document.createElement('div');
+        nodeEl.className = 'lineage-node glass-card p-4 rounded-2xl border border-white/5 hover:border-white/20 hover:scale-[1.02] cursor-pointer transition-all duration-300 relative group flex flex-col gap-2 opacity-0 animate-reveal';
+        nodeEl.style.position = 'absolute';
+        nodeEl.style.left = `${x}px`;
+        nodeEl.style.top = `${nodeY}px`;
+        nodeEl.style.width = `${nodeWidth}px`;
+        nodeEl.style.zIndex = '10';
+        nodeEl.style.animationDelay = `${(lIdx * 3 + idx) * 0.03}s`;
+        
+        nodeEl.setAttribute('data-node-id', node.id);
+        nodeEl.setAttribute('data-node-type', node.type);
+
+        nodeEl.innerHTML = `
+          <div class="flex items-center justify-between pointer-events-none">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[13px] ${accentClass}" data-icon="${icon}">${icon}</span>
+              <span class="text-[8px] uppercase tracking-[0.2em] font-bold text-outline opacity-40">${node.type}</span>
+            </div>
+            ${node.metadata?.is_verified ? `<span class="material-symbols-outlined text-[11px] text-primary" data-icon="verified">verified</span>` : ''}
           </div>
-          ${node.metadata?.is_verified ? `<span class="material-symbols-outlined text-[12px] text-primary" data-icon="verified">verified</span>` : ''}
-        </div>
-        <p class="text-xs text-on-surface leading-normal font-medium line-clamp-3 pr-2 pointer-events-none group-hover:text-white transition-colors duration-300">${node.label}</p>
-      `;
+          <p class="text-[11px] text-on-surface leading-snug font-medium line-clamp-2 pr-1 pointer-events-none group-hover:text-white transition-colors duration-300">${node.label}</p>
+        `;
 
-      colEl.appendChild(nodeEl);
+        nodesContainer.appendChild(nodeEl);
+      });
     });
 
     // 4. Trigger relative connections painting
     setTimeout(() => {
       drawLineageConnectors(container, data);
       setupLineageInteractions(container, data);
-    }, 150);
-
-    // 5. Scroll recalculations
-    container.querySelectorAll('.lineage-column').forEach(col => {
-      col.removeEventListener('scroll', recalculateConnectorLines);
-      col.addEventListener('scroll', () => drawLineageConnectors(container, data));
-    });
-
-    // 6. Hook up resize updates
-    if (resizeObserver) resizeObserver.disconnect();
-    resizeObserver = new ResizeObserver(() => {
-      drawLineageConnectors(container, data);
-    });
-    resizeObserver.observe(graphContainer);
+    }, 250);
 
   } catch (err) {
     console.error('Failed to load lineage graph:', err);
-    Object.values(cols).forEach(col => {
-      if (col) col.innerHTML = `<p class="text-xs text-outline opacity-40 p-4">Error loading map</p>`;
-    });
+    nodesContainer.innerHTML = `<p class="absolute inset-0 flex items-center justify-center text-xs text-outline opacity-40">Error loading DAG</p>`;
   }
-}
-
-function recalculateConnectorLines() {
-  // Triggers visual updates dynamically
 }
 
 function drawLineageConnectors(container: HTMLElement, data: LineageResponse) {
@@ -568,33 +596,22 @@ function drawLineageConnectors(container: HTMLElement, data: LineageResponse) {
   if (!svg || !graphContainer) return;
 
   svg.innerHTML = '';
-  const containerRect = graphContainer.getBoundingClientRect();
 
   data.edges.forEach(edge => {
-    const sourceEl = graphContainer.querySelector(`[data-node-id="${edge.source}"]`);
-    const targetEl = graphContainer.querySelector(`[data-node-id="${edge.target}"]`);
+    const sourceEl = graphContainer.querySelector(`[data-node-id="${edge.source}"]`) as HTMLElement;
+    const targetEl = graphContainer.querySelector(`[data-node-id="${edge.target}"]`) as HTMLElement;
 
     if (!sourceEl || !targetEl) return;
 
-    const sourceRect = sourceEl.getBoundingClientRect();
-    const targetRect = targetEl.getBoundingClientRect();
+    // Direct positions relative to scrollable relative parent container
+    const x1 = sourceEl.offsetLeft + sourceEl.offsetWidth;
+    const y1 = sourceEl.offsetTop + sourceEl.offsetHeight / 2;
 
-    // Node bounds checks: if scrolled out of viewport column clip bounds, skip drawing or adjust
-    const colSource = sourceEl.closest('.lineage-column')?.getBoundingClientRect();
-    const colTarget = targetEl.closest('.lineage-column')?.getBoundingClientRect();
-
-    if (colSource && (sourceRect.bottom < colSource.top || sourceRect.top > colSource.bottom)) return;
-    if (colTarget && (targetRect.bottom < colTarget.top || targetRect.top > colTarget.bottom)) return;
-
-    // Calculate relative attachment anchors (Source right-center to Target left-center)
-    const x1 = (sourceRect.right - containerRect.left);
-    const y1 = (sourceRect.top + sourceRect.height / 2 - containerRect.top);
-
-    const x2 = (targetRect.left - containerRect.left);
-    const y2 = (targetRect.top + targetRect.height / 2 - containerRect.top);
+    const x2 = targetEl.offsetLeft;
+    const y2 = targetEl.offsetTop + targetEl.offsetHeight / 2;
 
     // Cubic Bezier curve control path
-    const dx = (x2 - x1) * 0.4;
+    const dx = (x2 - x1) * 0.45;
     const pathD = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
 
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -646,8 +663,8 @@ function setupLineageInteractions(container: HTMLElement, data: LineageResponse)
       });
     }
 
-    traceUp(hoveredId);
-    traceDown(hoveredId);
+    traceUp(nodeId);
+    traceDown(nodeId);
 
     return { nodes: activeNodes, paths: activePaths };
   }
@@ -711,9 +728,9 @@ function setupLineageInteractions(container: HTMLElement, data: LineageResponse)
   // Drawer dismiss triggers
   container.querySelector('#close-details-btn')?.addEventListener('click', closeNodeDetailsDrawer);
   container.querySelector('#lineage-graph-container')?.addEventListener('click', (e) => {
-    // Only close if click is in the grid background
+    // Only close if click is in the grid canvas background
     const target = e.target as HTMLElement;
-    if (target.id === 'lineage-graph-container' || target.classList.contains('lineage-column')) {
+    if (target.id === 'lineage-graph-container' || target.id === 'dag-nodes-container') {
       closeNodeDetailsDrawer();
     }
   });
