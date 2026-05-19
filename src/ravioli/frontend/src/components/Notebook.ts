@@ -917,6 +917,11 @@ function bindInteractions(container: HTMLElement) {
         rerunBtn.innerHTML = `<span class="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>`;
         try {
            await api.executeMarkdown(activeId, question, logId, null);
+           
+           container.querySelector(`#cell-edit-${idx}`)?.classList.add('hidden');
+           container.querySelector(`#cell-static-${idx}`)?.classList.remove('hidden');
+           container.querySelector(`#cell-divider-${idx}`)?.classList.remove('opacity-0');
+
            const newLogs = await api.listLogs(activeId);
            lastLogsJson = JSON.stringify(newLogs);
            store.setLogs(newLogs);
@@ -1034,6 +1039,10 @@ function bindInteractions(container: HTMLElement) {
           runNewBtn.innerHTML = `<span class="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>`;
           try {
              await api.executeMarkdown(activeId, question, null, afterLogId);
+             
+             const newCellBlock = runNewBtn.closest('.new-cell-block');
+             newCellBlock?.remove();
+
              const newLogs = await api.listLogs(activeId);
              lastLogsJson = JSON.stringify(newLogs);
              store.setLogs(newLogs);
