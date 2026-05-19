@@ -217,6 +217,7 @@ function renderRichOutput(output: any): string {
 }
 
 let lastLogsJson = '';
+const executingCells = new Set<string>();
 
 export function renderNotebook() {
   const container = document.createElement('main');
@@ -683,12 +684,12 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
            <div class="h-px bg-outline-variant/10 ml-18 mr-2 transition-opacity" id="cell-divider-${cell.index}"></div>
   
             <div class="flex items-start gap-4">
-              <div class="font-mono text-xs font-bold text-secondary/50 pt-1 select-none w-14 text-right shrink-0">
-                 Out [${cell.index}]:
+              <div class="font-mono text-xs font-bold text-secondary/50 pt-1 select-none w-14 text-right shrink-0${executingCells.has(cell.inputLogId) ? ' flex items-center justify-end gap-1' : ''}">
+                 ${executingCells.has(cell.inputLogId) ? '<span class="material-symbols-outlined text-[10px] animate-spin" data-icon="progress_activity">progress_activity</span><span>Out [*]:</span>' : `Out [${cell.index}]:`}
               </div>
                <div class="flex-1 space-y-6 min-w-0 overflow-x-auto">
                   ${cell.outputs.length === 0 
-                    ? `<span class="text-xs text-outline italic">No output generated</span>`
+                    ? (executingCells.has(cell.inputLogId) ? '<div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg animate-pulse" id="streaming-content-' + cell.index + '"><span class="inline-block w-1 h-4 bg-primary animate-pulse"></span></div>' : '<span class="text-xs text-outline italic">No output generated</span>')
                     : cell.outputs.map(out => {
                         let contentHtml = out.content && out.content.trim() !== '[SQL Execution Result]' && out.content.trim() !== '[Python Execution Result]' 
                             ? `<div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg">${renderMarkdown(out.content)}</div>` 
@@ -996,6 +997,7 @@ function bindInteractions(container: HTMLElement) {
     const target = e.target as HTMLElement;
 
     async function runCell(idx: string, logId: string, toolName: string, question: string, cellBody: HTMLElement) {
+      executingCells.add(logId);
       container.querySelector(`#cell-edit-${idx}`)?.classList.add('hidden');
       const staticView = container.querySelector(`#cell-static-${idx}`);
       if (staticView) {
@@ -1061,6 +1063,8 @@ function bindInteractions(container: HTMLElement) {
               streamingContent.innerHTML = `<span class="text-error">Execution Failed.</span>`;
               streamingContent.classList.remove('animate-pulse');
            }
+        } finally {
+           executingCells.delete(logId);
         }
       } else {
         let fullText = "";
@@ -1072,6 +1076,7 @@ function bindInteractions(container: HTMLElement) {
             }
           },
           async () => {
+            executingCells.delete(logId);
             if (streamingContent) {
               streamingContent.innerHTML = renderMarkdown(fullText);
               streamingContent.classList.remove('animate-pulse');
@@ -1086,6 +1091,7 @@ function bindInteractions(container: HTMLElement) {
             store.setLogs(newLogs);
           },
           (err) => {
+            executingCells.delete(logId);
             console.error('Rerun error', err);
             if (outGutter) {
                outGutter.textContent = `Out [${idx}]:`;
