@@ -563,6 +563,92 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
 
 function bindInteractions(container: HTMLElement) {
   const activeId = store.getActiveAnalysisId();
+
+  function createCellEditBlock(
+    type: 'python' | 'sql' | 'chat',
+    afterLogId: string | null,
+    targetElement: HTMLElement,
+    toolbarNode?: HTMLElement
+  ) {
+    const tempId = 'temp-' + Date.now();
+    const newCell = document.createElement('div');
+    newCell.className = 'glass-panel p-6 rounded-3xl space-y-6 bg-surface-container-low/30 border-primary/40 relative overflow-hidden group animate-in fade-in slide-in-from-top-4 duration-500 shadow-xl shadow-primary/5 new-cell-block';
+    
+    let icon = "auto_awesome";
+    let color = "text-secondary";
+    let placeholder = "Enter AI instruction...";
+    
+    if (type === "sql") {
+       icon = "database";
+       color = "text-primary";
+       placeholder = "Enter SQL query to execute...";
+    } else if (type === "python") {
+       icon = "code";
+       color = "text-emerald-400";
+       placeholder = "Enter Python script...";
+    }
+
+    newCell.innerHTML = `
+       <div class="flex items-start gap-4">
+          <div class="font-mono text-xs font-bold ${color}/80 pt-2.5 select-none w-14 text-right shrink-0 flex items-center justify-end gap-1">
+             <span class="material-symbols-outlined text-[14px]">${icon}</span>
+             In [*]:
+          </div>
+          
+          <div class="flex-1 w-full" id="cell-edit-${tempId}">
+             <div class="glass-panel p-1.5 rounded-xl group focus-within:border-${color.split('-')[1] || 'primary'}/30 transition-all duration-300 shadow-lg shadow-${color.split('-')[1] || 'primary'}/5 bg-surface-container-lowest/80 border-outline-variant/10">
+                <div class="flex items-start gap-3 px-3">
+                  <div class="flex-1 min-w-0 py-1.5">
+                    <textarea id="cell-input-${tempId}" class="w-full bg-transparent border-none text-on-surface focus:ring-0 resize-none py-0 text-sm font-mono custom-scrollbar placeholder-outline-variant" rows="2" placeholder="${placeholder}"></textarea>
+                  </div>
+                  <div class="flex items-center gap-1.5 shrink-0 pt-0.5">
+                    <button class="w-7 h-7 rounded-full bg-surface-container-highest text-outline flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors btn-cancel-insert" title="Cancel">
+                      <span class="material-symbols-outlined text-[14px]">close</span>
+                    </button>
+                    <button class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-110 transition-transform btn-execute-new-cell shadow-md shadow-primary/20" data-type="${type}" data-after="${afterLogId || '__first__'}" data-temp-id="${tempId}" title="Run Cell">
+                      <span class="material-symbols-outlined text-[14px]">play_arrow</span>
+                    </button>
+                  </div>
+                </div>
+             </div>
+          </div>
+       </div>
+    `;
+
+    if (toolbarNode) {
+      toolbarNode.classList.add('hidden');
+    }
+
+    targetElement.insertAdjacentElement('afterend', newCell);
+    
+    // Auto-focus new textarea
+    const txt = newCell.querySelector(`#cell-input-${tempId}`) as HTMLTextAreaElement;
+    if (txt) {
+       txt.focus();
+       // Shift+Enter to run
+       txt.addEventListener('keydown', (ev) => {
+         if (ev.key === 'Enter' && ev.shiftKey) {
+           ev.preventDefault();
+           newCell.querySelector('.btn-execute-new-cell')?.dispatchEvent(new Event('click', { bubbles: true }));
+         }
+       });
+    }
+
+    // Handle Cancel Insert
+    const cancelBtn = newCell.querySelector('.btn-cancel-insert');
+    cancelBtn?.addEventListener('click', () => {
+       newCell.remove();
+       if (toolbarNode) {
+          toolbarNode.classList.remove('hidden');
+       }
+       // If no cells are left in the container, restore welcome screen
+       const cellContainer = container.querySelector('#cell-container');
+       if (cellContainer && !cellContainer.querySelector('.glass-panel')) {
+          updateNotebookUI(container);
+       }
+    });
+  }
+
   const input = container.querySelector('#cell-input') as HTMLTextAreaElement;
   const btn = container.querySelector('#btn-execute');
   const btnMagic = container.querySelector('#btn-magic');
@@ -608,28 +694,31 @@ function bindInteractions(container: HTMLElement) {
     const type = addBtn.getAttribute('data-type') as 'python' | 'sql' | 'chat';
     if (!type) return;
     
+    const cellContainer = container.querySelector('#cell-container');
+    if (!cellContainer) return;
+
+    // Remove the welcome screen if it is there
+    const welcome = cellContainer.querySelector('#notebook-welcome');
+    if (welcome) welcome.remove();
+
     // Get the last log in the store to anchor the new cell after it
     const logs = store.getLogs();
     const lastLog = logs[logs.length - 1];
     const afterLogId = lastLog?.id ?? null;
-    
-    const cellContainer = container.querySelector('#cell-container');
-    if (!cellContainer) return;
 
-    // Find the last inter-cell toolbar and click its corresponding type button,
-    // or synthesise a new cell directly at the bottom
-    const toolbars = cellContainer.querySelectorAll('.cell-insert-toolbar');
-    const lastToolbar = toolbars[toolbars.length - 1] as HTMLElement;
-    if (lastToolbar) {
-      const matchingBtn = lastToolbar.querySelector(`.btn-insert-cell[data-type="${type}"]`) as HTMLButtonElement;
-      if (matchingBtn) {
-        matchingBtn.click();
-        cellContainer.scrollTop = cellContainer.scrollHeight;
-        return;
-      }
+    // Append cell at the end of the container
+    const children = Array.from(cellContainer.children);
+    const lastChild = children[children.length - 1] as HTMLElement;
+
+    if (lastChild) {
+      createCellEditBlock(type, afterLogId, lastChild);
+    } else {
+      const dummy = document.createElement('div');
+      dummy.className = 'hidden';
+      cellContainer.appendChild(dummy);
+      createCellEditBlock(type, afterLogId, dummy);
     }
-    
-    // Fallback: scroll to bottom so user can see the toolbar
+
     cellContainer.scrollTop = cellContainer.scrollHeight;
   });
 
@@ -649,70 +738,11 @@ function bindInteractions(container: HTMLElement) {
       const welcome = cellContainer.querySelector('#notebook-welcome');
       welcome?.remove();
 
-      // Inject a fresh editable cell
-      const tempId = `first-${Date.now()}`;
-      const colors: Record<string, string> = { python: 'text-primary', sql: 'text-secondary', chat: 'text-tertiary' };
-      const icons: Record<string, string> = { python: 'code', sql: 'database', chat: 'smart_toy' };
-      const labels: Record<string, string> = { python: 'Python', sql: 'SQL', chat: 'Chat AI' };
-      const placeholders: Record<string, string> = {
-        python: '# Write Python here…\nimport pandas as pd\n',
-        sql: '-- Write SQL here…\nSELECT * FROM my_table LIMIT 10',
-        chat: 'Ask a question about your data…'
-      };
-
-      const newCell = document.createElement('div');
-      newCell.className = 'glass-panel p-6 rounded-3xl bg-surface-container-low/30 border-primary/20 animate-in fade-in duration-300 new-cell-block';
-      newCell.innerHTML = `
-        <div class="flex items-start gap-4" id="cell-edit-wrapper-${tempId}">
-          <div class="font-mono text-xs font-bold ${colors[type]}/50 pt-2.5 select-none w-14 text-right shrink-0 flex items-center justify-end gap-1">
-            <span class="material-symbols-outlined text-[14px]" data-icon="${icons[type]}">${icons[type]}</span>
-            <span>In [*]:</span>
-          </div>
-          <div class="flex-1 glass-panel p-1.5 rounded-xl border-${type === 'chat' ? 'tertiary' : type === 'sql' ? 'secondary' : 'primary'}/30 bg-surface-container-low/80 focus-within:border-opacity-60 transition-all" id="cell-edit-${tempId}">
-            <div class="flex items-start gap-3 px-3">
-              <div class="flex-1 min-w-0 py-1.5">
-                <textarea id="cell-input-${tempId}" 
-                  class="w-full bg-transparent border-none ${colors[type].replace('text-', 'text-')} focus:ring-0 resize-none py-0 text-sm font-mono max-h-64 custom-scrollbar" 
-                  rows="3" 
-                  placeholder="${placeholders[type]}"
-                  autofocus></textarea>
-              </div>
-              <div class="flex items-center gap-1.5 shrink-0 pt-0.5">
-                <button class="btn-cancel-insert px-3 h-7 rounded-full bg-surface-container-highest text-outline text-[11px] flex items-center gap-1 hover:bg-error/20 hover:text-error transition-colors" title="Remove">
-                  <span class="material-symbols-outlined text-[13px]">close</span>
-                </button>
-                <button class="btn-execute-new-cell px-3 h-7 rounded-full bg-primary text-on-primary text-[11px] font-bold flex items-center gap-1.5 hover:scale-105 transition-transform shadow-md shadow-primary/20"
-                  data-type="${type}" data-after="__first__" data-temp-id="${tempId}" title="Run (Shift+Enter)">
-                  <span class="material-symbols-outlined text-[13px]">play_arrow</span>
-                  Run
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-      cellContainer.appendChild(newCell);
-
-      // Auto-focus the textarea
-      const ta = newCell.querySelector(`#cell-input-${tempId}`) as HTMLTextAreaElement;
-      ta?.focus();
-
-      // Shift+Enter to run
-      ta?.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Enter' && ev.shiftKey) {
-          ev.preventDefault();
-          newCell.querySelector('.btn-execute-new-cell')?.dispatchEvent(new Event('click', { bubbles: true }));
-        }
-      });
-
-      // Cancel
-      newCell.querySelector('.btn-cancel-insert')?.addEventListener('click', () => {
-        newCell.remove();
-        // If nothing else in the container, restore welcome screen
-        if (!cellContainer.querySelector('.glass-panel')) {
-          updateNotebookUI(container);
-        }
-      });
+      // Create first cell edit block
+      const dummy = document.createElement('div');
+      dummy.className = 'hidden';
+      cellContainer.appendChild(dummy);
+      createCellEditBlock(type, null, dummy);
       return;
     }
     
@@ -828,72 +858,13 @@ function bindInteractions(container: HTMLElement) {
     // Insert New Unexecuted Cell
     const insertBtn = target.closest('.btn-insert-cell') as HTMLElement;
     if (insertBtn) {
-      const type = insertBtn.getAttribute('data-type');
+      const type = insertBtn.getAttribute('data-type') as 'python' | 'sql' | 'chat';
       const afterLogId = insertBtn.getAttribute('data-after');
-      const toolbarNode = insertBtn.closest('.group\\/toolbar');
+      const toolbarNode = insertBtn.closest('.group\\/toolbar') as HTMLElement;
       
       if (!toolbarNode || !type || !afterLogId) return;
 
-      // Temporarily hide the toolbar it was spawned from
-      toolbarNode.classList.add('hidden');
-
-      const tempId = 'temp-' + Date.now();
-      const newCell = document.createElement('div');
-      newCell.className = 'glass-panel p-6 rounded-3xl space-y-6 bg-surface-container-low/30 border-primary/40 relative overflow-hidden group animate-in fade-in slide-in-from-top-4 duration-500 shadow-xl shadow-primary/5';
-      
-      let icon = "auto_awesome";
-      let color = "text-secondary";
-      let placeholder = "Enter AI instruction...";
-      
-      if (type === "sql") {
-         icon = "database";
-         color = "text-primary";
-         placeholder = "Enter SQL query to execute...";
-      } else if (type === "python") {
-         icon = "code";
-         color = "text-emerald-400";
-         placeholder = "Enter Python script...";
-      }
-
-      newCell.innerHTML = `
-         <div class="flex items-start gap-4">
-            <div class="font-mono text-xs font-bold ${color}/80 pt-2.5 select-none w-14 text-right shrink-0 flex items-center justify-end gap-1">
-               <span class="material-symbols-outlined text-[14px]">${icon}</span>
-               In [*]:
-            </div>
-            
-            <div class="flex-1 w-full" id="cell-edit-${tempId}">
-               <div class="glass-panel p-1.5 rounded-xl group focus-within:border-${color.split('-')[1] || 'primary'}/30 transition-all duration-300 shadow-lg shadow-${color.split('-')[1] || 'primary'}/5 bg-surface-container-lowest/80 border-outline-variant/10">
-                  <div class="flex items-start gap-3 px-3">
-                    <div class="flex-1 min-w-0 py-1.5">
-                      <textarea id="cell-input-${tempId}" class="w-full bg-transparent border-none text-on-surface focus:ring-0 resize-none py-0 text-sm font-mono custom-scrollbar placeholder-outline-variant" rows="2" placeholder="${placeholder}"></textarea>
-                    </div>
-                    <div class="flex items-center gap-1.5 shrink-0 pt-0.5">
-                      <button class="w-7 h-7 rounded-full bg-surface-container-highest text-outline flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors btn-cancel-insert" title="Cancel">
-                        <span class="material-symbols-outlined text-[14px]">close</span>
-                      </button>
-                      <button class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-110 transition-transform btn-execute-new-cell shadow-md shadow-primary/20" data-type="${type}" data-after="${afterLogId}" data-temp-id="${tempId}" title="Run Cell">
-                        <span class="material-symbols-outlined text-[14px]">play_arrow</span>
-                      </button>
-                    </div>
-                  </div>
-               </div>
-            </div>
-         </div>
-      `;
-
-      toolbarNode.insertAdjacentElement('afterend', newCell);
-      
-      // Auto-focus new textarea
-      const txt = newCell.querySelector(`#cell-input-${tempId}`) as HTMLTextAreaElement;
-      if (txt) txt.focus();
-
-      // Handle Cancel Insert
-      const cancelBtn = newCell.querySelector('.btn-cancel-insert');
-      cancelBtn?.addEventListener('click', () => {
-         newCell.remove();
-         toolbarNode.classList.remove('hidden');
-      });
+      createCellEditBlock(type, afterLogId, toolbarNode, toolbarNode);
     }
 
     // Execute Newly Inserted Cell
