@@ -7,7 +7,7 @@ import logging
 import uuid
 import json
 import re
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 from pathlib import Path
 from sqlalchemy.orm import Session
@@ -350,24 +350,51 @@ async def process_analysis_question(analysis_id: str, question: str):
 async def stream_question(
     analysis_id: UUID,
     question: str,
+    replace_log_id: Optional[UUID] = None,
     db: Session = Depends(get_db)
 ):
     """
     Stream a response to a question using Server-Sent Events.
+    If replace_log_id is provided, updates the existing query and overwrites its outputs in-place.
     """
     analysis = db.query(models.Analysis).filter(models.Analysis.id == analysis_id).first()
     if not analysis:
         raise HTTPException(status_code=404, detail="Analysis not found")
 
-    # 1. Create user log
-    user_log = models.AnalysisLog(
-        analysis_id=analysis_id,
-        log_type="user_query",
-        content=question
-    )
-    db.add(user_log)
+    user_log = None
+    if replace_log_id:
+        user_log = db.query(models.AnalysisLog).filter(models.AnalysisLog.id == replace_log_id).first()
+        if user_log:
+            user_log.content = question
+            db.commit()
+            
+            # Delete subsequent outputs belonging to this execution step
+            all_logs = db.query(models.AnalysisLog).filter(models.AnalysisLog.analysis_id == analysis_id).order_by(models.AnalysisLog.timestamp.asc()).all()
+            target_idx = -1
+            for idx, log in enumerate(all_logs):
+                if log.id == replace_log_id:
+                    target_idx = idx
+                    break
+            if target_idx != -1:
+                for log in all_logs[target_idx+1:]:
+                    if log.log_type == "user_query":
+                        break
+                    db.delete(log)
+                db.commit()
+
+    if not user_log:
+        user_log = models.AnalysisLog(
+            analysis_id=analysis_id,
+            log_type="user_query",
+            content=question
+        )
+        db.add(user_log)
+        db.commit()
+        db.refresh(user_log)
+
     analysis.status = "running"
     db.commit()
+    user_log_timestamp = user_log.timestamp
 
     async def event_generator():
         # Context preparation (same as background task)
@@ -481,6 +508,7 @@ async def stream_question(
                 yield f"data: [VIZ]{json.dumps(viz_payload)}\n\n"
             
             # Persistence at the end
+            import datetime
             async_db = SessionLocal()
             try:
                 agent_log = models.AnalysisLog(
@@ -489,6 +517,11 @@ async def stream_question(
                     content=full_response,
                     data=viz_payload # Store the viz data in the log
                 )
+                
+                # Maintain original chronological position for in-place reruns
+                if replace_log_id and user_log_timestamp:
+                    agent_log.timestamp = user_log_timestamp + datetime.timedelta(seconds=1)
+                
                 async_db.add(agent_log)
                 
                 # Re-fetch analysis in this session

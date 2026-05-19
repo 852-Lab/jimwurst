@@ -53,8 +53,11 @@ export const api = {
     if (!response.ok) throw new Error('Failed to ask question');
   },
   
-  streamQuestion(analysisId: string, question: string, onMessage: (token: string) => void, onComplete: () => void, onError: (err: any) => void) {
-    const url = `${API_BASE}/analyses/${analysisId}/stream?question=${encodeURIComponent(question)}`;
+  streamQuestion(analysisId: string, question: string, replaceLogId: string | null, onMessage: (token: string) => void, onComplete: () => void, onError: (err: any) => void) {
+    let url = `${API_BASE}/analyses/${analysisId}/stream?question=${encodeURIComponent(question)}`;
+    if (replaceLogId) {
+      url += `&replace_log_id=${encodeURIComponent(replaceLogId)}`;
+    }
     const eventSource = new EventSource(url);
     
     eventSource.onmessage = (event) => {

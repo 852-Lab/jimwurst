@@ -227,14 +227,14 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
   if (isInitial || !container.querySelector('#notebook-shell')) {
     container.innerHTML = `
       <div id="notebook-shell" class="flex flex-col h-full w-full">
-        <header class="flex justify-between items-center px-12 py-8 bg-surface-container-low border-b border-outline-variant/10 z-10">
-          <div class="space-y-1" id="header-info">
-            <h2 class="text-2xl font-headline-lg text-white" id="analysis-title">${analysis.title}</h2>
-            <div class="flex items-center gap-4" id="analysis-status-container">
-               <!-- Status will be updated here -->
+        <header class="flex justify-between items-center px-12 py-6 bg-surface-container-low border-b border-outline-variant/10 z-10">
+          <div class="space-y-3 flex-1 min-w-0" id="header-info">
+            <h2 class="text-2xl font-headline-lg text-white truncate" id="analysis-title">${analysis.title}</h2>
+            <div class="flex items-center flex-wrap gap-3" id="analysis-status-container">
+               <!-- Status and Context Capsules will be updated here -->
             </div>
           </div>
-          <div class="flex items-center gap-4">
+          <div class="flex items-center gap-4 shrink-0 pl-6">
             <button class="p-2 text-outline hover:text-white transition-colors">
               <span class="material-symbols-outlined" data-icon="settings">settings</span>
             </button>
@@ -243,9 +243,6 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
             </button>
           </div>
         </header>
-
-        <!-- Dynamic Context Metadata Banner -->
-        <div class="px-12 pt-8 z-10 shrink-0" id="metadata-banner-container"></div>
 
         <!-- Scrollable Cells Area -->
         <div class="flex-1 overflow-y-auto px-12 pt-8 pb-32 space-y-8 custom-scrollbar" id="cell-container">
@@ -288,70 +285,45 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
     bindInteractions(container);
   }
 
-  // Update Dynamic Context Metadata Banner
-  const banner = container.querySelector('#metadata-banner-container');
-  if (banner) {
-    banner.innerHTML = `
-      <div class="glass-panel p-5 rounded-2xl border-outline-variant/10 bg-surface-container-low/40 relative overflow-hidden flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
-        <!-- Left side: Attached Context Resources -->
-        <div class="space-y-2 flex-1 min-w-0">
-          <div class="flex items-center gap-2 text-outline-variant text-[10px] font-label-md uppercase tracking-[0.2em] opacity-80">
-            <span class="material-symbols-outlined text-sm" data-icon="inventory_2">inventory_2</span>
-            <span>Active Context Resources</span>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            ${attachedSources.length === 0 && attachedKnowledges.length === 0
-              ? `<span class="text-xs text-outline italic">No context resources attached</span>`
-              : ''
-            }
-            ${attachedSources.map(ds => `
-              <div class="flex items-center gap-1.5 px-3 py-1 bg-primary/10 border border-primary/20 text-primary text-xs rounded-full min-w-0 hover:bg-primary/20 transition-colors" title="DuckDB Data Source Table: ${ds.table_name}">
-                <span class="material-symbols-outlined text-[14px]" data-icon="database">database</span>
-                <span class="truncate max-w-[150px] font-medium">${ds.original_filename}</span>
-              </div>
-            `).join('')}
-            ${attachedKnowledges.map(kp => `
-              <div class="flex items-center gap-1.5 px-3 py-1 bg-emerald/10 border border-emerald/20 text-emerald-400 text-xs rounded-full min-w-0 hover:bg-emerald/20 transition-colors">
-                <span class="material-symbols-outlined text-[14px]" data-icon="local_library">local_library</span>
-                <span class="truncate max-w-[150px] font-medium">${kp.title}</span>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-
-        <!-- Right side: Owner & Update Timestamp -->
-        <div class="flex gap-6 md:border-l border-outline-variant/10 md:pl-6 shrink-0 w-full md:w-auto justify-between md:justify-end">
-          <!-- Owner -->
-          <div class="flex flex-col gap-0.5 min-w-[100px]">
-            <span class="text-[9px] uppercase tracking-widest text-outline opacity-60 font-bold">Owner</span>
-            <div class="flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-sm text-secondary" data-icon="shield">shield</span>
-              <span class="text-xs text-white font-medium truncate max-w-[120px]">${ownerName}</span>
-            </div>
-          </div>
-          
-          <!-- Updated Time -->
-          <div class="flex flex-col gap-0.5 min-w-[120px]">
-            <span class="text-[9px] uppercase tracking-widest text-outline opacity-60 font-bold">Latest Edition</span>
-            <div class="flex items-center gap-1.5">
-              <span class="material-symbols-outlined text-sm text-outline" data-icon="history">history</span>
-              <span class="text-xs text-white font-medium">${formattedDate}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  // Update Status
+  // Update Status & Compact Metadata Header
   const statusContainer = container.querySelector('#analysis-status-container');
   if (statusContainer) {
     statusContainer.innerHTML = `
-      <span class="flex items-center gap-2 text-xs font-label-md text-tertiary uppercase tracking-widest">
+      <!-- Status & Step Count -->
+      <span class="flex items-center gap-2 text-[11px] font-label-md text-tertiary uppercase tracking-widest border-r border-outline-variant/20 pr-3">
         <span class="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>
         ${analysis.status}
       </span>
-      <span class="text-[10px] text-outline uppercase tracking-widest font-label-sm opacity-50"># ${logs.length} Steps</span>
+      <span class="text-[10px] text-outline uppercase tracking-widest font-label-sm opacity-50 border-r border-outline-variant/20 pr-3">
+        # ${logs.length} Steps
+      </span>
+      
+      <!-- Context Resources -->
+      ${attachedSources.map(ds => `
+        <div class="flex items-center gap-1.5 px-2.5 py-0.5 bg-primary/10 border border-primary/20 text-primary text-[10px] rounded-full min-w-0" title="DuckDB Data Source Table: ${ds.table_name}">
+          <span class="material-symbols-outlined text-[12px]" data-icon="database">database</span>
+          <span class="truncate max-w-[120px] font-medium">${ds.original_filename}</span>
+        </div>
+      `).join('')}
+      ${attachedKnowledges.map(kp => `
+        <div class="flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald/10 border border-emerald/20 text-emerald-400 text-[10px] rounded-full min-w-0">
+          <span class="material-symbols-outlined text-[12px]" data-icon="local_library">local_library</span>
+          <span class="truncate max-w-[120px] font-medium">${kp.title}</span>
+        </div>
+      `).join('')}
+
+      <!-- Separator -->
+      ${(attachedSources.length > 0 || attachedKnowledges.length > 0) ? `<div class="w-px h-3 bg-outline-variant/20 mx-1"></div>` : ''}
+
+      <!-- Owner & Date -->
+      <div class="flex items-center gap-1.5 text-secondary px-2 py-0.5 bg-surface-container-highest border border-outline-variant/10 rounded-full" title="Owner">
+        <span class="material-symbols-outlined text-[12px]" data-icon="shield">shield</span>
+        <span class="text-[10px] font-medium truncate max-w-[100px]">${ownerName}</span>
+      </div>
+      <div class="flex items-center gap-1.5 text-outline px-2 py-0.5 bg-surface-container-highest border border-outline-variant/10 rounded-full" title="Latest Edition">
+        <span class="material-symbols-outlined text-[12px]" data-icon="history">history</span>
+        <span class="text-[10px] font-medium">${formattedDate}</span>
+      </div>
     `;
   }
 
@@ -415,17 +387,41 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
     html += notebookCells.map(cell => `
       <div class="glass-panel p-6 rounded-3xl space-y-6 bg-surface-container-low/30 border-outline-variant/10 relative overflow-hidden group hover:border-primary/20 transition-all duration-300 animate-in fade-in duration-300">
          <!-- Cell Header: Input (In [X]) -->
-         <div class="flex items-start gap-4">
-            <div class="font-mono text-xs font-bold text-primary/50 pt-2.5 select-none w-14 text-right shrink-0">
+         <div class="flex items-start gap-4 group/input relative">
+            <div class="font-mono text-xs font-bold text-primary/50 pt-2.5 select-none w-14 text-right shrink-0" id="cell-in-label-${cell.index}">
                In [${cell.index}]:
             </div>
-            <div class="flex-1 font-mono text-sm text-primary-fixed-dim bg-surface-container-lowest/80 border border-outline-variant/10 rounded-xl p-3.5 shadow-inner overflow-x-auto">
-               ${cell.inputContent}
+            
+            <!-- Static View -->
+            <div class="flex-1 font-mono text-sm text-primary-fixed-dim bg-surface-container-lowest/80 border border-outline-variant/10 rounded-xl p-3.5 shadow-inner overflow-x-auto relative cell-static-view transition-all" id="cell-static-${cell.index}">
+               <div class="pr-8">${cell.inputContent}</div>
+               <button class="absolute top-2 right-2 p-1.5 rounded-lg bg-surface-container-highest/80 text-outline hover:text-primary opacity-0 group-hover/input:opacity-100 transition-opacity btn-edit-cell" data-cell-index="${cell.index}" title="Edit Cell">
+                 <span class="material-symbols-outlined text-[14px]">edit</span>
+               </button>
+            </div>
+            
+            <!-- Edit View -->
+            <div class="flex-1 hidden cell-edit-view w-full" id="cell-edit-${cell.index}">
+               <div class="glass-panel p-1.5 rounded-xl group focus-within:border-primary/30 transition-all duration-300 shadow-lg shadow-primary/5 bg-surface-container-low/80 border-primary/30">
+                  <div class="flex items-start gap-3 px-3">
+                    <div class="flex-1 min-w-0 py-1.5">
+                      <textarea id="cell-input-${cell.index}" class="w-full bg-transparent border-none text-primary-fixed-dim focus:ring-0 resize-none py-0 text-sm font-mono max-h-48 custom-scrollbar" rows="1">${cell.inputContent}</textarea>
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0 pt-0.5">
+                      <button class="w-7 h-7 rounded-full bg-surface-container-highest text-outline flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors btn-cancel-edit" data-cell-index="${cell.index}" title="Cancel">
+                        <span class="material-symbols-outlined text-[14px]">close</span>
+                      </button>
+                      <button class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-110 transition-transform btn-rerun-cell shadow-md shadow-primary/20" data-cell-index="${cell.index}" data-log-id="${cell.inputLogId}" title="Rerun Cell">
+                        <span class="material-symbols-outlined text-[14px]">play_arrow</span>
+                      </button>
+                    </div>
+                  </div>
+               </div>
             </div>
          </div>
 
          <!-- Cell Divider Line -->
-         <div class="h-px bg-outline-variant/10 ml-18 mr-2"></div>
+         <div class="h-px bg-outline-variant/10 ml-18 mr-2 transition-opacity" id="cell-divider-${cell.index}"></div>
 
          <!-- Cell Body: Output (Out [X]) -->
          <div class="flex items-start gap-4">
@@ -567,7 +563,7 @@ function bindInteractions(container: HTMLElement) {
     let fullText = "";
     const streamingContent = liveCellCard.querySelector('#streaming-content');
 
-    api.streamQuestion(activeId, question, 
+    api.streamQuestion(activeId, question, null, 
       (token) => {
         fullText += token;
         if (streamingContent) {
@@ -597,6 +593,108 @@ function bindInteractions(container: HTMLElement) {
         btn.removeAttribute('disabled');
       }
     );
+  });
+
+  // Delegated events for In-place Cell Editing
+  container.addEventListener('click', async (e) => {
+    const target = e.target as HTMLElement;
+    
+    // Toggle Edit Mode
+    const editBtn = target.closest('.btn-edit-cell') as HTMLElement;
+    if (editBtn) {
+      const idx = editBtn.getAttribute('data-cell-index');
+      container.querySelector(`#cell-static-${idx}`)?.classList.add('hidden');
+      container.querySelector(`#cell-edit-${idx}`)?.classList.remove('hidden');
+      container.querySelector(`#cell-divider-${idx}`)?.classList.add('opacity-0');
+      
+      const txt = container.querySelector(`#cell-input-${idx}`) as HTMLTextAreaElement;
+      if (txt) {
+         txt.style.height = 'auto';
+         txt.style.height = txt.scrollHeight + 'px';
+         txt.focus();
+      }
+      return;
+    }
+    
+    // Cancel Edit Mode
+    const cancelBtn = target.closest('.btn-cancel-edit') as HTMLElement;
+    if (cancelBtn) {
+      const idx = cancelBtn.getAttribute('data-cell-index');
+      container.querySelector(`#cell-static-${idx}`)?.classList.remove('hidden');
+      container.querySelector(`#cell-edit-${idx}`)?.classList.add('hidden');
+      container.querySelector(`#cell-divider-${idx}`)?.classList.remove('opacity-0');
+      return;
+    }
+    
+    // Rerun Cell
+    const rerunBtn = target.closest('.btn-rerun-cell') as HTMLButtonElement;
+    if (rerunBtn && activeId) {
+      const idx = rerunBtn.getAttribute('data-cell-index');
+      const logId = rerunBtn.getAttribute('data-log-id');
+      const txt = container.querySelector(`#cell-input-${idx}`) as HTMLTextAreaElement;
+      if (!txt || !logId) return;
+      
+      const question = txt.value;
+      if (!question) return;
+      
+      rerunBtn.disabled = true;
+      
+      // Update cell UI to executing state
+      container.querySelector(`#cell-edit-${idx}`)?.classList.add('hidden');
+      const staticView = container.querySelector(`#cell-static-${idx}`);
+      if (staticView) {
+        staticView.classList.remove('hidden');
+        staticView.innerHTML = `<div class="pr-8">${question}</div>`; // Lock new text without edit button during execution
+      }
+      container.querySelector(`#cell-divider-${idx}`)?.classList.remove('opacity-0');
+      
+      const cellBody = rerunBtn.closest('.glass-panel.rounded-3xl');
+      if (!cellBody) return;
+      
+      const outGutter = cellBody.querySelector('.text-secondary\\/50') as HTMLElement;
+      if (outGutter) {
+         outGutter.innerHTML = `<span class="material-symbols-outlined text-[10px] animate-spin" data-icon="progress_activity">progress_activity</span><span>Out [*]:</span>`;
+         outGutter.classList.add('flex', 'items-center', 'justify-end', 'gap-1');
+      }
+      
+      const outBody = outGutter?.nextElementSibling;
+      if (outBody) {
+        outBody.innerHTML = `<div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg animate-pulse" id="streaming-content-${idx}"><span class="inline-block w-1 h-4 bg-primary animate-pulse"></span></div>`;
+      }
+      
+      let fullText = "";
+      const streamingContent = outBody?.querySelector(`#streaming-content-${idx}`);
+
+      api.streamQuestion(activeId, question, logId,
+        (token) => {
+          fullText += token;
+          if (streamingContent) {
+            streamingContent.innerHTML = renderMarkdown(fullText) + '<span class="inline-block w-1 h-4 bg-primary animate-pulse ml-1"></span>';
+          }
+        },
+        async () => {
+          if (streamingContent) {
+            streamingContent.innerHTML = renderMarkdown(fullText);
+            streamingContent.classList.remove('animate-pulse');
+          }
+          if (outGutter) {
+            outGutter.innerHTML = `Out [${idx}]:`;
+            outGutter.classList.remove('flex', 'items-center', 'justify-end', 'gap-1');
+          }
+          
+          const newLogs = await api.listLogs(activeId);
+          lastLogsJson = JSON.stringify(newLogs);
+          store.setLogs(newLogs);
+        },
+        (err) => {
+          console.error('Rerun error', err);
+          if (outGutter) {
+             outGutter.innerHTML = `Out [${idx}]:`;
+             outGutter.classList.remove('flex', 'items-center', 'justify-end', 'gap-1');
+          }
+        }
+      );
+    }
   });
 
   // Follow-up question clicks
