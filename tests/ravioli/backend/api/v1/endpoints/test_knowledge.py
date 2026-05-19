@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, UTC
 from ravioli.backend.core.models import KnowledgePage
 
-def create_mock_page(id=None, title="Test Page", properties=None, content=None, ownership_type="individual"):
+def create_mock_page(id=None, title="Test Page", properties=None, content=None, ownership_type="individual", owner_type="individual"):
     return KnowledgePage(
         id=id or uuid.uuid4(),
         title=title,
@@ -10,7 +10,7 @@ def create_mock_page(id=None, title="Test Page", properties=None, content=None, 
         content=content or [{"type": "paragraph", "paragraph": {"rich_text": [{"text": {"content": "Hello"}}]}}],
         icon={"type": "emoji", "emoji": "📄"},
         cover={"type": "external", "external": {"url": "https://example.com/cover.jpg"}},
-        owner_type="individual",
+        owner_type=owner_type,
         ownership_type=ownership_type,
         source="manual",
         created_at=datetime.now(UTC),
@@ -53,7 +53,7 @@ def test_create_knowledge_page(client, session, current_user):
     }
     
     # Mock the return value of create to have timestamps and audit fields
-    mock_page = create_mock_page(title="New Intelligence")
+    mock_page = create_mock_page(title="New Intelligence", owner_type="team")
     def mock_add(x):
         x.id = mock_page.id
         x.created_at = mock_page.created_at
@@ -62,6 +62,7 @@ def test_create_knowledge_page(client, session, current_user):
         x.updated_by = current_user.id
         return None
     session.add.side_effect = mock_add
+    session.query.return_value.filter.return_value.first.return_value = mock_page
     
     response = client.post("/api/v1/knowledge/", json=payload)
     
