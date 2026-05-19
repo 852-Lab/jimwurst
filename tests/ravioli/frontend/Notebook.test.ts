@@ -7,6 +7,7 @@ vi.mock('../../../src/ravioli/frontend/src/services/api', () => ({
   api: {
     listLogs: vi.fn(),
     getJupyterStatus: vi.fn().mockResolvedValue({ status: 'connected' }),
+    deleteLog: vi.fn().mockResolvedValue(undefined),
   }
 }));
 
@@ -102,5 +103,68 @@ describe('Notebook Component - Stability & Granular Updates', () => {
     // Log 2 should NOT be rendered yet because we are streaming
     expect(notebook.textContent).not.toContain('Log 2');
     expect(notebook.textContent).toContain('I am currently streaming...');
+  });
+
+  it('renders markdown cells correctly', () => {
+    const mockAnalysis = { id: 'a1', title: 'Deep Research', status: 'completed' };
+    store.setAnalyses([mockAnalysis] as any);
+    store.setActiveAnalysisId('a1');
+    store.setLogs([
+      { id: 'l1', content: '# Welcome to Markdown\nThis is **bold** text.', log_type: 'user_query', tool_name: 'markdown' }
+    ] as any);
+
+    const notebook = renderNotebook();
+    expect(notebook.querySelector('.cell-static-view')).not.toBeNull();
+    expect(notebook.textContent).toContain('Welcome to Markdown');
+    expect(notebook.querySelector('strong')?.textContent).toBe('bold');
+  });
+
+  it('triggers editing view when double-clicking static cell view', () => {
+    const mockAnalysis = { id: 'a1', title: 'Deep Research', status: 'completed' };
+    store.setAnalyses([mockAnalysis] as any);
+    store.setActiveAnalysisId('a1');
+    store.setLogs([
+      { id: 'l1', content: 'Double click test', log_type: 'user_query', tool_name: 'markdown' }
+    ] as any);
+
+    const notebook = renderNotebook();
+    const staticView = notebook.querySelector('#cell-static-1') as HTMLElement;
+    const editView = notebook.querySelector('#cell-edit-1') as HTMLElement;
+
+    expect(staticView.classList.contains('hidden')).toBe(false);
+    expect(editView.classList.contains('hidden')).toBe(true);
+
+    // Simulate double click
+    staticView.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+    expect(staticView.classList.contains('hidden')).toBe(true);
+    expect(editView.classList.contains('hidden')).toBe(false);
+  });
+
+  it('triggers delete confirmation and API call on delete button click', async () => {
+    const mockAnalysis = { id: 'a1', title: 'Deep Research', status: 'completed' };
+    store.setAnalyses([mockAnalysis] as any);
+    store.setActiveAnalysisId('a1');
+    store.setLogs([
+      { id: 'l1', content: 'Delete me cell', log_type: 'user_query', tool_name: 'markdown' }
+    ] as any);
+
+    const notebook = renderNotebook();
+    const deleteBtn = notebook.querySelector('.btn-delete-cell') as HTMLElement;
+    expect(deleteBtn).not.toBeNull();
+
+    // Mock window.confirm
+    const originalConfirm = window.confirm;
+    window.confirm = vi.fn().mockReturnValue(true);
+    
+    // Import api from the mock to spy on deleteLog
+    const { api } = await import('../../../src/ravioli/frontend/src/services/api');
+
+    deleteBtn.click();
+
+    expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete this cell?');
+    expect(api.deleteLog).toHaveBeenCalledWith('l1');
+
+    window.confirm = originalConfirm;
   });
 });

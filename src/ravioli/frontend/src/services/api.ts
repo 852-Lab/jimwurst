@@ -37,6 +37,14 @@ export const api = {
     if (!response.ok) throw new Error('Failed to delete analysis');
   },
 
+  async deleteLog(logId: string): Promise<void> {
+    const response = await fetch(`${API_BASE}/analysis-logs/${logId}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Failed to delete log');
+  },
+
   async listLogs(analysisId: string): Promise<AnalysisLog[]> {
     const response = await fetch(`${API_BASE}/analysis-logs/analysis/${analysisId}`, { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch logs');
