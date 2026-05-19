@@ -40,6 +40,10 @@ class Analysis(Base):
     owner_type: Mapped[Optional[str]] = mapped_column(String(50)) # 'user' or 'group'
 
     # Relationships
+    owner_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[owner_id], primaryjoin="and_(foreign(Analysis.owner_id)==User.id, Analysis.owner_type=='user')", viewonly=True)
+    creator_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by], viewonly=True)
+    owner_group: Mapped[Optional["UserGroup"]] = relationship("UserGroup", foreign_keys=[owner], viewonly=True)
+
     logs: Mapped[List["AnalysisLog"]] = relationship("AnalysisLog", back_populates="analysis", cascade="all, delete-orphan")
     insights: Mapped[List["Insight"]] = relationship("Insight", back_populates="analysis", cascade="all, delete-orphan")
 
@@ -202,6 +206,34 @@ class Insight(Base):
     owner_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[owner_id], primaryjoin="and_(foreign(Insight.owner_id)==User.id, Insight.owner_type=='user')", viewonly=True)
     owner_group: Mapped[Optional["UserGroup"]] = relationship("UserGroup", foreign_keys=[owner], viewonly=True)
     reviewer_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[reviewed_by], viewonly=True)
+
+    # Self-referential many-to-many lineage relationships
+    parents: Mapped[List["Insight"]] = relationship(
+        "Insight",
+        secondary="app.insight_links",
+        primaryjoin="Insight.id==InsightLink.child_id",
+        secondaryjoin="Insight.id==InsightLink.parent_id",
+        back_populates="children"
+    )
+    children: Mapped[List["Insight"]] = relationship(
+        "Insight",
+        secondary="app.insight_links",
+        primaryjoin="Insight.id==InsightLink.parent_id",
+        secondaryjoin="Insight.id==InsightLink.child_id",
+        back_populates="parents"
+    )
+
+
+class InsightLink(Base):
+    """
+    Many-to-many relationship between insights representing derived lineage paths.
+    An insight can have multiple parent insights, and a parent insight can have multiple children.
+    """
+    __tablename__ = "insight_links"
+    __table_args__ = {"schema": "app"}
+
+    parent_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("app.insights.id", ondelete="CASCADE"), primary_key=True)
+    child_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("app.insights.id", ondelete="CASCADE"), primary_key=True)
 
 
 class SystemSetting(Base):
