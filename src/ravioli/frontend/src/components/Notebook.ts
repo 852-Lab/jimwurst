@@ -1004,7 +1004,8 @@ function bindInteractions(container: HTMLElement) {
        const rawAfter = runNewBtn.getAttribute('data-after');
        // '__first__' is a sentinel meaning "no anchor — just append"
        const afterLogId = (rawAfter && rawAfter !== '__first__') ? rawAfter : null;
-       const tempId = runNewBtn.getAttribute('data-temp-id');
+       const rawTempId = runNewBtn.getAttribute('data-temp-id');
+       const tempId = rawTempId && /^[A-Za-z0-9_-]+$/.test(rawTempId) ? rawTempId : null;
        
        if (!type || !tempId) return;
        
