@@ -10,6 +10,18 @@ const md = new MarkdownIt({
   typographer: true
 });
 
+type CellType = 'python' | 'sql' | 'chat' | 'markdown';
+
+function parseCellType(value: string | null): CellType | null {
+  return value === 'python' || value === 'sql' || value === 'chat' || value === 'markdown' ? value : null;
+}
+
+function parseAfterLogId(value: string | null): string | null {
+  if (!value) return null;
+  if (value === '__first__') return value;
+  return /^[A-Za-z0-9_-]+$/.test(value) ? value : null;
+}
+
 function renderMarkdown(content: string) {
   if (!content) return '';
   
@@ -805,8 +817,8 @@ function bindInteractions(container: HTMLElement) {
   container.querySelector('#add-cell-bar')?.addEventListener('click', (e) => {
     const addBtn = (e.target as HTMLElement).closest('.btn-add-cell') as HTMLElement;
     if (!addBtn) return;
-    const type = addBtn.getAttribute('data-type') as 'python' | 'sql' | 'chat';
-    if (!type) return;
+    const type = parseCellType(addBtn.getAttribute('data-type'));
+    if (!type || type === 'markdown') return;
     
     const cellContainer = container.querySelector('#cell-container');
     if (!cellContainer) return;
@@ -843,7 +855,7 @@ function bindInteractions(container: HTMLElement) {
     // "First Cell" welcome screen chooser
     const firstCellBtn = target.closest('.btn-first-cell') as HTMLElement;
     if (firstCellBtn) {
-      const type = firstCellBtn.getAttribute('data-type') as 'python' | 'sql' | 'chat' | 'markdown';
+      const type = parseCellType(firstCellBtn.getAttribute('data-type'));
       if (!type) return;
       const cellContainer = container.querySelector('#cell-container');
       if (!cellContainer) return;
@@ -988,8 +1000,8 @@ function bindInteractions(container: HTMLElement) {
     // Insert New Unexecuted Cell
     const insertBtn = target.closest('.btn-insert-cell') as HTMLElement;
     if (insertBtn) {
-      const type = insertBtn.getAttribute('data-type') as 'python' | 'sql' | 'chat' | 'markdown';
-      const afterLogId = insertBtn.getAttribute('data-after');
+      const type = parseCellType(insertBtn.getAttribute('data-type'));
+      const afterLogId = parseAfterLogId(insertBtn.getAttribute('data-after'));
       const toolbarNode = insertBtn.closest('.group\\/toolbar') as HTMLElement;
       
       if (!toolbarNode || !type || !afterLogId) return;
