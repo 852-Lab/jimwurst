@@ -95,7 +95,11 @@ function updateLineNumbers(textarea: HTMLTextAreaElement) {
     const highlight = parent.querySelector(`#cell-highlight-${idStr}`) as HTMLElement;
     if (highlight) {
       const isSql = highlight.getAttribute('data-tool') === 'sql';
-      highlight.innerHTML = isSql ? highlightSQL(textarea.value) : textarea.value;
+      if (isSql) {
+        highlight.innerHTML = highlightSQL(textarea.value);
+      } else {
+        highlight.textContent = textarea.value;
+      }
       highlight.scrollTop = textarea.scrollTop;
       highlight.scrollLeft = textarea.scrollLeft;
     }
