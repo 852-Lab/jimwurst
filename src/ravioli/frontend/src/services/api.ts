@@ -1,4 +1,4 @@
-import type { User, UserRole, UserGroup, Analysis, AnalysisCreate, AnalysisLog, DataSource, QuickInsightResponse, WFSLayer, Insight, InsightStats, InsightsSummary, KnowledgePage, KnowledgePageCreate, KnowledgePageUpdate } from '../types';
+import type { User, UserRole, UserGroup, Analysis, AnalysisCreate, AnalysisLog, DataSource, QuickInsightResponse, WFSLayer, Insight, InsightStats, InsightsSummary, KnowledgePage, KnowledgePageCreate, KnowledgePageUpdate, LineageResponse } from '../types';
 
 const API_BASE = '/api/v1';
 
@@ -562,6 +562,12 @@ export const api = {
       const err = await response.json();
       throw new Error(err.detail || 'Failed to delete user');
     }
+  },
+
+  async getInsightsLineage(): Promise<LineageResponse> {
+    const response = await fetch(`${API_BASE}/insights/lineage`, { credentials: 'include' });
+    if (!response.ok) throw new Error('Failed to fetch insights lineage');
+    return response.json();
   }
 };
 
