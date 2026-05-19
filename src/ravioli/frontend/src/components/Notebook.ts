@@ -423,27 +423,54 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
          <!-- Cell Divider Line -->
          <div class="h-px bg-outline-variant/10 ml-18 mr-2 transition-opacity" id="cell-divider-${cell.index}"></div>
 
-         <!-- Cell Body: Output (Out [X]) -->
-         <div class="flex items-start gap-4">
+          <div class="flex items-start gap-4">
             <div class="font-mono text-xs font-bold text-secondary/50 pt-1 select-none w-14 text-right shrink-0">
                Out [${cell.index}]:
             </div>
-            <div class="flex-1 space-y-6 min-w-0">
-               ${cell.outputs.length === 0 
-                 ? `<span class="text-xs text-outline italic">No output generated</span>`
-                 : cell.outputs.map(out => `
-                     <div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg">
-                       ${renderMarkdown(out.content)}
-                     </div>
-                     ${out.data && out.data.type === 'chart' ? `
-                       <div class="mt-4 glass-panel p-6 rounded-2xl border-primary/20 h-80 relative bg-surface-container-lowest/30">
-                         <canvas id="chart-${out.id}"></canvas>
-                       </div>
-                     ` : ''}
-                   `).join('')
-               }
-            </div>
+             <div class="flex-1 space-y-6 min-w-0 overflow-x-auto">
+                ${cell.outputs.length === 0 
+                  ? `<span class="text-xs text-outline italic">No output generated</span>`
+                  : cell.outputs.map(out => {
+                      let contentHtml = out.content && out.content.trim() !== '[SQL Execution Result]' && out.content.trim() !== '[Python Execution Result]' 
+                          ? `<div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg">${renderMarkdown(out.content)}</div>` 
+                          : '';
+                      
+                      let dataHtml = '';
+                      if (out.data) {
+                        if (out.data.type === 'chart') {
+                          dataHtml += `<div class="mt-4 glass-panel p-6 rounded-2xl border-primary/20 h-80 relative bg-surface-container-lowest/30"><canvas id="chart-${out.id}"></canvas></div>`;
+                        }
+                        if (out.data.sql_outputs) {
+                          dataHtml += out.data.sql_outputs.map((so: any) => renderRichOutput(so)).join('');
+                        }
+                        if (out.data.jupyter_outputs) {
+                          dataHtml += out.data.jupyter_outputs.map((jo: any) => renderRichOutput(jo)).join('');
+                        }
+                      }
+                      
+                      return contentHtml + dataHtml;
+                    }).join('')
+                }
+             </div>
          </div>
+      </div>
+
+      <!-- Colab-style Floating Toolbar -->
+      <div class="relative group/toolbar py-2 -my-2 z-20 flex justify-center items-center opacity-0 hover:opacity-100 transition-opacity">
+        <div class="absolute inset-x-0 top-1/2 h-px bg-primary/30 scale-x-0 group-hover/toolbar:scale-x-100 transition-transform duration-500 origin-center pointer-events-none"></div>
+        <div class="flex items-center gap-1 bg-surface-container-highest px-3 py-1.5 rounded-full border border-primary/20 shadow-xl shadow-primary/5 relative z-10 translate-y-2 group-hover/toolbar:translate-y-0 transition-all duration-300">
+          <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-primary flex items-center gap-1 hover:bg-primary/20 px-2 py-1 rounded-lg transition-colors" data-type="sql" data-after="${cell.inputLogId}">
+            <span class="material-symbols-outlined text-[14px]">database</span> SQL
+          </button>
+          <div class="w-px h-3 bg-outline-variant/30 mx-1"></div>
+          <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-emerald-400 flex items-center gap-1 hover:bg-emerald-400/20 px-2 py-1 rounded-lg transition-colors" data-type="python" data-after="${cell.inputLogId}">
+            <span class="material-symbols-outlined text-[14px]">code</span> Python
+          </button>
+          <div class="w-px h-3 bg-outline-variant/30 mx-1"></div>
+          <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-secondary flex items-center gap-1 hover:bg-secondary/20 px-2 py-1 rounded-lg transition-colors" data-type="chat" data-after="${cell.inputLogId}">
+            <span class="material-symbols-outlined text-[14px]">auto_awesome</span> Chat
+          </button>
+        </div>
       </div>
     `).join('');
 
@@ -677,7 +704,7 @@ function bindInteractions(container: HTMLElement) {
       let fullText = "";
       const streamingContent = outBody?.querySelector(`#streaming-content-${idx}`);
 
-      api.streamQuestion(activeId, question, logId,
+      api.streamQuestion(activeId, question, logId, null,
         (token) => {
           fullText += token;
           if (streamingContent) {
@@ -707,6 +734,161 @@ function bindInteractions(container: HTMLElement) {
         }
       );
     }
+
+    // Insert New Unexecuted Cell
+    const insertBtn = target.closest('.btn-insert-cell') as HTMLElement;
+    if (insertBtn) {
+      const type = insertBtn.getAttribute('data-type');
+      const afterLogId = insertBtn.getAttribute('data-after');
+      const toolbarNode = insertBtn.closest('.group\\/toolbar');
+      
+      if (!toolbarNode || !type || !afterLogId) return;
+
+      // Temporarily hide the toolbar it was spawned from
+      toolbarNode.classList.add('hidden');
+
+      const tempId = 'temp-' + Date.now();
+      const newCell = document.createElement('div');
+      newCell.className = 'glass-panel p-6 rounded-3xl space-y-6 bg-surface-container-low/30 border-primary/40 relative overflow-hidden group animate-in fade-in slide-in-from-top-4 duration-500 shadow-xl shadow-primary/5';
+      
+      let icon = "auto_awesome";
+      let color = "text-secondary";
+      let placeholder = "Enter AI instruction...";
+      
+      if (type === "sql") {
+         icon = "database";
+         color = "text-primary";
+         placeholder = "Enter SQL query to execute...";
+      } else if (type === "python") {
+         icon = "code";
+         color = "text-emerald-400";
+         placeholder = "Enter Python script...";
+      }
+
+      newCell.innerHTML = `
+         <div class="flex items-start gap-4">
+            <div class="font-mono text-xs font-bold ${color}/80 pt-2.5 select-none w-14 text-right shrink-0 flex items-center justify-end gap-1">
+               <span class="material-symbols-outlined text-[14px]">${icon}</span>
+               In [*]:
+            </div>
+            
+            <div class="flex-1 w-full" id="cell-edit-${tempId}">
+               <div class="glass-panel p-1.5 rounded-xl group focus-within:border-${color.split('-')[1] || 'primary'}/30 transition-all duration-300 shadow-lg shadow-${color.split('-')[1] || 'primary'}/5 bg-surface-container-lowest/80 border-outline-variant/10">
+                  <div class="flex items-start gap-3 px-3">
+                    <div class="flex-1 min-w-0 py-1.5">
+                      <textarea id="cell-input-${tempId}" class="w-full bg-transparent border-none text-on-surface focus:ring-0 resize-none py-0 text-sm font-mono custom-scrollbar placeholder-outline-variant" rows="2" placeholder="${placeholder}"></textarea>
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0 pt-0.5">
+                      <button class="w-7 h-7 rounded-full bg-surface-container-highest text-outline flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors btn-cancel-insert" title="Cancel">
+                        <span class="material-symbols-outlined text-[14px]">close</span>
+                      </button>
+                      <button class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-110 transition-transform btn-execute-new-cell shadow-md shadow-primary/20" data-type="${type}" data-after="${afterLogId}" data-temp-id="${tempId}" title="Run Cell">
+                        <span class="material-symbols-outlined text-[14px]">play_arrow</span>
+                      </button>
+                    </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+      `;
+
+      toolbarNode.insertAdjacentElement('afterend', newCell);
+      
+      // Auto-focus new textarea
+      const txt = newCell.querySelector(`#cell-input-${tempId}`) as HTMLTextAreaElement;
+      if (txt) txt.focus();
+
+      // Handle Cancel Insert
+      const cancelBtn = newCell.querySelector('.btn-cancel-insert');
+      cancelBtn?.addEventListener('click', () => {
+         newCell.remove();
+         toolbarNode.classList.remove('hidden');
+      });
+    }
+
+    // Execute Newly Inserted Cell
+    const runNewBtn = target.closest('.btn-execute-new-cell') as HTMLButtonElement;
+    if (runNewBtn && activeId) {
+       const type = runNewBtn.getAttribute('data-type');
+       const afterLogId = runNewBtn.getAttribute('data-after');
+       const tempId = runNewBtn.getAttribute('data-temp-id');
+       
+       if (!type || !afterLogId || !tempId) return;
+       
+       const txt = container.querySelector(`#cell-input-${tempId}`) as HTMLTextAreaElement;
+       const question = txt?.value;
+       if (!question) return;
+
+       runNewBtn.disabled = true;
+
+       const cellBody = runNewBtn.closest('.glass-panel.rounded-3xl');
+       if (!cellBody) return;
+
+       // Transition UI to executing state
+       const editView = container.querySelector(`#cell-edit-${tempId}`);
+       if (editView) {
+          const staticDiv = document.createElement('div');
+          staticDiv.className = 'flex-1 font-mono text-sm text-primary-fixed-dim bg-surface-container-lowest/80 border border-outline-variant/10 rounded-xl p-3.5 shadow-inner overflow-x-auto';
+          staticDiv.textContent = question;
+          editView.replaceWith(staticDiv);
+       }
+
+       // Append Output Gutter
+       const outputDiv = document.createElement('div');
+       outputDiv.className = 'flex items-start gap-4 mt-6 border-t border-outline-variant/10 pt-6';
+       outputDiv.innerHTML = `
+          <div class="font-mono text-xs font-bold text-secondary/50 pt-1 select-none w-14 text-right shrink-0 flex items-center justify-end gap-1 out-label">
+             <span class="material-symbols-outlined text-[10px] animate-spin" data-icon="progress_activity">progress_activity</span>
+             <span>Out [*]:</span>
+          </div>
+          <div class="flex-1 min-w-0" id="out-body-${tempId}">
+             <div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg animate-pulse" id="streaming-content-${tempId}">
+                <span class="inline-block w-1 h-4 bg-primary animate-pulse"></span>
+             </div>
+          </div>
+       `;
+       cellBody.appendChild(outputDiv);
+
+       const outGutter = outputDiv.querySelector('.out-label') as HTMLElement;
+       const streamingContent = outputDiv.querySelector(`#streaming-content-${tempId}`);
+
+       if (type === 'chat') {
+          let fullText = "";
+          api.streamQuestion(activeId, question, null, afterLogId,
+             (token) => {
+                fullText += token;
+                if (streamingContent) streamingContent.innerHTML = renderMarkdown(fullText) + '<span class="inline-block w-1 h-4 bg-primary animate-pulse ml-1"></span>';
+             },
+             async () => {
+                const newLogs = await api.listLogs(activeId);
+                lastLogsJson = JSON.stringify(newLogs);
+                store.setLogs(newLogs);
+             },
+             (err) => console.error(err)
+          );
+       } else if (type === 'sql' || type === 'python') {
+          try {
+             if (type === 'sql') {
+                await api.executeSql(activeId, question, null, afterLogId);
+             } else {
+                await api.executePython(activeId, question, null, afterLogId);
+             }
+             const newLogs = await api.listLogs(activeId);
+             lastLogsJson = JSON.stringify(newLogs);
+             store.setLogs(newLogs);
+          } catch (e) {
+             console.error(e);
+             if (outGutter) {
+                outGutter.textContent = `Error`;
+             }
+             if (streamingContent) {
+                streamingContent.innerHTML = `<span class="text-error">Execution Failed.</span>`;
+                streamingContent.classList.remove('animate-pulse');
+             }
+          }
+       }
+    }
+
   });
 
   // Follow-up question clicks
