@@ -46,7 +46,10 @@ describe('Knowledge Component', () => {
         icon: { type: 'emoji', emoji: '🔥' },
         cover: null,
         ownership_type: 'team',
-        updated_at: '2024-01-01T12:00:00Z'
+        updated_at: '2024-01-01T12:00:00Z',
+        owner_user: { id: 'u1', name: 'Phoenix Owner', email: 'owner@example.com', role: 'Operator', status: 'active' },
+        creator_user: { id: 'u2', name: 'Phoenix Creator', email: 'creator@example.com', role: 'Operator', status: 'active' },
+        reviewer_user: { id: 'u3', name: 'Phoenix Reviewer', email: 'reviewer@example.com', role: 'Admin', status: 'active' }
       }
     ]);
     
@@ -55,6 +58,9 @@ describe('Knowledge Component', () => {
     expect(el.innerHTML).toContain('Strategic goals for 2024');
     expect(el.innerHTML).toContain('🔥');
     expect(el.innerHTML).toContain('team');
+    expect(el.innerHTML).toContain('Phoenix Owner');
+    expect(el.innerHTML).toContain('Phoenix Creator');
+    expect(el.innerHTML).toContain('Phoenix Reviewer');
   });
 
   it('should escape HTML in titles to prevent XSS and reinterpretation errors', () => {

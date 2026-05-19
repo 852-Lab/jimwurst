@@ -44,6 +44,32 @@ describe('Insights Component', () => {
     expect(el.innerHTML).toContain('Verified Insights');
   });
 
+  it('should render the news feed with owner, creator, and reviewer details', async () => {
+    (api.getInsightsFeed as any).mockResolvedValue([
+      {
+        id: 'ins-1',
+        analysis_id: 'an-1',
+        content: 'This is an amazing insight',
+        is_verified: true,
+        is_published: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        source_label: 'Custom Analysis',
+        owner_user: { id: 'u1', name: 'John Owner', email: 'owner@example.com', role: 'Operator', status: 'active' },
+        creator_user: { id: 'u2', name: 'Jane Creator', email: 'creator@example.com', role: 'Operator', status: 'active' },
+        reviewer_user: { id: 'u3', name: 'Bob Reviewer', email: 'reviewer@example.com', role: 'Admin', status: 'active' }
+      }
+    ]);
+
+    const el = renderInsights();
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    expect(el.innerHTML).toContain('This is an amazing insight');
+    expect(el.innerHTML).toContain('John Owner');
+    expect(el.innerHTML).toContain('Jane Creator');
+    expect(el.innerHTML).toContain('Bob Reviewer');
+  });
+
   describe('Expandable Summary', () => {
     it('should NOT show toggle when summary has <= 4 points', async () => {
       (api.getInsightsSummary as any).mockResolvedValue({ 
