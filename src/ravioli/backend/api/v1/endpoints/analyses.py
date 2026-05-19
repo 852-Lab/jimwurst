@@ -1003,7 +1003,7 @@ def execute_sql_cell(
                 if source:
                     duckdb_manager.attach_file(str(source.id))
             except Exception:
-                pass
+                logger.exception("Failed to attach data source file for analysis %s (file_id=%s)", analysis_id, file_id)
                 
     try:
         results = duckdb_manager.execute_query(payload.code)
