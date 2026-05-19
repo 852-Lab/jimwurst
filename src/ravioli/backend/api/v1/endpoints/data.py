@@ -330,7 +330,11 @@ async def upload_file(
 
 @router.get("/files", response_model=List[schemas.DataSource])
 async def list_files(db: Session = Depends(get_db)):
-    query = select(DataSource).order_by(DataSource.created_at.desc())
+    query = select(DataSource).options(
+        joinedload(DataSource.owner_user),
+        joinedload(DataSource.owner_group),
+        joinedload(DataSource.creator_user)
+    ).order_by(DataSource.created_at.desc())
     result = db.execute(query)
     return result.scalars().all()
 

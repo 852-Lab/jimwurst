@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from typing import List
 from uuid import UUID
@@ -65,6 +65,12 @@ def get_review_queue(db: Session = Depends(get_db)):
     """Unverified insights awaiting operator review, newest first."""
     return (
         db.query(models.Insight)
+        .options(
+            joinedload(models.Insight.owner_user),
+            joinedload(models.Insight.owner_group),
+            joinedload(models.Insight.creator_user),
+            joinedload(models.Insight.reviewer_user)
+        )
         .filter(models.Insight.is_verified == False)
         .order_by(models.Insight.created_at.desc())
         .all()
@@ -77,6 +83,12 @@ def get_insights_feed(days: int = 30, db: Session = Depends(get_db)):
     since = datetime.now(UTC) - timedelta(days=days)
     return (
         db.query(models.Insight)
+        .options(
+            joinedload(models.Insight.owner_user),
+            joinedload(models.Insight.owner_group),
+            joinedload(models.Insight.creator_user),
+            joinedload(models.Insight.reviewer_user)
+        )
         .filter(models.Insight.is_verified == True, models.Insight.created_at >= since)
         .order_by(models.Insight.created_at.desc())
         .all()
@@ -96,9 +108,17 @@ def verify_insight(
     insight.is_verified = True
     insight.updated_at = datetime.now(UTC)
     insight.updated_by = current_user.id
+    insight.reviewed_by = current_user.id
     db.commit()
     db.refresh(insight)
-    return insight
+    
+    # Return with eager loaded relations
+    return db.query(models.Insight).options(
+        joinedload(models.Insight.owner_user),
+        joinedload(models.Insight.owner_group),
+        joinedload(models.Insight.creator_user),
+        joinedload(models.Insight.reviewer_user)
+    ).filter(models.Insight.id == insight_id).first()
 
 
 @router.patch("/{insight_id}/reject", response_model=schemas.Insight)
@@ -114,4 +134,9 @@ def reject_insight(insight_id: UUID, db: Session = Depends(get_db)):
 
 @router.get("/", response_model=List[schemas.Insight])
 def list_insights(db: Session = Depends(get_db)):
-    return db.query(models.Insight).order_by(models.Insight.created_at.desc()).all()
+    return db.query(models.Insight).options(
+        joinedload(models.Insight.owner_user),
+        joinedload(models.Insight.owner_group),
+        joinedload(models.Insight.creator_user),
+        joinedload(models.Insight.reviewer_user)
+    ).order_by(models.Insight.created_at.desc()).all()
