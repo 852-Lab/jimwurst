@@ -104,10 +104,15 @@ export const api = {
   
   async getSuggestedPrompts(analysisId: string): Promise<string[]> {
     const response = await fetch(`${API_BASE}/analyses/${analysisId}/suggested-prompts`, { credentials: 'include' });
-    if (!response.ok) throw new Error('Failed to fetch suggested prompts');
+    if (!response.ok) return [];
     return response.json();
   },
 
+  async getTablePreview(fullTableName: string): Promise<any[]> {
+    const response = await fetch(`${API_BASE}/data/preview/${encodeURIComponent(fullTableName)}`, { credentials: 'include' });
+    if (!response.ok) throw new Error('Failed to fetch table preview');
+    return response.json();
+  },
 
   async generateQuickInsight(file: File): Promise<QuickInsightResponse> {
     const formData = new FormData();

@@ -245,39 +245,25 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
         </header>
 
         <!-- Scrollable Cells Area -->
-        <div class="flex-1 overflow-y-auto px-12 pt-8 pb-32 space-y-8 custom-scrollbar" id="cell-container">
+        <div class="flex-1 overflow-y-auto px-12 pt-8 pb-8 space-y-8 custom-scrollbar" id="cell-container">
           <!-- Logs grouped as Jupyter cells will be updated here -->
         </div>
 
-        <!-- Jupyter-Style Interactive Cell Input -->
-        <div class="w-full px-12 pb-12 pt-6 bg-gradient-to-t from-background via-background/90 to-transparent relative z-20 border-t border-outline-variant/5">
-          <div class="max-w-4xl mx-auto flex items-start gap-4">
-             <div class="font-mono text-xs font-bold text-primary/40 pt-5 select-none w-14 text-right shrink-0" id="next-cell-index-tag">
-                In [${nextIndex}]:
-             </div>
-             <div class="flex-1 glass-panel p-2 rounded-2xl group focus-within:border-primary/30 transition-all duration-500 shadow-2xl shadow-primary/5 bg-surface-container-low/60">
-                <div class="flex items-center gap-4 px-4">
-                  <button id="btn-magic" class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 hover:bg-primary/20 transition-colors relative group/magic" title="Magic Suggestions">
-                     <span class="material-symbols-outlined text-primary text-xl group-hover/magic:rotate-12 transition-transform" data-icon="auto_awesome">auto_awesome</span>
-                     <div id="magic-popover" class="absolute bottom-full left-0 mb-4 w-80 glass-panel p-4 rounded-2xl hidden animate-in fade-in slide-in-from-bottom-2 duration-300 z-50">
-                        <div class="flex items-center gap-2 mb-3 text-tertiary">
-                          <span class="material-symbols-outlined text-sm" data-icon="lightbulb">lightbulb</span>
-                          <span class="text-[10px] font-label-md uppercase tracking-[0.2em]">Neural Suggestions</span>
-                        </div>
-                        <div id="magic-suggestions-list" class="space-y-2"></div>
-                     </div>
-                  </button>
-                  <div class="flex-1 min-w-0 py-2">
-                    <textarea id="cell-input" class="w-full bg-transparent border-none text-on-surface focus:ring-0 resize-none py-2 text-lg font-body-lg max-h-48 custom-scrollbar" placeholder="Enter follow-up query..." rows="1"></textarea>
-                  </div>
-                  <div class="flex items-center pr-2">
-                    <button id="btn-execute" class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-110 transition-transform disabled:opacity-50 disabled:scale-100 group/btn shadow-lg shadow-primary/20">
-                      <span class="material-symbols-outlined text-xl group-hover/btn:translate-x-0.5 transition-transform" data-icon="arrow_forward">arrow_forward</span>
-                    </button>
-                  </div>
-                </div>
-             </div>
-          </div>
+        <!-- Add Cell Footer Bar -->
+        <div class="shrink-0 flex items-center justify-center gap-3 py-4 px-12 border-t border-outline-variant/10 bg-surface-container-low/40 backdrop-blur-sm" id="add-cell-bar">
+          <span class="text-[10px] text-outline uppercase tracking-widest font-label-sm opacity-60 mr-2">Add cell</span>
+          <button class="btn-add-cell flex items-center gap-1.5 px-4 py-1.5 bg-surface-container-highest border border-outline-variant/20 text-outline text-[11px] rounded-full hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-all duration-200 group/add" data-type="python">
+            <span class="material-symbols-outlined text-[14px] group-hover/add:text-primary" data-icon="code">code</span>
+            Python
+          </button>
+          <button class="btn-add-cell flex items-center gap-1.5 px-4 py-1.5 bg-surface-container-highest border border-outline-variant/20 text-outline text-[11px] rounded-full hover:bg-secondary/10 hover:border-secondary/30 hover:text-secondary transition-all duration-200 group/add" data-type="sql">
+            <span class="material-symbols-outlined text-[14px] group-hover/add:text-secondary" data-icon="database">database</span>
+            SQL
+          </button>
+          <button class="btn-add-cell flex items-center gap-1.5 px-4 py-1.5 bg-surface-container-highest border border-outline-variant/20 text-outline text-[11px] rounded-full hover:bg-tertiary/10 hover:border-tertiary/30 hover:text-tertiary transition-all duration-200 group/add" data-type="chat">
+            <span class="material-symbols-outlined text-[14px] group-hover/add:text-tertiary" data-icon="smart_toy">smart_toy</span>
+            Chat AI
+          </button>
         </div>
       </div>
     `;
@@ -300,10 +286,14 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
       
       <!-- Context Resources -->
       ${attachedSources.map(ds => `
-        <div class="flex items-center gap-1.5 px-2.5 py-0.5 bg-primary/10 border border-primary/20 text-primary text-[10px] rounded-full min-w-0" title="DuckDB Data Source Table: ${ds.table_name}">
-          <span class="material-symbols-outlined text-[12px]" data-icon="database">database</span>
+        <button class="btn-preview-data flex items-center gap-1.5 px-2.5 py-0.5 bg-primary/10 border border-primary/20 text-primary text-[10px] rounded-full min-w-0 hover:bg-primary/20 hover:border-primary/40 transition-colors cursor-pointer group/ds" 
+          data-table="${ds.schema_name}.${ds.table_name}" 
+          data-filename="${ds.original_filename}"
+          title="Click to preview: ${ds.table_name} (${ds.row_count ?? '?'} rows)">
+          <span class="material-symbols-outlined text-[12px] group-hover/ds:rotate-12 transition-transform" data-icon="database">database</span>
           <span class="truncate max-w-[120px] font-medium">${ds.original_filename}</span>
-        </div>
+          <span class="material-symbols-outlined text-[10px] opacity-50 group-hover/ds:opacity-100 transition-opacity">open_in_new</span>
+        </button>
       `).join('')}
       ${attachedKnowledges.map(kp => `
         <div class="flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald/10 border border-emerald/20 text-emerald-400 text-[10px] rounded-full min-w-0">
@@ -527,99 +517,37 @@ function bindInteractions(container: HTMLElement) {
   });
 
   document.addEventListener('click', () => magicPopover?.classList.add('hidden'));
-  magicPopover?.addEventListener('click', (e) => e.stopPropagation());
 
-  input?.addEventListener('input', () => {
-    input.style.height = 'auto';
-    input.style.height = input.scrollHeight + 'px';
-  });
-
-  input?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      btn?.dispatchEvent(new Event('click'));
-    }
-  });
-
-  btn?.addEventListener('click', async () => {
-    const question = input.value;
-    if (!question || !activeId) return;
+  // Footer "Add Cell" bar
+  container.querySelector('#add-cell-bar')?.addEventListener('click', (e) => {
+    const addBtn = (e.target as HTMLElement).closest('.btn-add-cell') as HTMLElement;
+    if (!addBtn) return;
+    const type = addBtn.getAttribute('data-type') as 'python' | 'sql' | 'chat';
+    if (!type) return;
     
-    input.value = '';
-    input.style.height = 'auto';
-    btn.setAttribute('disabled', 'true');
-
+    // Get the last log in the store to anchor the new cell after it
+    const logs = store.getLogs();
+    const lastLog = logs[logs.length - 1];
+    const afterLogId = lastLog?.id ?? null;
+    
     const cellContainer = container.querySelector('#cell-container');
     if (!cellContainer) return;
 
-    const logs = store.getLogs();
-    const nextIndex = logs.filter(log => log.log_type === 'user_query').length + 1;
-
-    // Create a live streaming Notebook Cell Card
-    const liveCellCard = document.createElement('div');
-    liveCellCard.className = 'glass-panel p-6 rounded-3xl space-y-6 bg-surface-container-low/30 border-outline-variant/10 relative overflow-hidden group border-primary/20 animate-in fade-in duration-300';
-    liveCellCard.innerHTML = `
-       <!-- Cell Header: Input (In [X]) -->
-       <div class="flex items-start gap-4">
-          <div class="font-mono text-xs font-bold text-primary/50 pt-2.5 select-none w-14 text-right shrink-0">
-             In [${nextIndex}]:
-          </div>
-          <div class="flex-1 font-mono text-sm text-primary-fixed-dim bg-surface-container-lowest/80 border border-outline-variant/10 rounded-xl p-3.5 shadow-inner overflow-x-auto">
-             ${question}
-          </div>
-       </div>
-
-       <!-- Cell Divider Line -->
-       <div class="h-px bg-outline-variant/10 ml-18 mr-2"></div>
-
-       <!-- Cell Body: Output (Out [X]) -->
-       <div class="flex items-start gap-4">
-          <div class="font-mono text-xs font-bold text-secondary/50 pt-1 select-none w-14 text-right shrink-0 flex items-center justify-end gap-1">
-             <span class="material-symbols-outlined text-[10px] animate-spin" data-icon="progress_activity">progress_activity</span>
-             <span>Out [*]:</span>
-          </div>
-          <div class="flex-1 prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg animate-pulse" id="streaming-content">
-             <span class="inline-block w-1 h-4 bg-primary animate-pulse"></span>
-          </div>
-       </div>
-    `;
-    
-    cellContainer.appendChild(liveCellCard);
-    cellContainer.scrollTop = cellContainer.scrollHeight;
-
-    let fullText = "";
-    const streamingContent = liveCellCard.querySelector('#streaming-content');
-
-    api.streamQuestion(activeId, question, null, 
-      (token) => {
-        fullText += token;
-        if (streamingContent) {
-          streamingContent.innerHTML = renderMarkdown(fullText) + '<span class="inline-block w-1 h-4 bg-primary animate-pulse ml-1"></span>';
-          cellContainer.scrollTop = cellContainer.scrollHeight;
-        }
-      },
-      async () => {
-        if (streamingContent) {
-          streamingContent.innerHTML = renderMarkdown(fullText);
-          streamingContent.classList.remove('animate-pulse');
-        }
-        
-        // Remove loading state from Out index gutter
-        const label = liveCellCard.querySelector('.text-secondary\\/50') as HTMLElement;
-        if (label) {
-          label.innerHTML = `Out [${nextIndex}]:`;
-        }
-
-        btn.removeAttribute('disabled');
-        const newLogs = await api.listLogs(activeId);
-        lastLogsJson = JSON.stringify(newLogs); // Mark as updated to avoid immediate re-render from poll
-        store.setLogs(newLogs);
-      },
-      (err) => {
-        console.error('Streaming error', err);
-        btn.removeAttribute('disabled');
+    // Find the last inter-cell toolbar and click its corresponding type button,
+    // or synthesise a new cell directly at the bottom
+    const toolbars = cellContainer.querySelectorAll('.cell-insert-toolbar');
+    const lastToolbar = toolbars[toolbars.length - 1] as HTMLElement;
+    if (lastToolbar) {
+      const matchingBtn = lastToolbar.querySelector(`.btn-insert-cell[data-type="${type}"]`) as HTMLButtonElement;
+      if (matchingBtn) {
+        matchingBtn.click();
+        cellContainer.scrollTop = cellContainer.scrollHeight;
+        return;
       }
-    );
+    }
+    
+    // Fallback: scroll to bottom so user can see the toolbar
+    cellContainer.scrollTop = cellContainer.scrollHeight;
   });
 
   // Delegated events for In-place Cell Editing
@@ -889,21 +817,105 @@ function bindInteractions(container: HTMLElement) {
        }
     }
 
-  });
-
-  // Follow-up question clicks
-  container.querySelectorAll('.followup-question-btn').forEach(fBtn => {
-    fBtn.addEventListener('click', () => {
-      const question = fBtn.getAttribute('data-question');
-      if (!question) return;
-      if (input) {
-        input.value = question;
-        input.style.height = 'auto';
-        input.style.height = input.scrollHeight + 'px';
-        btn?.dispatchEvent(new Event('click'));
-      }
-    });
+     // Data Source Preview Modal trigger
+     const previewBtn = target.closest('.btn-preview-data') as HTMLElement;
+     if (previewBtn) {
+       const fullTable = previewBtn.getAttribute('data-table');
+       const filename = previewBtn.getAttribute('data-filename');
+       if (fullTable) {
+         showDataPreviewModal(fullTable, filename || 'Data Source');
+       }
+     }
   });
 }
 
-
+async function showDataPreviewModal(fullTableName: string, filename: string) {
+  let modal = document.getElementById('data-preview-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'data-preview-modal';
+    modal.className = 'fixed inset-0 z-[100] flex items-center justify-center bg-background/80 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300';
+    modal.innerHTML = `
+      <div class="glass-panel p-6 rounded-3xl w-11/12 max-w-5xl max-h-[85vh] flex flex-col shadow-2xl shadow-primary/20 bg-surface-container-low/90 border-outline-variant/20 scale-95 transition-transform duration-300" id="data-preview-content">
+        <div class="flex justify-between items-center mb-4 shrink-0">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary shrink-0">
+              <span class="material-symbols-outlined">database</span>
+            </div>
+            <div class="min-w-0">
+              <h3 class="text-xl font-headline-sm text-white truncate max-w-xl" id="preview-title">Data Preview</h3>
+              <p class="text-[11px] text-primary/70 font-mono tracking-widest uppercase mt-0.5" id="preview-subtitle">Loading...</p>
+            </div>
+          </div>
+          <button class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors shrink-0" id="btn-close-preview">
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div class="flex-1 min-h-0 overflow-auto custom-scrollbar bg-surface-container-lowest/50 rounded-2xl border border-outline-variant/10" id="preview-table-container">
+           <div class="flex items-center justify-center h-40">
+             <span class="material-symbols-outlined animate-spin text-primary text-4xl">progress_activity</span>
+           </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    
+    modal.querySelector('#btn-close-preview')?.addEventListener('click', () => {
+      modal?.classList.add('opacity-0', 'pointer-events-none');
+      modal?.querySelector('#data-preview-content')?.classList.replace('scale-100', 'scale-95');
+    });
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal?.classList.add('opacity-0', 'pointer-events-none');
+        modal?.querySelector('#data-preview-content')?.classList.replace('scale-100', 'scale-95');
+      }
+    });
+  }
+  
+  const titleEl = modal.querySelector('#preview-title');
+  const subtitleEl = modal.querySelector('#preview-subtitle');
+  const tableContainer = modal.querySelector('#preview-table-container');
+  
+  if (titleEl) titleEl.textContent = filename || 'Data Preview';
+  if (subtitleEl) subtitleEl.textContent = `Table: ${fullTableName}`;
+  if (tableContainer) {
+    tableContainer.innerHTML = `<div class="flex items-center justify-center h-64"><span class="material-symbols-outlined animate-spin text-primary text-4xl shadow-primary/20 shadow-lg rounded-full">progress_activity</span></div>`;
+  }
+  
+  modal.classList.remove('opacity-0', 'pointer-events-none');
+  modal.querySelector('#data-preview-content')?.classList.replace('scale-95', 'scale-100');
+  
+  try {
+    const data = await api.getTablePreview(fullTableName);
+    
+    if (!data || data.length === 0) {
+      if (tableContainer) tableContainer.innerHTML = `<div class="flex flex-col items-center justify-center h-64 text-outline"><span class="material-symbols-outlined text-4xl mb-2 opacity-50">draft</span><p>No rows found</p></div>`;
+      return;
+    }
+    
+    const keys = Object.keys(data[0]);
+    let html = `
+      <table class="w-full text-left border-collapse text-sm font-mono">
+        <thead class="bg-surface-container-highest text-xs uppercase tracking-wider text-primary sticky top-0 shadow-sm z-10">
+          <tr>${keys.map(k => `<th class="px-6 py-4 font-medium whitespace-nowrap border-b border-primary/20">${k}</th>`).join('')}</tr>
+        </thead>
+        <tbody class="divide-y divide-outline-variant/10">`;
+        
+    data.forEach((row: any) => {
+      html += `<tr class="hover:bg-surface-container-low/70 transition-colors">
+        ${keys.map(k => {
+           let val = row[k];
+           if (val === null || val === undefined) return '<td class="px-6 py-3"><span class="text-outline/40 italic text-[11px]">null</span></td>';
+           if (typeof val === 'object') val = JSON.stringify(val);
+           return `<td class="px-6 py-3 text-on-surface-variant truncate max-w-sm" title="${val}">${val}</td>`;
+        }).join('')}
+      </tr>`;
+    });
+    
+    html += `</tbody></table>`;
+    if (tableContainer) tableContainer.innerHTML = html;
+    
+  } catch (err) {
+    if (tableContainer) tableContainer.innerHTML = `<div class="flex flex-col items-center justify-center h-64 text-error"><span class="material-symbols-outlined text-4xl mb-2 opacity-80">error</span><p>Failed to load data preview.</p></div>`;
+  }
+}

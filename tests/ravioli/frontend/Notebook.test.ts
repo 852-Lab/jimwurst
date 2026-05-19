@@ -40,7 +40,7 @@ describe('Notebook Component - Stability & Granular Updates', () => {
     const notebook = renderNotebook();
     expect(notebook.textContent).toContain('Deep Research');
     expect(notebook.textContent).toContain('Step 1 complete');
-    expect(notebook.querySelector('#cell-input')).not.toBeNull();
+    expect(notebook.querySelector('#add-cell-bar')).not.toBeNull();
   });
 
   it('mitigation: updates logs without replacing the main container', () => {
@@ -68,10 +68,9 @@ describe('Notebook Component - Stability & Granular Updates', () => {
     // Verify content update
     expect(notebook.textContent).toContain('New background log');
     
-    // Verify input field was NOT reset (focus/value would be preserved in a real browser, 
-    // here we just check it still exists and hasn't been recreated in a way that wipes it if we had a value).
-    const input = notebook.querySelector('#cell-input') as HTMLTextAreaElement;
-    expect(input).not.toBeNull();
+    // Verify the add-cell bar still exists and hasn't been destroyed by the update.
+    const addBar = notebook.querySelector('#add-cell-bar') as HTMLElement;
+    expect(addBar).not.toBeNull();
   });
 
   it('mitigation: does NOT update logs if a streaming bubble is present', () => {
