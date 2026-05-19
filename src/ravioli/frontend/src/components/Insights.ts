@@ -10,10 +10,12 @@ let activeView: 'feed' | 'lineage' = 'feed';
 let summaryCache: Map<number, InsightsSummary> = new Map();
 let currentLineageData: LineageResponse | null = null;
 let resizeObserver: ResizeObserver | null = null;
+let selectedNodeId: string | null = null;
 
 export const clearInsightsCache = () => {
   summaryCache.clear();
   currentLineageData = null;
+  selectedNodeId = null;
 };
 
 function banCard(value: number | string, label: string, icon: string, accent = 'text-primary') {
@@ -47,33 +49,41 @@ function insightPill(insight: Insight) {
       </div>
       <div class="flex-1 min-w-0 space-y-3">
         <p class="text-sm font-body-md text-on-surface-variant leading-relaxed group-hover:text-white transition-colors duration-500">${insight.content}</p>
-        <div class="flex flex-wrap items-center gap-y-2 gap-x-4">
-          <div class="flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary text-xs opacity-50 group-hover:opacity-100 transition-opacity" data-icon="verified">verified</span>
-            <span class="text-[10px] uppercase tracking-[0.2em] text-outline font-label-sm opacity-30 group-hover:opacity-60 transition-opacity">${source}</span>
-          </div>
-          <span class="text-[10px] text-outline opacity-20 hidden sm:inline">·</span>
-          
-          <!-- Owner & Creator metadata stack -->
-          <div class="flex items-center gap-3">
-            <div class="flex items-center gap-1.5" title="Owner (${ownerTypeLabel})">
-              <span class="material-symbols-outlined text-[12px] text-primary opacity-40">shield</span>
-              <span class="text-[9px] uppercase tracking-[0.1em] text-outline opacity-40 font-bold">${ownerName}</span>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
+          <div class="flex flex-wrap items-center gap-y-2 gap-x-4">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-xs opacity-50 group-hover:opacity-100 transition-opacity" data-icon="verified">verified</span>
+              <span class="text-[10px] uppercase tracking-[0.2em] text-outline font-label-sm opacity-30 group-hover:opacity-60 transition-opacity">${source}</span>
             </div>
-            <div class="flex items-center gap-1.5" title="Creator">
-              <span class="material-symbols-outlined text-[12px] text-secondary opacity-40">person</span>
-              <span class="text-[9px] uppercase tracking-[0.1em] text-outline opacity-40 font-bold">${creatorName}</span>
-            </div>
-            ${reviewerName ? `
-              <div class="flex items-center gap-1.5" title="Approved by Reviewer">
-                <span class="material-symbols-outlined text-[12px] text-green-400 opacity-60">fact_check</span>
-                <span class="text-[9px] uppercase tracking-[0.1em] text-green-400 font-bold">Approved by: ${reviewerName}</span>
+            <span class="text-[10px] text-outline opacity-20 hidden sm:inline">·</span>
+            
+            <!-- Owner & Creator metadata stack -->
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-1.5" title="Owner (${ownerTypeLabel})">
+                <span class="material-symbols-outlined text-[12px] text-primary opacity-40">shield</span>
+                <span class="text-[9px] uppercase tracking-[0.1em] text-outline opacity-40 font-bold">${ownerName}</span>
               </div>
-            ` : ''}
+              <div class="flex items-center gap-1.5" title="Creator">
+                <span class="material-symbols-outlined text-[12px] text-secondary opacity-40">person</span>
+                <span class="text-[9px] uppercase tracking-[0.1em] text-outline opacity-40 font-bold">${creatorName}</span>
+              </div>
+              ${reviewerName ? `
+                <div class="flex items-center gap-1.5" title="Approved by Reviewer">
+                  <span class="material-symbols-outlined text-[12px] text-green-400 opacity-60">fact_check</span>
+                  <span class="text-[9px] uppercase tracking-[0.1em] text-green-400 font-bold">Approved by: ${reviewerName}</span>
+                </div>
+              ` : ''}
+            </div>
+            
+            <span class="text-[10px] text-outline opacity-20 hidden sm:inline">·</span>
+            <span class="text-[10px] uppercase tracking-[0.2em] text-outline font-label-sm opacity-30 group-hover:opacity-60 transition-opacity">${ago}</span>
           </div>
-          
-          <span class="text-[10px] text-outline opacity-20 hidden sm:inline">·</span>
-          <span class="text-[10px] uppercase tracking-[0.2em] text-outline font-label-sm opacity-30 group-hover:opacity-60 transition-opacity">${ago}</span>
+
+          <!-- Trace Lineage Action Button -->
+          <button class="btn-trace-lineage shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white/5 border border-white/10 hover:bg-primary/10 hover:border-primary/20 text-[9px] text-outline hover:text-primary font-bold uppercase tracking-[0.15em] rounded-full transition-all duration-300 shadow-sm" data-insight-id="${insight.id}">
+            <span class="material-symbols-outlined text-[11px]" data-icon="schema">schema</span>
+            <span>Trace Lineage</span>
+          </button>
         </div>
       </div>
     </div>`;
@@ -439,6 +449,27 @@ async function hydrateFeed(container: HTMLElement) {
           </div>
         </div>`
       : feed.map((i, index) => `<div class="opacity-0 animate-reveal" style="animation-delay: ${index * 0.05}s">${insightPill(i)}</div>`).join('');
+
+    // Wire up chronological feed 'Trace Lineage' button clicks
+    container.querySelectorAll('.btn-trace-lineage').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const insightId = btn.getAttribute('data-insight-id');
+        if (!insightId) return;
+
+        // Switch to Lineage Map view
+        const lineageTabBtn = container.querySelector('[data-view="lineage"]') as HTMLElement;
+        if (lineageTabBtn) {
+          lineageTabBtn.click();
+          
+          // Wait a tick for graph coordinates to render, then auto-scroll and highlight
+          setTimeout(() => {
+            selectAndHighlightInsightNode(container, insightId);
+          }, 150);
+        }
+      });
+    });
+
   } catch {
     feedEl.innerHTML = `<p class="text-sm text-outline opacity-50">Failed to load feed.</p>`;
   }
@@ -582,6 +613,11 @@ async function hydrateLineage(container: HTMLElement, forceRefresh = false) {
     setTimeout(() => {
       drawLineageConnectors(container, data);
       setupLineageInteractions(container, data);
+      
+      // If a node was pre-selected, apply highlights
+      if (selectedNodeId) {
+        applyLineageHighlights(container, selectedNodeId);
+      }
     }, 80);
 
   } catch (err) {
@@ -622,7 +658,7 @@ function drawLineageConnectors(container: HTMLElement, data: LineageResponse, re
 
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('d', pathD);
-    path.setAttribute('class', 'lineage-path fill-none stroke-white/5 transition-all duration-300');
+    path.setAttribute('class', 'lineage-path fill-none transition-all duration-300');
     path.setAttribute('stroke-width', '1.5');
     path.setAttribute('data-source-id', edge.source);
     path.setAttribute('data-target-id', edge.target);
@@ -638,52 +674,129 @@ function drawLineageConnectors(container: HTMLElement, data: LineageResponse, re
   }
 }
 
+function applyLineageHighlights(container: HTMLElement, targetId: string | null) {
+  const graphContainer = container.querySelector('#lineage-graph-container');
+  if (!graphContainer) return;
+
+  const nodes = graphContainer.querySelectorAll('.lineage-node');
+  const paths = graphContainer.querySelectorAll('.lineage-path');
+
+  if (!targetId) {
+    // Reset to default quiet state: all nodes normal, all paths extremely faint
+    nodes.forEach(n => {
+      n.classList.remove('lineage-dimmed', 'lineage-active', 'border-primary', 'shadow-primary/20');
+    });
+    paths.forEach(p => {
+      p.classList.remove('lineage-dimmed', 'lineage-active');
+    });
+    return;
+  }
+
+  // 1. Recursive Ancestors and Descendants trace helper
+  const activeNodes = new Set<string>([targetId]);
+  const activePaths: SVGElement[] = [];
+
+  // Helper: trace parents (backward)
+  function traceUp(nodeId: string) {
+    paths.forEach((p: any) => {
+      const source = p.getAttribute('data-source-id');
+      const target = p.getAttribute('data-target-id');
+      if (target === nodeId && !activeNodes.has(source)) {
+        activeNodes.add(source);
+        activePaths.push(p);
+        traceUp(source);
+      }
+    });
+  }
+
+  // Helper: trace children (forward)
+  function traceDown(nodeId: string) {
+    paths.forEach((p: any) => {
+      const source = p.getAttribute('data-source-id');
+      const target = p.getAttribute('data-target-id');
+      if (source === nodeId && !activeNodes.has(target)) {
+        activeNodes.add(target);
+        activePaths.push(p);
+        traceDown(target);
+      }
+    });
+  }
+
+  traceUp(targetId);
+  traceDown(targetId);
+
+  // 2. Dim/Highlight components
+  nodes.forEach(n => {
+    const id = n.getAttribute('data-node-id');
+    if (id === targetId) {
+      n.classList.remove('lineage-dimmed');
+      n.classList.add('lineage-active', 'border-primary', 'shadow-primary/20');
+    } else if (id && activeNodes.has(id)) {
+      n.classList.remove('lineage-dimmed');
+      n.classList.add('lineage-active');
+    } else {
+      n.classList.add('lineage-dimmed');
+      n.classList.remove('lineage-active');
+    }
+  });
+
+  paths.forEach(p => {
+    if (activePaths.includes(p as SVGElement)) {
+      p.classList.remove('lineage-dimmed');
+      p.classList.add('lineage-active');
+    } else {
+      p.classList.add('lineage-dimmed');
+      p.classList.remove('lineage-active');
+    }
+  });
+}
+
+function selectAndHighlightInsightNode(container: HTMLElement, nodeId: string) {
+  selectedNodeId = nodeId;
+
+  const graphContainer = container.querySelector('#lineage-graph-container') as HTMLElement;
+  if (!graphContainer) return;
+
+  const nodeEl = graphContainer.querySelector(`[data-node-id="${nodeId}"]`) as HTMLElement;
+  if (!nodeEl) return;
+
+  // 1. Smoothly scroll to center the selected node in the canvas viewport
+  const containerWidth = graphContainer.clientWidth;
+  const containerHeight = graphContainer.clientHeight;
+  const nodeLeft = nodeEl.offsetLeft;
+  const nodeTop = nodeEl.offsetTop;
+  const nodeWidth = nodeEl.offsetWidth;
+  const nodeHeight = nodeEl.offsetHeight;
+
+  const targetScrollLeft = nodeLeft - (containerWidth / 2) + (nodeWidth / 2);
+  const targetScrollTop = nodeTop - (containerHeight / 2) + (nodeHeight / 2);
+
+  graphContainer.scrollTo({
+    left: Math.max(0, targetScrollLeft),
+    top: Math.max(0, targetScrollTop),
+    behavior: 'smooth'
+  });
+
+  // 2. Apply neon high-visibility highlights
+  applyLineageHighlights(container, nodeId);
+
+  // 3. Open details drawer
+  if (currentLineageData) {
+    const nodeData = currentLineageData.nodes.find(n => n.id === nodeId);
+    if (nodeData) {
+      openNodeDetailsDrawer(container, nodeData);
+    }
+  }
+}
+
 function setupLineageInteractions(container: HTMLElement, data: LineageResponse) {
   const nodes = container.querySelectorAll('.lineage-node');
-  const paths = container.querySelectorAll('.lineage-path');
   const detailsPanel = container.querySelector('#node-details-panel') as HTMLElement;
   const graphContainer = container.querySelector('#lineage-graph-container') as HTMLElement;
 
   if (!detailsPanel || !graphContainer) return;
 
-  // 1. Recursive Ancestors and Descendants trace helper
-  function traceConnectedSubGraph(hoveredId: string) {
-    const activeNodes = new Set<string>([hoveredId]);
-    const activePaths: SVGElement[] = [];
-
-    // Helper: trace parents (backward)
-    function traceUp(nodeId: string) {
-      paths.forEach((p: any) => {
-        const source = p.getAttribute('data-source-id');
-        const target = p.getAttribute('data-target-id');
-        if (target === nodeId && !activeNodes.has(source)) {
-          activeNodes.add(source);
-          activePaths.push(p);
-          traceUp(source);
-        }
-      });
-    }
-
-    // Helper: trace children (forward)
-    function traceDown(nodeId: string) {
-      paths.forEach((p: any) => {
-        const source = p.getAttribute('data-source-id');
-        const target = p.getAttribute('data-target-id');
-        if (source === nodeId && !activeNodes.has(target)) {
-          activeNodes.add(target);
-          activePaths.push(p);
-          traceDown(target);
-        }
-      });
-    }
-
-    traceUp(nodeId);
-    traceDown(nodeId);
-
-    return { nodes: activeNodes, paths: activePaths };
-  }
-
-  // 2. Drag & Drop + Hover Highlight implementation
+  // Drag & Drop + Hover Highlight implementation
   nodes.forEach(node => {
     const nodeEl = node as HTMLElement;
     let isDragging = false;
@@ -749,6 +862,8 @@ function setupLineageInteractions(container: HTMLElement, data: LineageResponse)
       if (!hasMoved) {
         const nodeId = nodeEl.getAttribute('data-node-id');
         if (nodeId) {
+          selectedNodeId = nodeId;
+          applyLineageHighlights(container, nodeId);
           const nodeData = data.nodes.find(n => n.id === nodeId);
           if (nodeData) {
             openNodeDetailsDrawer(container, nodeData);
@@ -810,6 +925,8 @@ function setupLineageInteractions(container: HTMLElement, data: LineageResponse)
       if (!hasMoved) {
         const nodeId = nodeEl.getAttribute('data-node-id');
         if (nodeId) {
+          selectedNodeId = nodeId;
+          applyLineageHighlights(container, nodeId);
           const nodeData = data.nodes.find(n => n.id === nodeId);
           if (nodeData) {
             openNodeDetailsDrawer(container, nodeData);
@@ -818,57 +935,34 @@ function setupLineageInteractions(container: HTMLElement, data: LineageResponse)
       }
     };
 
-    // Attach listeners
+    // Attach drag/drop listeners
     nodeEl.addEventListener('mousedown', onMouseDown);
     nodeEl.addEventListener('touchstart', onTouchStart, { passive: true });
 
     // Hover Highlight Traces
     nodeEl.addEventListener('mouseenter', () => {
       const nodeId = nodeEl.getAttribute('data-node-id');
-      if (!nodeId) return;
-
-      const subGraph = traceConnectedSubGraph(nodeId);
-
-      // Dim non-connected components
-      nodes.forEach(n => {
-        const id = n.getAttribute('data-node-id');
-        if (id && subGraph.nodes.has(id)) {
-          n.classList.remove('lineage-dimmed');
-          n.classList.add('lineage-active');
-        } else {
-          n.classList.add('lineage-dimmed');
-          n.classList.remove('lineage-active');
-        }
-      });
-
-      paths.forEach(p => {
-        if (subGraph.paths.includes(p as SVGElement)) {
-          p.classList.remove('lineage-dimmed');
-          p.classList.add('lineage-active');
-        } else {
-          p.classList.add('lineage-dimmed');
-          p.classList.remove('lineage-active');
-        }
-      });
+      if (nodeId) applyLineageHighlights(container, nodeId);
     });
 
     nodeEl.addEventListener('mouseleave', () => {
-      nodes.forEach(n => {
-        n.classList.remove('lineage-dimmed');
-        n.classList.remove('lineage-active');
-      });
-      paths.forEach(p => {
-        p.classList.remove('lineage-dimmed');
-        p.classList.remove('lineage-active');
-      });
+      // Restore selected highlights or standard quiet state
+      applyLineageHighlights(container, selectedNodeId);
     });
   });
 
   // Drawer dismiss triggers
-  container.querySelector('#close-details-btn')?.addEventListener('click', closeNodeDetailsDrawer);
+  container.querySelector('#close-details-btn')?.addEventListener('click', () => {
+    selectedNodeId = null;
+    applyLineageHighlights(container, null);
+    closeNodeDetailsDrawer();
+  });
+  
   container.querySelector('#lineage-graph-container')?.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
     if (target.id === 'lineage-graph-container' || target.id === 'dag-nodes-container') {
+      selectedNodeId = null;
+      applyLineageHighlights(container, null);
       closeNodeDetailsDrawer();
     }
   });
@@ -924,7 +1018,6 @@ function openNodeDetailsDrawer(container: HTMLElement, node: LineageNode) {
       </button>
     `;
     actions.querySelector('#drawer-view-file')?.addEventListener('click', () => {
-      // Trigger navigation to Datasets tab
       window.location.hash = '#data';
     });
 
@@ -950,7 +1043,6 @@ function openNodeDetailsDrawer(container: HTMLElement, node: LineageNode) {
       </button>
     `;
     actions.querySelector('#drawer-view-analysis')?.addEventListener('click', () => {
-      // Trigger navigation to Notebooks/Analyses
       window.location.hash = '#analyses';
     });
 
@@ -992,7 +1084,6 @@ function openNodeDetailsDrawer(container: HTMLElement, node: LineageNode) {
       </button>
     `;
     actions.querySelector('#drawer-view-knowledge')?.addEventListener('click', () => {
-      // Trigger navigation to Knowledge
       window.location.hash = `#knowledge/${meta.id || ''}`;
     });
   }
