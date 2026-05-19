@@ -157,3 +157,51 @@
 .stagger-3 { animation-delay: 0.3s; }
 .stagger-4 { animation-delay: 0.4s; }
 
+/* Lineage Graph Custom Styles */
+.lineage-column {
+  scrollbar-width: none;
+}
+.lineage-column::-webkit-scrollbar {
+  display: none;
+}
+
+.lineage-node {
+  transition: all 0.30s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.lineage-node.lineage-active {
+  border-color: rgba(255, 218, 218, 0.4) !important;
+  box-shadow: 0 0 20px rgba(255, 218, 218, 0.15) !important;
+  opacity: 1 !important;
+  transform: scale(1.03);
+}
+
+.lineage-node.lineage-dimmed {
+  opacity: 0.15 !important;
+  filter: grayscale(80%) blur(0.5px);
+}
+
+.lineage-path {
+  transition: stroke 0.3s ease, stroke-width 0.3s ease, opacity 0.3s ease;
+}
+
+.lineage-path.lineage-active {
+  stroke: rgba(255, 218, 218, 0.85) !important;
+  stroke-width: 2.5px !important;
+  filter: drop-shadow(0 0 4px rgba(255, 218, 218, 0.5));
+  opacity: 1 !important;
+}
+
+.lineage-path.lineage-dimmed {
+  opacity: 0.04 !important;
+}
+
+.animate-spin-hover:hover {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+

@@ -1,13 +1,20 @@
 import { api } from '../services/api';
 import { formatDistanceToNow, format } from 'date-fns';
-import type { Insight, InsightStats, InsightsSummary } from '../types';
+import type { Insight, InsightStats, InsightsSummary, LineageResponse, LineageNode, LineageEdge } from '../types';
 
 const DAY_OPTIONS = [1, 3, 7, 14, 28, 30];
 
 // Module-level state so re-renders within the same session preserve selections
 let activeDays = 7;
+let activeView: 'feed' | 'lineage' = 'feed';
 let summaryCache: Map<number, InsightsSummary> = new Map();
-export const clearInsightsCache = () => summaryCache.clear();
+let currentLineageData: LineageResponse | null = null;
+let resizeObserver: ResizeObserver | null = null;
+
+export const clearInsightsCache = () => {
+  summaryCache.clear();
+  currentLineageData = null;
+};
 
 function banCard(value: number | string, label: string, icon: string, accent = 'text-primary') {
   return `
@@ -27,7 +34,6 @@ function insightPill(insight: Insight) {
   const dateStr = format(new Date(insight.created_at), 'MMM d');
   const source = insight.source_label ?? 'Unknown analysis';
 
-  // Extract owner, creator, and reviewer names
   const ownerName = insight.owner_user?.name || insight.owner_group?.name || 'Admin';
   const ownerTypeLabel = insight.owner_group ? 'Team' : 'User';
   const creatorName = insight.creator_user?.name || 'Admin';
@@ -77,95 +83,205 @@ export function renderInsights() {
   const container = document.createElement('main');
   container.className = 'flex-1 ml-64 overflow-y-auto bg-background h-screen flex flex-col custom-scrollbar';
 
-  // Render with loading skeletons, then hydrate async
   container.innerHTML = `
     <!-- Page Header -->
-    <header class="px-12 pt-12 pb-8 shrink-0 animate-reveal">
-      <div class="space-y-2">
-        <p class="text-[10px] uppercase tracking-[0.3em] text-primary-fixed-dim opacity-60 font-label-sm">Studio Noir</p>
-        <h1 class="font-display-lg text-4xl text-on-surface tracking-tight">Insights</h1>
-        <p class="text-sm text-on-surface-variant font-body-md opacity-60">Distilled intelligence from your verified analyses.</p>
+    <header class="px-12 pt-12 pb-4 shrink-0 animate-reveal flex flex-col gap-6">
+      <div class="flex items-start justify-between">
+        <div class="space-y-2">
+          <p class="text-[10px] uppercase tracking-[0.3em] text-primary-fixed-dim opacity-60 font-label-sm">Studio Noir</p>
+          <h1 class="font-display-lg text-4xl text-on-surface tracking-tight">Insights</h1>
+          <p class="text-sm text-on-surface-variant font-body-md opacity-60">Distilled intelligence and lineage tracking from your warehouse.</p>
+        </div>
+        
+        <!-- View Toggle Switcher -->
+        <div class="inline-flex p-1 bg-surface-container-low/50 backdrop-blur-md rounded-full border border-white/5" id="view-selector">
+          <button class="view-btn px-6 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-[0.15em] transition-all duration-500 ${activeView === 'feed' ? 'bg-primary text-on-primary shadow-lg shadow-primary/20' : 'text-outline hover:text-white hover:bg-white/5'}" data-view="feed">
+            Feed & Summary
+          </button>
+          <button class="view-btn px-6 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-[0.15em] transition-all duration-500 ${activeView === 'lineage' ? 'bg-primary text-on-primary shadow-lg shadow-primary/20' : 'text-outline hover:text-white hover:bg-white/5'}" data-view="lineage">
+            Lineage Map
+          </button>
+        </div>
       </div>
-      <div class="mt-8 h-px bg-gradient-to-r from-primary/20 via-outline-variant/20 to-transparent"></div>
+      <div class="h-px bg-gradient-to-r from-primary/20 via-outline-variant/20 to-transparent"></div>
     </header>
 
-    <div class="flex-1 px-12 pb-16 space-y-16">
+    <div class="flex-1 px-12 pb-16 relative">
+      
+      <!-- VIEW 1: Chronological Feed & AI Summary -->
+      <div id="feed-view" class="${activeView === 'feed' ? 'space-y-16' : 'hidden'} animate-reveal">
+        <!-- BANs -->
+        <section id="bans-section">
+          <div class="grid grid-cols-3 gap-4">
+            <div class="rounded-2xl animate-pulse bg-surface-container-low h-16"></div>
+            <div class="rounded-2xl animate-pulse bg-surface-container-low h-16"></div>
+            <div class="rounded-2xl animate-pulse bg-surface-container-low h-16"></div>
+          </div>
+        </section>
 
-      <!-- BANs -->
-      <section id="bans-section">
-        <div class="grid grid-cols-3 gap-4">
-          <div class="rounded-2xl animate-pulse bg-surface-container-low h-16"></div>
-          <div class="rounded-2xl animate-pulse bg-surface-container-low h-16"></div>
-          <div class="rounded-2xl animate-pulse bg-surface-container-low h-16"></div>
-        </div>
-      </section>
-
-      <!-- Hero: AI Summary (dominant) -->
-      <section id="hero-section" class="relative">
-        <div class="flex items-center justify-between mb-8">
-          <div class="flex items-center gap-5">
-            <div class="w-14 h-14 rounded-[1.25rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/5 animate-float">
-              <span class="material-symbols-outlined text-primary text-3xl glow-primary" data-icon="auto_awesome">auto_awesome</span>
+        <!-- Hero: AI Summary -->
+        <section id="hero-section" class="relative">
+          <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center gap-5">
+              <div class="w-14 h-14 rounded-[1.25rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/5 animate-float">
+                <span class="material-symbols-outlined text-primary text-3xl glow-primary" data-icon="auto_awesome">auto_awesome</span>
+              </div>
+              <div>
+                <h2 class="text-2xl font-headline-sm text-on-surface uppercase tracking-[0.2em] font-medium">Intelligence Brief</h2>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                  <p class="text-[10px] uppercase tracking-[0.3em] text-primary-fixed-dim opacity-40 font-bold">Synthesized Analytics</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <h2 class="text-2xl font-headline-sm text-on-surface uppercase tracking-[0.2em] font-medium">Intelligence Brief</h2>
-              <div class="flex items-center gap-2 mt-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-                <p class="text-[10px] uppercase tracking-[0.3em] text-primary-fixed-dim opacity-40 font-bold">Synthesized Analytics</p>
+            <!-- Day selector -->
+            <div class="flex items-center gap-1 p-1.5 bg-surface-container-low/50 backdrop-blur-md rounded-full border border-white/5" id="day-selector">
+              ${DAY_OPTIONS.map(d => `
+                <button class="day-btn px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-[0.15em] transition-all duration-500 ${d === activeDays ? 'bg-primary text-on-primary shadow-lg shadow-primary/20' : 'text-outline hover:text-white hover:bg-white/5'}" data-days="${d}">${d}d</button>
+              `).join('')}
+            </div>
+          </div>
+          
+          <div id="hero-content" class="glass-card p-12 rounded-[2.5rem] relative overflow-hidden group">
+            <div class="absolute -top-24 -right-24 w-96 h-96 bg-primary/5 rounded-full blur-[120px] pointer-events-none group-hover:bg-primary/10 transition-colors duration-1000"></div>
+            <div class="absolute -bottom-16 -left-16 w-64 h-64 bg-tertiary/5 rounded-full blur-[100px] pointer-events-none group-hover:bg-tertiary/10 transition-colors duration-1000"></div>
+            <div class="absolute inset-0 bg-noise opacity-[0.02] pointer-events-none"></div>
+            
+            <div id="hero-text" class="relative z-10 min-h-[160px] flex flex-col justify-center">
+              <div class="flex flex-col items-center gap-4 py-8 opacity-40">
+                <span class="material-symbols-outlined text-4xl animate-spin" data-icon="progress_activity">progress_activity</span>
+                <span class="text-xs uppercase tracking-[0.3em] font-bold">Initializing intelligence core…</span>
               </div>
             </div>
           </div>
-          <!-- Day selector -->
-          <div class="flex items-center gap-1 p-1.5 bg-surface-container-low/50 backdrop-blur-md rounded-full border border-white/5" id="day-selector">
-            ${DAY_OPTIONS.map(d => `
-              <button class="day-btn px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-[0.15em] transition-all duration-500 ${d === activeDays ? 'bg-primary text-on-primary shadow-lg shadow-primary/20' : 'text-outline hover:text-white hover:bg-white/5'}" data-days="${d}">${d}d</button>
-            `).join('')}
+        </section>
+
+        <!-- News Feed -->
+        <section class="max-w-4xl mx-auto">
+          <div class="flex items-center gap-3 mb-8">
+            <div class="w-10 h-10 rounded-[1rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/5">
+              <span class="material-symbols-outlined text-primary text-2xl" data-icon="newspaper">newspaper</span>
+            </div>
+            <div>
+              <h2 class="text-xl font-headline-sm text-on-surface uppercase tracking-[0.2em] font-medium">Intelligence Feed</h2>
+              <p class="text-[10px] uppercase tracking-[0.3em] text-outline opacity-30 font-bold mt-0.5">Chronicle of verified signals</p>
+            </div>
           </div>
+          <div id="news-feed" class="space-y-0 min-h-[200px]">
+            <div class="h-20 border-b border-white/5 animate-pulse bg-surface-container-low/20 rounded mb-2"></div>
+            <div class="h-20 border-b border-white/5 animate-pulse bg-surface-container-low/20 rounded mb-2"></div>
+            <div class="h-20 border-b border-white/5 animate-pulse bg-surface-container-low/20 rounded"></div>
+          </div>
+        </section>
+      </div>
+
+      <!-- VIEW 2: Pedigree Lineage DAG Graph -->
+      <div id="lineage-view" class="${activeView === 'lineage' ? 'flex flex-col' : 'hidden'} h-full min-h-[600px] animate-reveal">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-[1rem] bg-secondary/10 flex items-center justify-center border border-secondary/20 shadow-lg shadow-secondary/5">
+              <span class="material-symbols-outlined text-secondary text-2xl" data-icon="schema">schema</span>
+            </div>
+            <div>
+              <h2 class="text-xl font-headline-sm text-on-surface uppercase tracking-[0.2em] font-medium">Lineage Map</h2>
+              <p class="text-[10px] uppercase tracking-[0.3em] text-outline opacity-30 font-bold mt-0.5">GENEALOGY AND PROPAGATION OF INSIGHT SIGNALS</p>
+            </div>
+          </div>
+          <button class="px-5 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-[10px] font-bold uppercase tracking-[0.15em] rounded-full transition-all duration-300 flex items-center gap-2" id="refresh-lineage">
+            <span class="material-symbols-outlined text-xs animate-spin-hover" data-icon="refresh">refresh</span> Refresh Map
+          </button>
         </div>
-        
-        <div id="hero-content" class="glass-card p-12 rounded-[2.5rem] relative overflow-hidden group">
-          <!-- Animated Background Elements -->
-          <div class="absolute -top-24 -right-24 w-96 h-96 bg-primary/5 rounded-full blur-[120px] pointer-events-none group-hover:bg-primary/10 transition-colors duration-1000"></div>
-          <div class="absolute -bottom-16 -left-16 w-64 h-64 bg-tertiary/5 rounded-full blur-[100px] pointer-events-none group-hover:bg-tertiary/10 transition-colors duration-1000"></div>
-          <div class="absolute inset-0 bg-noise opacity-[0.02] pointer-events-none"></div>
+
+        <div class="grid grid-cols-4 gap-8 h-[650px] relative overflow-hidden glass-card rounded-[2.5rem] p-8 border-white/5" id="lineage-graph-container">
+          <!-- Absolute SVG Overlay for connectors -->
+          <svg class="absolute inset-0 pointer-events-none w-full h-full" id="lineage-connectors" style="z-index: 1;"></svg>
           
-          <div id="hero-text" class="relative z-10 min-h-[160px] flex flex-col justify-center">
-            <div class="flex flex-col items-center gap-4 py-8 opacity-40">
-              <span class="material-symbols-outlined text-4xl animate-spin" data-icon="progress_activity">progress_activity</span>
-              <span class="text-xs uppercase tracking-[0.3em] font-bold">Initializing intelligence core…</span>
+          <!-- Column 1: Data Sources -->
+          <div class="lineage-column flex flex-col gap-6 overflow-y-auto relative z-10" data-col="datasource">
+            <h3 class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold sticky top-0 bg-[#131313]/90 py-2 border-b border-white/5 mb-2">Data Sources</h3>
+            <div class="column-nodes flex flex-col gap-4"></div>
+          </div>
+          
+          <!-- Column 2: Analyses -->
+          <div class="lineage-column flex flex-col gap-6 overflow-y-auto relative z-10" data-col="analysis">
+            <h3 class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold sticky top-0 bg-[#131313]/90 py-2 border-b border-white/5 mb-2">Analyses</h3>
+            <div class="column-nodes flex flex-col gap-4"></div>
+          </div>
+          
+          <!-- Column 3: Insights -->
+          <div class="lineage-column flex flex-col gap-6 overflow-y-auto relative z-10" data-col="insight">
+            <h3 class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold sticky top-0 bg-[#131313]/90 py-2 border-b border-white/5 mb-2">Insights</h3>
+            <div class="column-nodes flex flex-col gap-4"></div>
+          </div>
+          
+          <!-- Column 4: Knowledge -->
+          <div class="lineage-column flex flex-col gap-6 overflow-y-auto relative z-10" data-col="knowledge">
+            <h3 class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold sticky top-0 bg-[#131313]/90 py-2 border-b border-white/5 mb-2">Knowledge Pages</h3>
+            <div class="column-nodes flex flex-col gap-4"></div>
+          </div>
+          
+          <!-- Node Details Drawer overlay card -->
+          <div id="node-details-panel" class="absolute bottom-6 right-6 w-[26rem] p-8 rounded-[2rem] glass-card border-white/10 shadow-2xl translate-y-12 opacity-0 pointer-events-none transition-all duration-500 z-30 flex flex-col gap-4">
+            <div class="flex items-start justify-between">
+              <span class="node-tag text-[9px] uppercase tracking-[0.25em] font-bold px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary">Node</span>
+              <button class="text-outline hover:text-white p-1 hover:bg-white/5 rounded-full transition-all" id="close-details-btn">
+                <span class="material-symbols-outlined text-base">close</span>
+              </button>
+            </div>
+            <h4 class="node-title text-lg font-semibold text-white tracking-tight leading-snug">Node Title</h4>
+            <div class="node-meta-grid grid grid-cols-2 gap-4 border-y border-white/5 py-4 my-1">
+              <!-- Grid items injected -->
+            </div>
+            <p class="node-desc text-xs text-on-surface-variant font-body-md leading-relaxed">Select any node in the pedigree lanes to reveal structural dependencies and propagation logs.</p>
+            <div class="node-actions flex items-center justify-end gap-3 mt-1">
+              <!-- Action buttons -->
             </div>
           </div>
         </div>
-      </section>
-
-      <!-- News Feed -->
-      <section class="max-w-4xl mx-auto">
-        <div class="flex items-center gap-3 mb-8">
-          <div class="w-10 h-10 rounded-[1rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/5">
-            <span class="material-symbols-outlined text-primary text-2xl" data-icon="newspaper">newspaper</span>
-          </div>
-          <div>
-            <h2 class="text-xl font-headline-sm text-on-surface uppercase tracking-[0.2em] font-medium">Intelligence Feed</h2>
-            <p class="text-[10px] uppercase tracking-[0.3em] text-outline opacity-30 font-bold mt-0.5">Chronicle of verified signals</p>
-          </div>
-        </div>
-        <div id="news-feed" class="space-y-0 min-h-[200px]">
-          <div class="h-20 border-b border-white/5 animate-pulse bg-surface-container-low/20 rounded mb-2"></div>
-          <div class="h-20 border-b border-white/5 animate-pulse bg-surface-container-low/20 rounded mb-2"></div>
-          <div class="h-20 border-b border-white/5 animate-pulse bg-surface-container-low/20 rounded"></div>
-        </div>
-      </section>
+      </div>
 
     </div>
   `;
 
-  // Hydrate all sections in parallel
   hydrate(container);
-
   return container;
 }
 
 async function hydrate(container: HTMLElement) {
+  // Setup view switcher
+  container.querySelectorAll('#view-selector button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const view = btn.getAttribute('data-view') as 'feed' | 'lineage';
+      if (view === activeView) return;
+      activeView = view;
+
+      // Update switcher UI
+      container.querySelectorAll('#view-selector button').forEach(b => {
+        b.classList.toggle('bg-primary', b === btn);
+        b.classList.toggle('text-on-primary', b === btn);
+        b.classList.toggle('shadow-lg', b === btn);
+        b.classList.toggle('shadow-primary/20', b === btn);
+        b.classList.toggle('text-outline', b !== btn);
+        b.classList.toggle('hover:bg-white/5', b !== btn);
+      });
+
+      // Switch views
+      const feedView = container.querySelector('#feed-view');
+      const lineageView = container.querySelector('#lineage-view');
+      if (view === 'feed') {
+        feedView?.classList.remove('hidden');
+        feedView?.classList.add('space-y-16');
+        lineageView?.classList.add('hidden');
+      } else {
+        feedView?.classList.add('hidden');
+        feedView?.classList.remove('space-y-16');
+        lineageView?.classList.remove('hidden');
+        hydrateLineage(container);
+      }
+    });
+  });
+
+  // Hydrate standard feed in parallel
   await Promise.all([
     hydrateBans(container),
     hydrateSummary(container, activeDays),
@@ -184,6 +300,11 @@ async function hydrate(container: HTMLElement) {
       });
       await hydrateSummary(container, days);
     });
+  });
+
+  // Hook up refresh map button
+  container.querySelector('#refresh-lineage')?.addEventListener('click', () => {
+    hydrateLineage(container, true);
   });
 }
 
@@ -214,13 +335,11 @@ async function hydrateSummary(container: HTMLElement, days: number) {
     </div>`;
 
   try {
-    // Use cache to avoid re-fetching same window
     let data = summaryCache.get(days);
     if (!data) {
       data = await api.getInsightsSummary(days);
       summaryCache.set(days, data);
     }
-    // Parse bullet lines from the summary; fall back to treating full text as one bullet
     const allBullets = data.summary
       .split('\n')
       .map(l => l.replace(/^[\s\-*•]+/, '').trim())
@@ -326,4 +445,412 @@ async function hydrateFeed(container: HTMLElement) {
   } catch {
     feedEl.innerHTML = `<p class="text-sm text-outline opacity-50">Failed to load feed.</p>`;
   }
+}
+
+/* =========================================================================
+   GENEALOGY AND PEDIGREE LINEAGE GRAPH LOGIC (VIEW 2)
+   ========================================================================= */
+
+async function hydrateLineage(container: HTMLElement, forceRefresh = false) {
+  const graphContainer = container.querySelector('#lineage-graph-container');
+  if (!graphContainer) return;
+
+  const cols = {
+    datasource: graphContainer.querySelector('[data-col="datasource"] .column-nodes') as HTMLElement,
+    analysis: graphContainer.querySelector('[data-col="analysis"] .column-nodes') as HTMLElement,
+    insight: graphContainer.querySelector('[data-col="insight"] .column-nodes') as HTMLElement,
+    knowledge: graphContainer.querySelector('[data-col="knowledge"] .column-nodes') as HTMLElement,
+  };
+
+  const svg = graphContainer.querySelector('#lineage-connectors') as SVGElement;
+
+  // 1. Show loading skeleton inside columns
+  Object.values(cols).forEach(col => {
+    if (col) {
+      col.innerHTML = `
+        <div class="rounded-xl bg-surface-container-low/20 animate-pulse h-16 border border-white/5 mb-3"></div>
+        <div class="rounded-xl bg-surface-container-low/20 animate-pulse h-16 border border-white/5 mb-3"></div>
+        <div class="rounded-xl bg-surface-container-low/20 animate-pulse h-16 border border-white/5"></div>
+      `;
+    }
+  });
+  if (svg) svg.innerHTML = '';
+
+  try {
+    // 2. Fetch lineage map
+    if (!currentLineageData || forceRefresh) {
+      currentLineageData = await api.getInsightsLineage();
+    }
+    const data = currentLineageData;
+
+    // Clear column contents
+    Object.values(cols).forEach(col => { if (col) col.innerHTML = ''; });
+
+    if (data.nodes.length === 0) {
+      Object.values(cols).forEach(col => {
+        if (col) col.innerHTML = `<p class="text-[9px] text-outline opacity-30 p-4 text-center">Empty</p>`;
+      });
+      return;
+    }
+
+    // 3. Render Node Cards
+    data.nodes.forEach((node, index) => {
+      const colEl = cols[node.type];
+      if (!colEl) return;
+
+      let icon = 'description';
+      let accentClass = 'text-sky-400';
+      if (node.type === 'analysis') {
+        icon = 'analytics';
+        accentClass = 'text-purple-400';
+      } else if (node.type === 'insight') {
+        icon = 'auto_awesome';
+        accentClass = 'text-rose-400';
+      } else if (node.type === 'knowledge') {
+        icon = 'article';
+        accentClass = 'text-emerald-400';
+      }
+
+      const nodeEl = document.createElement('div');
+      nodeEl.className = 'lineage-node glass-card p-5 rounded-2xl border border-white/5 hover:border-white/20 hover:scale-[1.02] cursor-pointer transition-all duration-300 relative group flex flex-col gap-3 opacity-0 animate-reveal';
+      nodeEl.style.animationDelay = `${index * 0.03}s`;
+      nodeEl.setAttribute('data-node-id', node.id);
+      nodeEl.setAttribute('data-node-type', node.type);
+
+      nodeEl.innerHTML = `
+        <div class="flex items-center justify-between pointer-events-none">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[14px] ${accentClass}" data-icon="${icon}">${icon}</span>
+            <span class="text-[8px] uppercase tracking-[0.2em] font-bold text-outline opacity-40">${node.type}</span>
+          </div>
+          ${node.metadata?.is_verified ? `<span class="material-symbols-outlined text-[12px] text-primary" data-icon="verified">verified</span>` : ''}
+        </div>
+        <p class="text-xs text-on-surface leading-normal font-medium line-clamp-3 pr-2 pointer-events-none group-hover:text-white transition-colors duration-300">${node.label}</p>
+      `;
+
+      colEl.appendChild(nodeEl);
+    });
+
+    // 4. Trigger relative connections painting
+    setTimeout(() => {
+      drawLineageConnectors(container, data);
+      setupLineageInteractions(container, data);
+    }, 150);
+
+    // 5. Scroll recalculations
+    container.querySelectorAll('.lineage-column').forEach(col => {
+      col.removeEventListener('scroll', recalculateConnectorLines);
+      col.addEventListener('scroll', () => drawLineageConnectors(container, data));
+    });
+
+    // 6. Hook up resize updates
+    if (resizeObserver) resizeObserver.disconnect();
+    resizeObserver = new ResizeObserver(() => {
+      drawLineageConnectors(container, data);
+    });
+    resizeObserver.observe(graphContainer);
+
+  } catch (err) {
+    console.error('Failed to load lineage graph:', err);
+    Object.values(cols).forEach(col => {
+      if (col) col.innerHTML = `<p class="text-xs text-outline opacity-40 p-4">Error loading map</p>`;
+    });
+  }
+}
+
+function recalculateConnectorLines() {
+  // Triggers visual updates dynamically
+}
+
+function drawLineageConnectors(container: HTMLElement, data: LineageResponse) {
+  const svg = container.querySelector('#lineage-connectors') as SVGElement;
+  const graphContainer = container.querySelector('#lineage-graph-container');
+  if (!svg || !graphContainer) return;
+
+  svg.innerHTML = '';
+  const containerRect = graphContainer.getBoundingClientRect();
+
+  data.edges.forEach(edge => {
+    const sourceEl = graphContainer.querySelector(`[data-node-id="${edge.source}"]`);
+    const targetEl = graphContainer.querySelector(`[data-node-id="${edge.target}"]`);
+
+    if (!sourceEl || !targetEl) return;
+
+    const sourceRect = sourceEl.getBoundingClientRect();
+    const targetRect = targetEl.getBoundingClientRect();
+
+    // Node bounds checks: if scrolled out of viewport column clip bounds, skip drawing or adjust
+    const colSource = sourceEl.closest('.lineage-column')?.getBoundingClientRect();
+    const colTarget = targetEl.closest('.lineage-column')?.getBoundingClientRect();
+
+    if (colSource && (sourceRect.bottom < colSource.top || sourceRect.top > colSource.bottom)) return;
+    if (colTarget && (targetRect.bottom < colTarget.top || targetRect.top > colTarget.bottom)) return;
+
+    // Calculate relative attachment anchors (Source right-center to Target left-center)
+    const x1 = (sourceRect.right - containerRect.left);
+    const y1 = (sourceRect.top + sourceRect.height / 2 - containerRect.top);
+
+    const x2 = (targetRect.left - containerRect.left);
+    const y2 = (targetRect.top + targetRect.height / 2 - containerRect.top);
+
+    // Cubic Bezier curve control path
+    const dx = (x2 - x1) * 0.4;
+    const pathD = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', pathD);
+    path.setAttribute('class', 'lineage-path fill-none stroke-white/5 transition-all duration-300');
+    path.setAttribute('stroke-width', '1.5');
+    path.setAttribute('data-source-id', edge.source);
+    path.setAttribute('data-target-id', edge.target);
+
+    svg.appendChild(path);
+  });
+}
+
+function setupLineageInteractions(container: HTMLElement, data: LineageResponse) {
+  const nodes = container.querySelectorAll('.lineage-node');
+  const paths = container.querySelectorAll('.lineage-path');
+  const detailsPanel = container.querySelector('#node-details-panel') as HTMLElement;
+
+  if (!detailsPanel) return;
+
+  // 1. Recursive Ancestors and Descendants trace helper
+  function traceConnectedSubGraph(hoveredId: string) {
+    const activeNodes = new Set<string>([hoveredId]);
+    const activePaths: SVGElement[] = [];
+
+    // Helper: trace parents (backward)
+    function traceUp(nodeId: string) {
+      paths.forEach((p: any) => {
+        const source = p.getAttribute('data-source-id');
+        const target = p.getAttribute('data-target-id');
+        if (target === nodeId && !activeNodes.has(source)) {
+          activeNodes.add(source);
+          activePaths.push(p);
+          traceUp(source);
+        }
+      });
+    }
+
+    // Helper: trace children (forward)
+    function traceDown(nodeId: string) {
+      paths.forEach((p: any) => {
+        const source = p.getAttribute('data-source-id');
+        const target = p.getAttribute('data-target-id');
+        if (source === nodeId && !activeNodes.has(target)) {
+          activeNodes.add(target);
+          activePaths.push(p);
+          traceDown(target);
+        }
+      });
+    }
+
+    traceUp(hoveredId);
+    traceDown(hoveredId);
+
+    return { nodes: activeNodes, paths: activePaths };
+  }
+
+  // 2. Hover Trace Listeners
+  nodes.forEach(node => {
+    node.addEventListener('mouseenter', () => {
+      const nodeId = node.getAttribute('data-node-id');
+      if (!nodeId) return;
+
+      const subGraph = traceConnectedSubGraph(nodeId);
+
+      // Dim non-connected components
+      nodes.forEach(n => {
+        const id = n.getAttribute('data-node-id');
+        if (id && subGraph.nodes.has(id)) {
+          n.classList.remove('lineage-dimmed');
+          n.classList.add('lineage-active');
+        } else {
+          n.classList.add('lineage-dimmed');
+          n.classList.remove('lineage-active');
+        }
+      });
+
+      paths.forEach(p => {
+        if (subGraph.paths.includes(p as SVGElement)) {
+          p.classList.remove('lineage-dimmed');
+          p.classList.add('lineage-active');
+        } else {
+          p.classList.add('lineage-dimmed');
+          p.classList.remove('lineage-active');
+        }
+      });
+    });
+
+    node.addEventListener('mouseleave', () => {
+      // Restore standard visuals
+      nodes.forEach(n => {
+        n.classList.remove('lineage-dimmed');
+        n.classList.remove('lineage-active');
+      });
+      paths.forEach(p => {
+        p.classList.remove('lineage-dimmed');
+        p.classList.remove('lineage-active');
+      });
+    });
+
+    // 3. Node Selection Details Drawer
+    node.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const nodeId = node.getAttribute('data-node-id');
+      if (!nodeId) return;
+
+      const nodeData = data.nodes.find(n => n.id === nodeId);
+      if (!nodeData) return;
+
+      openNodeDetailsDrawer(container, nodeData);
+    });
+  });
+
+  // Drawer dismiss triggers
+  container.querySelector('#close-details-btn')?.addEventListener('click', closeNodeDetailsDrawer);
+  container.querySelector('#lineage-graph-container')?.addEventListener('click', (e) => {
+    // Only close if click is in the grid background
+    const target = e.target as HTMLElement;
+    if (target.id === 'lineage-graph-container' || target.classList.contains('lineage-column')) {
+      closeNodeDetailsDrawer();
+    }
+  });
+}
+
+function openNodeDetailsDrawer(container: HTMLElement, node: LineageNode) {
+  const panel = container.querySelector('#node-details-panel') as HTMLElement;
+  if (!panel) return;
+
+  const tag = panel.querySelector('.node-tag') as HTMLElement;
+  const title = panel.querySelector('.node-title') as HTMLElement;
+  const grid = panel.querySelector('.node-meta-grid') as HTMLElement;
+  const desc = panel.querySelector('.node-desc') as HTMLElement;
+  const actions = panel.querySelector('.node-actions') as HTMLElement;
+
+  // Clean class & background styles
+  tag.className = 'node-tag text-[9px] uppercase tracking-[0.25em] font-bold px-3.5 py-1.5 rounded-full border';
+  tag.textContent = node.type;
+
+  title.textContent = node.label;
+  grid.innerHTML = '';
+  actions.innerHTML = '';
+
+  const meta = node.metadata || {};
+
+  if (node.type === 'datasource') {
+    tag.classList.add('bg-sky-500/10', 'border-sky-500/20', 'text-sky-400');
+    title.textContent = meta.filename || node.label;
+
+    grid.innerHTML = `
+      <div class="flex flex-col gap-0.5">
+        <span class="text-[9px] uppercase tracking-wider text-outline opacity-40 font-bold">Row Count</span>
+        <span class="text-sm font-semibold text-white">${meta.row_count?.toLocaleString() || 'N/A'}</span>
+      </div>
+      <div class="flex flex-col gap-0.5">
+        <span class="text-[9px] uppercase tracking-wider text-outline opacity-40 font-bold">PII Tagging</span>
+        <span class="text-sm font-semibold ${meta.has_pii ? 'text-primary' : 'text-emerald-400'}">${meta.has_pii ? 'Has PII' : 'Clear'}</span>
+      </div>
+      <div class="flex flex-col gap-0.5">
+        <span class="text-[9px] uppercase tracking-wider text-outline opacity-40 font-bold">Size</span>
+        <span class="text-sm font-semibold text-white">${meta.size_bytes ? (meta.size_bytes / 1024).toFixed(1) + ' KB' : 'N/A'}</span>
+      </div>
+      <div class="flex flex-col gap-0.5">
+        <span class="text-[9px] uppercase tracking-wider text-outline opacity-40 font-bold">Content Type</span>
+        <span class="text-sm font-semibold text-white truncate">${meta.content_type || 'N/A'}</span>
+      </div>
+    `;
+    desc.textContent = `This raw source file has been loaded and sync-structured in the warehouse's OLAP storage container.`;
+    
+    actions.innerHTML = `
+      <button class="px-5 py-2.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 text-[10px] font-bold uppercase tracking-[0.15em] text-white transition-all duration-300" id="drawer-view-file">
+        View Dataset
+      </button>
+    `;
+    actions.querySelector('#drawer-view-file')?.addEventListener('click', () => {
+      // Trigger navigation to Datasets tab
+      window.location.hash = '#data';
+    });
+
+  } else if (node.type === 'analysis') {
+    tag.classList.add('bg-purple-500/10', 'border-purple-500/20', 'text-purple-400');
+    title.textContent = node.label;
+
+    grid.innerHTML = `
+      <div class="flex flex-col gap-0.5">
+        <span class="text-[9px] uppercase tracking-wider text-outline opacity-40 font-bold">Status</span>
+        <span class="text-sm font-semibold text-emerald-400 capitalize">${meta.status || 'N/A'}</span>
+      </div>
+      <div class="flex flex-col gap-0.5">
+        <span class="text-[9px] uppercase tracking-wider text-outline opacity-40 font-bold">Processed</span>
+        <span class="text-xs font-semibold text-white truncate">${meta.created_at ? format(new Date(meta.created_at), 'MMM d, h:mm a') : 'N/A'}</span>
+      </div>
+    `;
+    desc.textContent = meta.description || `Executed analytics notebook which parsed raw dimensions, calculated statistics, and yielded distilled insights.`;
+
+    actions.innerHTML = `
+      <button class="px-5 py-2.5 rounded-full bg-purple-500/15 border border-purple-500/30 hover:brightness-110 text-[10px] font-bold uppercase tracking-[0.15em] text-purple-300 transition-all duration-300" id="drawer-view-analysis">
+        Open Notebook
+      </button>
+    `;
+    actions.querySelector('#drawer-view-analysis')?.addEventListener('click', () => {
+      // Trigger navigation to Notebooks/Analyses
+      window.location.hash = '#analyses';
+    });
+
+  } else if (node.type === 'insight') {
+    tag.classList.add('bg-rose-500/10', 'border-rose-500/20', 'text-rose-400');
+    title.textContent = meta.content;
+
+    grid.innerHTML = `
+      <div class="flex flex-col gap-0.5">
+        <span class="text-[9px] uppercase tracking-wider text-outline opacity-40 font-bold">Verification</span>
+        <span class="text-sm font-semibold text-primary">${meta.is_verified ? 'Verified Signal' : 'Unverified'}</span>
+      </div>
+      <div class="flex flex-col gap-0.5">
+        <span class="text-[9px] uppercase tracking-wider text-outline opacity-40 font-bold">Context Source</span>
+        <span class="text-sm font-semibold text-white truncate">${meta.source_label || 'Analysis Engine'}</span>
+      </div>
+    `;
+    desc.textContent = `A distilled bullet-point signal generated by the Kowalski AI parsing engine, approved by data stewards and documented into system lineage pipelines.`;
+
+  } else if (node.type === 'knowledge') {
+    tag.classList.add('bg-emerald-500/10', 'border-emerald-500/20', 'text-emerald-400');
+    title.textContent = node.label;
+
+    grid.innerHTML = `
+      <div class="flex flex-col gap-0.5">
+        <span class="text-[9px] uppercase tracking-wider text-outline opacity-40 font-bold">Page Origin</span>
+        <span class="text-sm font-semibold text-white capitalize">${meta.source || 'Manual'}</span>
+      </div>
+      <div class="flex flex-col gap-0.5">
+        <span class="text-[9px] uppercase tracking-wider text-outline opacity-40 font-bold">Last Synced</span>
+        <span class="text-xs font-semibold text-white truncate">${meta.updated_at ? format(new Date(meta.updated_at), 'MMM d, h:mm a') : 'N/A'}</span>
+      </div>
+    `;
+    desc.textContent = `A published workspace document / intelligence catalog wiki derived directly from distilled warehouse insights.`;
+
+    actions.innerHTML = `
+      <button class="px-5 py-2.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 hover:brightness-110 text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-300 transition-all duration-300" id="drawer-view-knowledge">
+        View Page
+      </button>
+    `;
+    actions.querySelector('#drawer-view-knowledge')?.addEventListener('click', () => {
+      // Trigger navigation to Knowledge
+      window.location.hash = `#knowledge/${meta.id || ''}`;
+    });
+  }
+
+  // Slide drawer up and reveal
+  panel.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-12');
+  panel.classList.add('opacity-100', 'translate-y-0');
+}
+
+function closeNodeDetailsDrawer() {
+  const panel = document.querySelector('#node-details-panel') as HTMLElement;
+  if (!panel) return;
+
+  panel.classList.add('opacity-0', 'pointer-events-none', 'translate-y-12');
+  panel.classList.remove('opacity-100', 'translate-y-0');
 }

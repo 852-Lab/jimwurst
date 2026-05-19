@@ -140,3 +140,119 @@ def list_insights(db: Session = Depends(get_db)):
         joinedload(models.Insight.creator_user),
         joinedload(models.Insight.reviewer_user)
     ).order_by(models.Insight.created_at.desc()).all()
+
+
+@router.get("/lineage", response_model=schemas.LineageResponse)
+def get_insights_lineage(db: Session = Depends(get_db)):
+    """Fetch the lineage graph of data sources, analyses, insights, and knowledge pages."""
+    nodes = []
+    edges = []
+    
+    # 1. Fetch and add DataSources
+    datasources = db.query(models.DataSource).all()
+    for ds in datasources:
+        nodes.append(schemas.LineageNode(
+            id=f"datasource-{ds.id}",
+            type="datasource",
+            label=ds.original_filename,
+            metadata={
+                "id": str(ds.id),
+                "filename": ds.filename,
+                "content_type": ds.content_type,
+                "row_count": ds.row_count,
+                "size_bytes": ds.size_bytes,
+                "has_pii": ds.has_pii
+            }
+        ))
+        
+    # 2. Fetch and add Analyses
+    analyses = db.query(models.Analysis).all()
+    for ana in analyses:
+        nodes.append(schemas.LineageNode(
+            id=f"analysis-{ana.id}",
+            type="analysis",
+            label=ana.title,
+            metadata={
+                "id": str(ana.id),
+                "status": ana.status,
+                "description": ana.description,
+                "created_at": ana.created_at.isoformat() if ana.created_at else None
+            }
+        ))
+        # Add edge: DataSource -> Analysis
+        if ana.analysis_metadata:
+            file_id = ana.analysis_metadata.get("file_id")
+            if file_id:
+                edges.append(schemas.LineageEdge(
+                    source=f"datasource-{file_id}",
+                    target=f"analysis-{ana.id}",
+                    type="queried"
+                ))
+            elif ana.analysis_metadata.get("filename"):
+                filename = ana.analysis_metadata.get("filename")
+                ds_match = next((d for d in datasources if d.original_filename == filename or d.filename == filename), None)
+                if ds_match:
+                    edges.append(schemas.LineageEdge(
+                        source=f"datasource-{ds_match.id}",
+                        target=f"analysis-{ana.id}",
+                        type="queried"
+                    ))
+                    
+    # 3. Fetch and add Insights (with parents loaded)
+    insights = db.query(models.Insight).options(joinedload(models.Insight.parents)).all()
+    for ins in insights:
+        nodes.append(schemas.LineageNode(
+            id=f"insight-{ins.id}",
+            type="insight",
+            label=ins.content[:60] + ("..." if len(ins.content) > 60 else ""),
+            metadata={
+                "id": str(ins.id),
+                "content": ins.content,
+                "is_verified": ins.is_verified,
+                "is_published": ins.is_published,
+                "source_label": ins.source_label
+            }
+        ))
+        # Add edge: Analysis -> Insight
+        edges.append(schemas.LineageEdge(
+            source=f"analysis-{ins.analysis_id}",
+            target=f"insight-{ins.id}",
+            type="extracted_from"
+        ))
+        # Add edges: Parent Insight -> Child Insight
+        for p in ins.parents:
+            edges.append(schemas.LineageEdge(
+                source=f"insight-{p.id}",
+                target=f"insight-{ins.id}",
+                type="derived_from"
+            ))
+
+    # 4. Fetch and add KnowledgePages
+    pages = db.query(models.KnowledgePage).all()
+    for page in pages:
+        nodes.append(schemas.LineageNode(
+            id=f"knowledge-{page.id}",
+            type="knowledge",
+            label=page.title,
+            metadata={
+                "id": str(page.id),
+                "source": page.source,
+                "source_id": page.source_id,
+                "updated_at": page.updated_at.isoformat() if page.updated_at else None
+            }
+        ))
+        # Add edge: Insight -> KnowledgePage
+        if page.source_id:
+            try:
+                page_source_uuid = UUID(page.source_id)
+                ins_match = next((i for i in insights if i.id == page_source_uuid), None)
+                if ins_match:
+                    edges.append(schemas.LineageEdge(
+                        source=f"insight-{ins_match.id}",
+                        target=f"knowledge-{page.id}",
+                        type="documented_in"
+                    ))
+            except ValueError:
+                pass
+                
+    return schemas.LineageResponse(nodes=nodes, edges=edges)
