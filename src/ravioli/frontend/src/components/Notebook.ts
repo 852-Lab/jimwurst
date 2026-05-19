@@ -1016,8 +1016,12 @@ function bindInteractions(container: HTMLElement) {
                     ${(type === 'sql' || type === 'python') ? `
                     <div id="cell-gutter-${tempId}" class="w-8 select-none text-right font-mono text-sm leading-relaxed text-outline/30 pr-2 border-r border-outline-variant/10 whitespace-pre overflow-hidden pt-0 pointer-events-none">1</div>
                     ` : ''}
-                    <div class="flex-1 min-w-0 py-0.5">
-                      <textarea id="cell-input-${tempId}" class="w-full bg-transparent border-none text-on-surface focus:ring-0 resize-none py-0 text-sm font-mono leading-relaxed custom-scrollbar placeholder-outline-variant" rows="${isMarkdown ? 3 : 2}" placeholder="${placeholder}"></textarea>
+                    <div class="flex-1 min-w-0 py-0.5 relative">
+                      ${type === 'sql' ? `
+                      <!-- Highlight Backdrop -->
+                      <div id="cell-highlight-${tempId}" data-tool="${type}" class="absolute inset-0 w-full bg-transparent text-on-surface py-0.5 px-0 text-sm font-mono leading-relaxed whitespace-pre-wrap overflow-hidden pointer-events-none border border-transparent custom-scrollbar select-none"></div>
+                      ` : ''}
+                      <textarea id="cell-input-${tempId}" class="w-full bg-transparent border border-transparent ${type === 'sql' ? 'text-transparent caret-white' : 'text-on-surface'} focus:ring-0 resize-none py-0.5 px-0 text-sm font-mono leading-relaxed custom-scrollbar placeholder-outline-variant relative z-10" rows="${isMarkdown ? 3 : 2}" placeholder="${placeholder}"></textarea>
                     </div>
                     <div class="flex items-start gap-1.5 shrink-0 pt-0.5">
                       <button class="w-7 h-7 rounded-full bg-surface-container-highest text-outline flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors btn-cancel-insert" title="Cancel">
