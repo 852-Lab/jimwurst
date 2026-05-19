@@ -7,8 +7,9 @@ import logging
 import uuid
 import json
 import re
-from typing import List
+from typing import List, Optional
 from uuid import UUID
+from datetime import datetime, timezone
 from pathlib import Path
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -49,7 +50,7 @@ def create_analysis(
         description=analysis_in.description,
         analysis_metadata=analysis_in.analysis_metadata,
         notebook=notebook,
-        owner=analysis_in.owner or current_user.id,
+        owner=analysis_in.owner,
         owner_id=analysis_in.owner_id or current_user.id,
         owner_type=analysis_in.owner_type or "user",
         created_by=current_user.id,
@@ -280,6 +281,51 @@ async def process_analysis_question(analysis_id: str, question: str):
             role = "Operator" if log.log_type == "user_query" else "Kowalski"
             context_str += f"{role}: {log.content}\n"
 
+        # Fetch detailed info of selected data sources and knowledge pages to augment context
+        ds_context_parts = []
+        kb_context_parts = []
+        if analysis.analysis_metadata:
+            selected_ds_ids = analysis.analysis_metadata.get("data_sources", [])
+            selected_kb_ids = analysis.analysis_metadata.get("knowledge_pages", [])
+            
+            # Fetch data source descriptions
+            if selected_ds_ids:
+                for ds_id_str in selected_ds_ids:
+                    try:
+                        ds_uuid = UUID(str(ds_id_str))
+                        ds_obj = db.query(models.DataSource).filter(models.DataSource.id == ds_uuid).first()
+                        if ds_obj:
+                            desc = ds_obj.description or "No description"
+                            ds_context_parts.append(f"- Data Source '{ds_obj.original_filename}' (Table: {ds_obj.table_name}): {desc}")
+                    except Exception as ex:
+                        logger.error(f"Error fetching data source for context: {ex}")
+                        
+            # Fetch knowledge page contents
+            if selected_kb_ids:
+                for kb_id_str in selected_kb_ids:
+                    try:
+                        kb_uuid = UUID(str(kb_id_str))
+                        kb_obj = db.query(models.KnowledgePage).filter(models.KnowledgePage.id == kb_uuid).first()
+                        if kb_obj:
+                            # Extract page text from content blocks
+                            blocks = kb_obj.content or []
+                            text_content = ""
+                            for block in blocks:
+                                if block.get("type") == "paragraph":
+                                    paragraph = block.get("paragraph", {})
+                                    rich_text = paragraph.get("rich_text", [])
+                                    text_content += " ".join([t.get("plain_text", "") for t in rich_text]) + "\n"
+                            
+                            kb_context_parts.append(f"- Knowledge Page '{kb_obj.title}':\n{text_content.strip()}")
+                    except Exception as ex:
+                        logger.error(f"Error fetching knowledge page for context: {ex}")
+
+        # Prepend attached sources and knowledges to context
+        if ds_context_parts:
+            context_str = "ATTACHED DATA SOURCES:\n" + "\n".join(ds_context_parts) + "\n\n" + context_str
+        if kb_context_parts:
+            context_str = "ATTACHED KNOWLEDGE BASE CONTEXT:\n" + "\n".join(kb_context_parts) + "\n\n" + context_str
+
         # Generate answer
         agent = KowalskiAgent(db)
         answer = await skill_comm.generate_answer(filename, summary, context_str, question, agent.generate)
@@ -301,28 +347,86 @@ async def process_analysis_question(analysis_id: str, question: str):
     finally:
         db.close()
 
+def get_interpolated_timestamp(db: Session, analysis_id: UUID, after_log_id: UUID) -> datetime:
+    """
+    Calculates a timestamp strictly between after_log_id and the subsequent log
+    to allow arbitrary chronological insertions of notebook cells.
+    """
+    all_logs = db.query(models.AnalysisLog).filter(models.AnalysisLog.analysis_id == analysis_id).order_by(models.AnalysisLog.timestamp.asc()).all()
+    
+    target_idx = -1
+    for idx, log in enumerate(all_logs):
+        if log.id == after_log_id:
+            target_idx = idx
+            break
+            
+    if target_idx == -1:
+        return datetime.now(timezone.utc)
+        
+    target_log = all_logs[target_idx]
+    
+    if target_idx + 1 < len(all_logs):
+        next_log = all_logs[target_idx + 1]
+        delta = next_log.timestamp - target_log.timestamp
+        return target_log.timestamp + (delta / 2)
+    else:
+        from datetime import timedelta
+        return target_log.timestamp + timedelta(seconds=1)
+
 @router.get("/{analysis_id}/stream")
 async def stream_question(
     analysis_id: UUID,
     question: str,
+    replace_log_id: Optional[UUID] = None,
+    insert_after_log_id: Optional[UUID] = None,
     db: Session = Depends(get_db)
 ):
     """
     Stream a response to a question using Server-Sent Events.
+    If replace_log_id is provided, updates the existing query and overwrites its outputs in-place.
+    If insert_after_log_id is provided, calculates the chronological timestamp to wedge the new cell in-between.
     """
     analysis = db.query(models.Analysis).filter(models.Analysis.id == analysis_id).first()
     if not analysis:
         raise HTTPException(status_code=404, detail="Analysis not found")
 
-    # 1. Create user log
-    user_log = models.AnalysisLog(
-        analysis_id=analysis_id,
-        log_type="user_query",
-        content=question
-    )
-    db.add(user_log)
+    user_log = None
+    if replace_log_id:
+        user_log = db.query(models.AnalysisLog).filter(models.AnalysisLog.id == replace_log_id).first()
+        if user_log:
+            user_log.content = question
+            db.commit()
+            
+            # Delete subsequent outputs belonging to this execution step
+            all_logs = db.query(models.AnalysisLog).filter(models.AnalysisLog.analysis_id == analysis_id).order_by(models.AnalysisLog.timestamp.asc()).all()
+            target_idx = -1
+            for idx, log in enumerate(all_logs):
+                if log.id == replace_log_id:
+                    target_idx = idx
+                    break
+            if target_idx != -1:
+                for log in all_logs[target_idx+1:]:
+                    if log.log_type == "user_query":
+                        break
+                    db.delete(log)
+                db.commit()
+
+    if not user_log:
+        user_log = models.AnalysisLog(
+            analysis_id=analysis_id,
+            log_type="user_query",
+            content=question
+        )
+        if insert_after_log_id:
+            user_log.timestamp = get_interpolated_timestamp(db, analysis_id, insert_after_log_id)
+            
+        db.add(user_log)
+        db.commit()
+        db.refresh(user_log)
+
     analysis.status = "running"
     db.commit()
+    user_log_timestamp = user_log.timestamp
 
     async def event_generator():
         # Context preparation (same as background task)
@@ -346,15 +450,67 @@ async def stream_question(
         # Determine table context if available
         table_name = None
         schema_name = "main"
-        file_id = analysis.analysis_metadata.get("file_id")
+        file_id = None
+        if analysis.analysis_metadata:
+            file_id = analysis.analysis_metadata.get("file_id")
+            if not file_id:
+                ds_list = analysis.analysis_metadata.get("data_sources", [])
+                if ds_list and len(ds_list) > 0:
+                    file_id = ds_list[0]
+
         if file_id:
             try:
-                source = db.query(models.DataSource).filter(models.DataSource.id == UUID(file_id)).first()
+                source = db.query(models.DataSource).filter(models.DataSource.id == UUID(str(file_id))).first()
                 if source:
                     table_name = source.table_name
                     schema_name = source.schema_name
             except Exception as e:
                 logger.error(f"Error resolving table context for analysis {analysis_id}: {e}")
+
+        # Fetch detailed info of selected data sources and knowledge pages to augment context
+        ds_context_parts = []
+        kb_context_parts = []
+        if analysis.analysis_metadata:
+            selected_ds_ids = analysis.analysis_metadata.get("data_sources", [])
+            selected_kb_ids = analysis.analysis_metadata.get("knowledge_pages", [])
+            
+            # Fetch data source descriptions
+            if selected_ds_ids:
+                for ds_id_str in selected_ds_ids:
+                    try:
+                        ds_uuid = UUID(str(ds_id_str))
+                        ds_obj = db.query(models.DataSource).filter(models.DataSource.id == ds_uuid).first()
+                        if ds_obj:
+                            desc = ds_obj.description or "No description"
+                            ds_context_parts.append(f"- Data Source '{ds_obj.original_filename}' (Table: {ds_obj.table_name}): {desc}")
+                    except Exception as ex:
+                        logger.error(f"Error fetching data source for context: {ex}")
+                        
+            # Fetch knowledge page contents
+            if selected_kb_ids:
+                for kb_id_str in selected_kb_ids:
+                    try:
+                        kb_uuid = UUID(str(kb_id_str))
+                        kb_obj = db.query(models.KnowledgePage).filter(models.KnowledgePage.id == kb_uuid).first()
+                        if kb_obj:
+                            # Extract page text from content blocks
+                            blocks = kb_obj.content or []
+                            text_content = ""
+                            for block in blocks:
+                                if block.get("type") == "paragraph":
+                                    paragraph = block.get("paragraph", {})
+                                    rich_text = paragraph.get("rich_text", [])
+                                    text_content += " ".join([t.get("plain_text", "") for t in rich_text]) + "\n"
+                            
+                            kb_context_parts.append(f"- Knowledge Page '{kb_obj.title}':\n{text_content.strip()}")
+                    except Exception as ex:
+                        logger.error(f"Error fetching knowledge page for context: {ex}")
+
+        # Prepend attached sources and knowledges to context
+        if ds_context_parts:
+            context_str = "ATTACHED DATA SOURCES:\n" + "\n".join(ds_context_parts) + "\n\n" + context_str
+        if kb_context_parts:
+            context_str = "ATTACHED KNOWLEDGE BASE CONTEXT:\n" + "\n".join(kb_context_parts) + "\n\n" + context_str
 
         try:
             # 1. Engage the SQL Agent with progress streaming
@@ -384,6 +540,7 @@ async def stream_question(
                 yield f"data: [VIZ]{json.dumps(viz_payload)}\n\n"
             
             # Persistence at the end
+            import datetime
             async_db = SessionLocal()
             try:
                 agent_log = models.AnalysisLog(
@@ -392,6 +549,11 @@ async def stream_question(
                     content=full_response,
                     data=viz_payload # Store the viz data in the log
                 )
+                
+                # Maintain original chronological position for in-place reruns or custom insertions
+                if (replace_log_id or insert_after_log_id) and user_log_timestamp:
+                    agent_log.timestamp = user_log_timestamp + datetime.timedelta(milliseconds=500)
+                
                 async_db.add(agent_log)
                 
                 # Re-fetch analysis in this session
@@ -709,3 +871,216 @@ async def create_quick_insight_existing(
         stats={"rows": row_count, "cols": col_count},
         followup_questions=followup_questions
     )
+
+from pydantic import BaseModel
+
+class ExecutionRequest(BaseModel):
+    code: str
+    replace_log_id: Optional[UUID] = None
+    insert_after_log_id: Optional[UUID] = None
+
+@router.post("/{analysis_id}/execute-python")
+def execute_python_cell(
+    analysis_id: UUID,
+    payload: ExecutionRequest,
+    db: Session = Depends(get_db)
+):
+    analysis = db.query(models.Analysis).filter(models.Analysis.id == analysis_id).first()
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+        
+    user_log = None
+    if payload.replace_log_id:
+        user_log = db.query(models.AnalysisLog).filter(models.AnalysisLog.id == payload.replace_log_id).first()
+        if user_log:
+            user_log.content = payload.code
+            db.commit()
+            all_logs = db.query(models.AnalysisLog).filter(models.AnalysisLog.analysis_id == analysis_id).order_by(models.AnalysisLog.timestamp.asc()).all()
+            target_idx = -1
+            for idx, log in enumerate(all_logs):
+                if log.id == payload.replace_log_id:
+                    target_idx = idx
+                    break
+            if target_idx != -1:
+                for log in all_logs[target_idx+1:]:
+                    if log.log_type == "user_query":
+                        break
+                    db.delete(log)
+                db.commit()
+
+    if not user_log:
+        user_log = models.AnalysisLog(
+            analysis_id=analysis_id,
+            log_type="user_query",
+            content=payload.code,
+            tool_name="python"
+        )
+        if payload.insert_after_log_id:
+            user_log.timestamp = get_interpolated_timestamp(db, analysis_id, payload.insert_after_log_id)
+        db.add(user_log)
+        db.commit()
+        db.refresh(user_log)
+        
+    user_log_timestamp = user_log.timestamp
+
+    from ravioli.backend.core.jupyter_manager import jupyter_manager
+    import datetime
+    
+    outputs = jupyter_manager.execute_code(analysis_id, payload.code)
+    
+    agent_log = models.AnalysisLog(
+        analysis_id=analysis_id,
+        log_type="thought",
+        content="[Python Execution Result]",
+        tool_name="python",
+        data={"jupyter_outputs": outputs}
+    )
+    if (payload.replace_log_id or payload.insert_after_log_id) and user_log_timestamp:
+        agent_log.timestamp = user_log_timestamp + datetime.timedelta(milliseconds=500)
+        
+    db.add(agent_log)
+    db.commit()
+    db.refresh(agent_log)
+    
+    return {"status": "success", "outputs": outputs, "log_id": str(user_log.id)}
+
+@router.post("/{analysis_id}/execute-sql")
+def execute_sql_cell(
+    analysis_id: UUID,
+    payload: ExecutionRequest,
+    db: Session = Depends(get_db)
+):
+    analysis = db.query(models.Analysis).filter(models.Analysis.id == analysis_id).first()
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+        
+    user_log = None
+    if payload.replace_log_id:
+        user_log = db.query(models.AnalysisLog).filter(models.AnalysisLog.id == payload.replace_log_id).first()
+        if user_log:
+            user_log.content = payload.code
+            db.commit()
+            all_logs = db.query(models.AnalysisLog).filter(models.AnalysisLog.analysis_id == analysis_id).order_by(models.AnalysisLog.timestamp.asc()).all()
+            target_idx = -1
+            for idx, log in enumerate(all_logs):
+                if log.id == payload.replace_log_id:
+                    target_idx = idx
+                    break
+            if target_idx != -1:
+                for log in all_logs[target_idx+1:]:
+                    if log.log_type == "user_query":
+                        break
+                    db.delete(log)
+                db.commit()
+
+    if not user_log:
+        user_log = models.AnalysisLog(
+            analysis_id=analysis_id,
+            log_type="user_query",
+            content=payload.code,
+            tool_name="sql"
+        )
+        if payload.insert_after_log_id:
+            user_log.timestamp = get_interpolated_timestamp(db, analysis_id, payload.insert_after_log_id)
+        db.add(user_log)
+        db.commit()
+        db.refresh(user_log)
+        
+    user_log_timestamp = user_log.timestamp
+    
+    from ravioli.backend.data.olap.duckdb_manager import duckdb_manager
+    import datetime
+    
+    if analysis.analysis_metadata:
+        file_id = analysis.analysis_metadata.get("file_id")
+        if not file_id:
+            ds_list = analysis.analysis_metadata.get("data_sources", [])
+            if ds_list and len(ds_list) > 0:
+                file_id = ds_list[0]
+        if file_id:
+            try:
+                source = db.query(models.DataSource).filter(models.DataSource.id == UUID(str(file_id))).first()
+                if source:
+                    duckdb_manager.attach_file(str(source.id))
+            except Exception:
+                logger.exception("Failed to attach data source file for analysis %s (file_id=%s)", analysis_id, file_id)
+                
+    try:
+        results = duckdb_manager.execute_query(payload.code)
+        if hasattr(results, "to_dict"):
+            rows = results.to_dict(orient="records")
+        else:
+            rows = results if isinstance(results, list) else []
+        outputs = [{"type": "table", "data": rows}]
+    except Exception as e:
+        logger.exception("SQL execution failed for analysis %s", analysis_id)
+        outputs = [{"type": "error", "ename": "SQLError", "evalue": "Query execution failed.", "traceback": []}]
+        
+    agent_log = models.AnalysisLog(
+        analysis_id=analysis_id,
+        log_type="thought",
+        content="[SQL Execution Result]",
+        tool_name="sql",
+        data={"sql_outputs": outputs}
+    )
+    if (payload.replace_log_id or payload.insert_after_log_id) and user_log_timestamp:
+        agent_log.timestamp = user_log_timestamp + datetime.timedelta(milliseconds=500)
+        
+    db.add(agent_log)
+    db.commit()
+    db.refresh(agent_log)
+    
+    return {"status": "success", "outputs": outputs, "log_id": str(user_log.id)}
+
+@router.post("/{analysis_id}/execute-markdown")
+def execute_markdown_cell(
+    analysis_id: UUID,
+    payload: ExecutionRequest,
+    db: Session = Depends(get_db)
+):
+    analysis = db.query(models.Analysis).filter(models.Analysis.id == analysis_id).first()
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+        
+    user_log = None
+    if payload.replace_log_id:
+        user_log = db.query(models.AnalysisLog).filter(models.AnalysisLog.id == payload.replace_log_id).first()
+        if user_log:
+            user_log.content = payload.code
+            db.commit()
+            all_logs = db.query(models.AnalysisLog).filter(models.AnalysisLog.analysis_id == analysis_id).order_by(models.AnalysisLog.timestamp.asc()).all()
+            target_idx = -1
+            for idx, log in enumerate(all_logs):
+                if log.id == payload.replace_log_id:
+                    target_idx = idx
+                    break
+            if target_idx != -1:
+                for log in all_logs[target_idx+1:]:
+                    if log.log_type == "user_query":
+                        break
+                    db.delete(log)
+                db.commit()
+
+    if not user_log:
+        user_log = models.AnalysisLog(
+            analysis_id=analysis_id,
+            log_type="user_query",
+            content=payload.code,
+            tool_name="markdown"
+        )
+        if payload.insert_after_log_id:
+            user_log.timestamp = get_interpolated_timestamp(db, analysis_id, payload.insert_after_log_id)
+        db.add(user_log)
+        db.commit()
+        db.refresh(user_log)
+        
+    return {"status": "success", "outputs": [], "log_id": str(user_log.id)}
+
+@router.get("/{analysis_id}/jupyter-status")
+def get_jupyter_status(analysis_id: UUID, db: Session = Depends(get_db)):
+    """
+    Get the status of the Jupyter IPython kernel for this analysis.
+    """
+    from ravioli.backend.core.jupyter_manager import jupyter_manager
+    status_str = jupyter_manager.get_kernel_status(analysis_id)
+    return {"status": status_str}

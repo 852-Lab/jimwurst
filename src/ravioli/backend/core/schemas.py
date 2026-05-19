@@ -57,6 +57,9 @@ class Analysis(AnalysisBase):
     
     # Optionally include logs in the response
     logs: List[AnalysisLog] = []
+    
+    owner_user: Optional['User'] = None
+    creator_user: Optional['User'] = None
 
     model_config = ConfigDict(from_attributes=True)
 

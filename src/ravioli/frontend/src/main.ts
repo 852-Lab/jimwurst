@@ -10,7 +10,6 @@ import { renderData } from './components/Data';
 import { renderSettings } from './components/Settings';
 import { renderGovernance } from './components/Governance';
 import { renderAuth } from './components/Auth';
-import type { User } from './types';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 
@@ -66,6 +65,34 @@ function updateUI() {
     shell.appendChild(contentContainer);
     
     app.appendChild(shell);
+  }
+
+  // Global Floating Action Button (FAB)
+  let fab = document.getElementById('global-fab');
+  if (!fab && shell) {
+    fab = document.createElement('button');
+    fab.id = 'global-fab';
+    fab.className = 'fixed bottom-8 right-8 w-16 h-16 rounded-full bg-primary text-on-primary flex items-center justify-center shadow-lg shadow-primary/30 border border-primary/20 hover:scale-110 active:scale-95 transition-all duration-300 z-50 group hover:shadow-primary/50 cursor-pointer';
+    fab.innerHTML = `
+      <span class="material-symbols-outlined text-3xl font-bold group-hover:rotate-90 transition-transform duration-300" data-icon="add">add</span>
+      <!-- Soft aura ring -->
+      <span class="absolute inset-0 rounded-full border-2 border-primary/40 animate-ping opacity-0 group-hover:opacity-100 duration-1000"></span>
+    `;
+    fab.addEventListener('click', () => {
+      // Clear active analysis so that create-analysis doesn't auto-redirect to notebook
+      store.setActiveAnalysisId(undefined);
+      store.setCurrentView('create-analysis');
+    });
+    shell.appendChild(fab);
+  }
+
+  // Toggle FAB visibility depending on current view and active analysis
+  if (fab) {
+    if (currentView === 'create-analysis' || activeId || currentView === 'auth') {
+      fab.classList.add('hidden');
+    } else {
+      fab.classList.remove('hidden');
+    }
   }
 
   // Update Sidebar if user changed or analyses changed
