@@ -582,7 +582,7 @@ async function hydrateLineage(container: HTMLElement, forceRefresh = false) {
     setTimeout(() => {
       drawLineageConnectors(container, data);
       setupLineageInteractions(container, data);
-    }, 250);
+    }, 80);
 
   } catch (err) {
     console.error('Failed to load lineage graph:', err);
@@ -590,12 +590,14 @@ async function hydrateLineage(container: HTMLElement, forceRefresh = false) {
   }
 }
 
-function drawLineageConnectors(container: HTMLElement, data: LineageResponse) {
+function drawLineageConnectors(container: HTMLElement, data: LineageResponse, retryCount = 0) {
   const svg = container.querySelector('#lineage-connectors') as SVGElement;
   const graphContainer = container.querySelector('#lineage-graph-container');
   if (!svg || !graphContainer) return;
 
   svg.innerHTML = '';
+
+  let hasZeroOffset = false;
 
   data.edges.forEach(edge => {
     const sourceEl = graphContainer.querySelector(`[data-node-id="${edge.source}"]`) as HTMLElement;
@@ -610,6 +612,10 @@ function drawLineageConnectors(container: HTMLElement, data: LineageResponse) {
     const x2 = targetEl.offsetLeft;
     const y2 = targetEl.offsetTop + targetEl.offsetHeight / 2;
 
+    if (x1 === 0 && x2 === 0) {
+      hasZeroOffset = true;
+    }
+
     // Cubic Bezier curve control path
     const dx = (x2 - x1) * 0.45;
     const pathD = `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
@@ -623,6 +629,13 @@ function drawLineageConnectors(container: HTMLElement, data: LineageResponse) {
 
     svg.appendChild(path);
   });
+
+  // Defensive Retry: If offsets are zero (due to layout lag), retry in 100ms
+  if (hasZeroOffset && retryCount < 3) {
+    setTimeout(() => {
+      drawLineageConnectors(container, data, retryCount + 1);
+    }, 100);
+  }
 }
 
 function setupLineageInteractions(container: HTMLElement, data: LineageResponse) {
