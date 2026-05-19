@@ -9,6 +9,7 @@ import json
 import re
 from typing import List, Optional
 from uuid import UUID
+from datetime import datetime, timezone
 from pathlib import Path
 from sqlalchemy.orm import Session
 from sqlalchemy import select
@@ -347,15 +348,43 @@ async def process_analysis_question(analysis_id: str, question: str):
         db.close()
 
 @router.get("/{analysis_id}/stream")
+def get_interpolated_timestamp(db: Session, analysis_id: UUID, after_log_id: UUID) -> datetime:
+    """
+    Calculates a timestamp strictly between after_log_id and the subsequent log
+    to allow arbitrary chronological insertions of notebook cells.
+    """
+    all_logs = db.query(models.AnalysisLog).filter(models.AnalysisLog.analysis_id == analysis_id).order_by(models.AnalysisLog.timestamp.asc()).all()
+    
+    target_idx = -1
+    for idx, log in enumerate(all_logs):
+        if log.id == after_log_id:
+            target_idx = idx
+            break
+            
+    if target_idx == -1:
+        return datetime.now(timezone.utc)
+        
+    target_log = all_logs[target_idx]
+    
+    if target_idx + 1 < len(all_logs):
+        next_log = all_logs[target_idx + 1]
+        delta = next_log.timestamp - target_log.timestamp
+        return target_log.timestamp + (delta / 2)
+    else:
+        from datetime import timedelta
+        return target_log.timestamp + timedelta(seconds=1)
+
 async def stream_question(
     analysis_id: UUID,
     question: str,
     replace_log_id: Optional[UUID] = None,
+    insert_after_log_id: Optional[UUID] = None,
     db: Session = Depends(get_db)
 ):
     """
     Stream a response to a question using Server-Sent Events.
     If replace_log_id is provided, updates the existing query and overwrites its outputs in-place.
+    If insert_after_log_id is provided, calculates the chronological timestamp to wedge the new cell in-between.
     """
     analysis = db.query(models.Analysis).filter(models.Analysis.id == analysis_id).first()
     if not analysis:
@@ -388,6 +417,9 @@ async def stream_question(
             log_type="user_query",
             content=question
         )
+        if insert_after_log_id:
+            user_log.timestamp = get_interpolated_timestamp(db, analysis_id, insert_after_log_id)
+            
         db.add(user_log)
         db.commit()
         db.refresh(user_log)
@@ -518,9 +550,9 @@ async def stream_question(
                     data=viz_payload # Store the viz data in the log
                 )
                 
-                # Maintain original chronological position for in-place reruns
-                if replace_log_id and user_log_timestamp:
-                    agent_log.timestamp = user_log_timestamp + datetime.timedelta(seconds=1)
+                # Maintain original chronological position for in-place reruns or custom insertions
+                if (replace_log_id or insert_after_log_id) and user_log_timestamp:
+                    agent_log.timestamp = user_log_timestamp + datetime.timedelta(milliseconds=500)
                 
                 async_db.add(agent_log)
                 
@@ -839,3 +871,162 @@ async def create_quick_insight_existing(
         stats={"rows": row_count, "cols": col_count},
         followup_questions=followup_questions
     )
+
+from pydantic import BaseModel
+
+class ExecutionRequest(BaseModel):
+    code: str
+    replace_log_id: Optional[UUID] = None
+    insert_after_log_id: Optional[UUID] = None
+
+@router.post("/{analysis_id}/execute-python")
+def execute_python_cell(
+    analysis_id: UUID,
+    payload: ExecutionRequest,
+    db: Session = Depends(get_db)
+):
+    analysis = db.query(models.Analysis).filter(models.Analysis.id == analysis_id).first()
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+        
+    user_log = None
+    if payload.replace_log_id:
+        user_log = db.query(models.AnalysisLog).filter(models.AnalysisLog.id == payload.replace_log_id).first()
+        if user_log:
+            user_log.content = payload.code
+            db.commit()
+            all_logs = db.query(models.AnalysisLog).filter(models.AnalysisLog.analysis_id == analysis_id).order_by(models.AnalysisLog.timestamp.asc()).all()
+            target_idx = -1
+            for idx, log in enumerate(all_logs):
+                if log.id == payload.replace_log_id:
+                    target_idx = idx
+                    break
+            if target_idx != -1:
+                for log in all_logs[target_idx+1:]:
+                    if log.log_type == "user_query":
+                        break
+                    db.delete(log)
+                db.commit()
+
+    if not user_log:
+        user_log = models.AnalysisLog(
+            analysis_id=analysis_id,
+            log_type="user_query",
+            content=payload.code,
+            tool_name="python"
+        )
+        if payload.insert_after_log_id:
+            user_log.timestamp = get_interpolated_timestamp(db, analysis_id, payload.insert_after_log_id)
+        db.add(user_log)
+        db.commit()
+        db.refresh(user_log)
+        
+    user_log_timestamp = user_log.timestamp
+
+    from ravioli.backend.core.jupyter_manager import jupyter_manager
+    import datetime
+    
+    outputs = jupyter_manager.execute_code(analysis_id, payload.code)
+    
+    agent_log = models.AnalysisLog(
+        analysis_id=analysis_id,
+        log_type="thought",
+        content="[Python Execution Result]",
+        tool_name="python",
+        data={"jupyter_outputs": outputs}
+    )
+    if (payload.replace_log_id or payload.insert_after_log_id) and user_log_timestamp:
+        agent_log.timestamp = user_log_timestamp + datetime.timedelta(milliseconds=500)
+        
+    db.add(agent_log)
+    db.commit()
+    db.refresh(agent_log)
+    
+    return {"status": "success", "outputs": outputs, "log_id": str(user_log.id)}
+
+@router.post("/{analysis_id}/execute-sql")
+def execute_sql_cell(
+    analysis_id: UUID,
+    payload: ExecutionRequest,
+    db: Session = Depends(get_db)
+):
+    analysis = db.query(models.Analysis).filter(models.Analysis.id == analysis_id).first()
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+        
+    user_log = None
+    if payload.replace_log_id:
+        user_log = db.query(models.AnalysisLog).filter(models.AnalysisLog.id == payload.replace_log_id).first()
+        if user_log:
+            user_log.content = payload.code
+            db.commit()
+            all_logs = db.query(models.AnalysisLog).filter(models.AnalysisLog.analysis_id == analysis_id).order_by(models.AnalysisLog.timestamp.asc()).all()
+            target_idx = -1
+            for idx, log in enumerate(all_logs):
+                if log.id == payload.replace_log_id:
+                    target_idx = idx
+                    break
+            if target_idx != -1:
+                for log in all_logs[target_idx+1:]:
+                    if log.log_type == "user_query":
+                        break
+                    db.delete(log)
+                db.commit()
+
+    if not user_log:
+        user_log = models.AnalysisLog(
+            analysis_id=analysis_id,
+            log_type="user_query",
+            content=payload.code,
+            tool_name="sql"
+        )
+        if payload.insert_after_log_id:
+            user_log.timestamp = get_interpolated_timestamp(db, analysis_id, payload.insert_after_log_id)
+        db.add(user_log)
+        db.commit()
+        db.refresh(user_log)
+        
+    user_log_timestamp = user_log.timestamp
+    
+    from ravioli.backend.data.olap.duckdb_manager import duckdb_manager
+    import datetime
+    
+    if analysis.analysis_metadata:
+        file_id = analysis.analysis_metadata.get("file_id")
+        if not file_id:
+            ds_list = analysis.analysis_metadata.get("data_sources", [])
+            if ds_list and len(ds_list) > 0:
+                file_id = ds_list[0]
+        if file_id:
+            try:
+                source = db.query(models.DataSource).filter(models.DataSource.id == UUID(str(file_id))).first()
+                if source:
+                    duckdb_manager.attach_file(str(source.id))
+            except Exception:
+                pass
+                
+    try:
+        results = duckdb_manager.execute_query(payload.code)
+        if hasattr(results, "to_dict"):
+            rows = results.to_dict(orient="records")
+        else:
+            rows = results if isinstance(results, list) else []
+        outputs = [{"type": "table", "data": rows}]
+    except Exception as e:
+        outputs = [{"type": "error", "ename": "SQLError", "evalue": str(e), "traceback": []}]
+        
+    agent_log = models.AnalysisLog(
+        analysis_id=analysis_id,
+        log_type="thought",
+        content="[SQL Execution Result]",
+        tool_name="sql",
+        data={"sql_outputs": outputs}
+    )
+    if (payload.replace_log_id or payload.insert_after_log_id) and user_log_timestamp:
+        agent_log.timestamp = user_log_timestamp + datetime.timedelta(milliseconds=500)
+        
+    db.add(agent_log)
+    db.commit()
+    db.refresh(agent_log)
+    
+    return {"status": "success", "outputs": outputs, "log_id": str(user_log.id)}

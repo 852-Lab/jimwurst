@@ -53,10 +53,13 @@ export const api = {
     if (!response.ok) throw new Error('Failed to ask question');
   },
   
-  streamQuestion(analysisId: string, question: string, replaceLogId: string | null, onMessage: (token: string) => void, onComplete: () => void, onError: (err: any) => void) {
+  streamQuestion(analysisId: string, question: string, replaceLogId: string | null, insertAfterLogId: string | null, onMessage: (token: string) => void, onComplete: () => void, onError: (err: any) => void) {
     let url = `${API_BASE}/analyses/${analysisId}/stream?question=${encodeURIComponent(question)}`;
     if (replaceLogId) {
       url += `&replace_log_id=${encodeURIComponent(replaceLogId)}`;
+    }
+    if (insertAfterLogId) {
+      url += `&insert_after_log_id=${encodeURIComponent(insertAfterLogId)}`;
     }
     const eventSource = new EventSource(url);
     
@@ -75,6 +78,28 @@ export const api = {
     };
 
     return () => eventSource.close();
+  },
+
+  async executeSql(analysisId: string, code: string, replaceLogId: string | null, insertAfterLogId: string | null): Promise<any> {
+    const response = await fetch(`${API_BASE}/analyses/${analysisId}/execute-sql`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, replace_log_id: replaceLogId, insert_after_log_id: insertAfterLogId }),
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Failed to execute SQL cell');
+    return response.json();
+  },
+
+  async executePython(analysisId: string, code: string, replaceLogId: string | null, insertAfterLogId: string | null): Promise<any> {
+    const response = await fetch(`${API_BASE}/analyses/${analysisId}/execute-python`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, replace_log_id: replaceLogId, insert_after_log_id: insertAfterLogId }),
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Failed to execute Python cell');
+    return response.json();
   },
   
   async getSuggestedPrompts(analysisId: string): Promise<string[]> {
