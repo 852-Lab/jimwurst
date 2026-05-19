@@ -347,7 +347,6 @@ async def process_analysis_question(analysis_id: str, question: str):
     finally:
         db.close()
 
-@router.get("/{analysis_id}/stream")
 def get_interpolated_timestamp(db: Session, analysis_id: UUID, after_log_id: UUID) -> datetime:
     """
     Calculates a timestamp strictly between after_log_id and the subsequent log
@@ -374,6 +373,7 @@ def get_interpolated_timestamp(db: Session, analysis_id: UUID, after_log_id: UUI
         from datetime import timedelta
         return target_log.timestamp + timedelta(seconds=1)
 
+@router.get("/{analysis_id}/stream")
 async def stream_question(
     analysis_id: UUID,
     question: str,
