@@ -80,6 +80,25 @@ function toggleComment(textarea: HTMLTextAreaElement) {
   textarea.selectionEnd = end + (end >= lineStartIdx + (currentLine.match(/^\s*/)?.[0].length || 0) ? offset : 0);
 }
 
+function updateLineNumbers(textarea: HTMLTextAreaElement) {
+  const idStr = textarea.id.replace('cell-input-', '');
+  const gutter = textarea.closest('.glass-panel')?.querySelector(`#cell-gutter-${idStr}`) as HTMLElement;
+  if (gutter) {
+    const lines = textarea.value.split('\n');
+    const lineNumbers = lines.map((_, i) => i + 1).join('\n');
+    gutter.textContent = lineNumbers;
+    gutter.scrollTop = textarea.scrollTop;
+  }
+}
+
+function updateLineGutterScroll(textarea: HTMLTextAreaElement) {
+  const idStr = textarea.id.replace('cell-input-', '');
+  const gutter = textarea.closest('.glass-panel')?.querySelector(`#cell-gutter-${idStr}`) as HTMLElement;
+  if (gutter) {
+    gutter.scrollTop = textarea.scrollTop;
+  }
+}
+
 function renderMarkdown(content: string) {
   if (!content) return '';
   
@@ -690,19 +709,25 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
               <div class="flex-1 hidden cell-edit-view w-full" id="cell-edit-${cell.index}">
                  <div class="glass-panel p-1.5 rounded-xl group focus-within:border-primary/30 transition-all duration-300 shadow-lg shadow-primary/5 bg-surface-container-low/80 border-primary/30">
                     <div class="flex flex-col w-full">
-                      <div class="flex items-start gap-3 px-3">
-                      <div class="flex-1 min-w-0 py-1.5">
-                        <textarea id="cell-input-${cell.index}" class="w-full bg-transparent border-none text-primary-fixed-dim focus:ring-0 resize-none py-0 text-sm font-mono max-h-48 custom-scrollbar" rows="2">${cell.inputContent}</textarea>
+                      <div class="flex items-stretch gap-3 px-3">
+                        ${(cell.toolName === 'sql' || cell.toolName === 'python') ? `
+                        <div id="cell-gutter-${cell.index}" class="w-8 select-none text-right font-mono text-sm leading-relaxed text-outline/30 pr-2 border-r border-outline-variant/10 whitespace-pre overflow-hidden pt-0 pointer-events-none">${(() => {
+                          const lines = (cell.inputContent || '').split('\n');
+                          return lines.map((_, i) => i + 1).join('\n');
+                        })()}</div>
+                        ` : ''}
+                        <div class="flex-1 min-w-0 py-0.5">
+                          <textarea id="cell-input-${cell.index}" class="w-full bg-transparent border-none text-primary-fixed-dim focus:ring-0 resize-none py-0 text-sm font-mono leading-relaxed max-h-48 custom-scrollbar" rows="2">${cell.inputContent}</textarea>
+                        </div>
+                        <div class="flex items-start gap-1.5 shrink-0 pt-0.5">
+                          <button class="w-7 h-7 rounded-full bg-surface-container-highest text-outline flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors btn-cancel-edit" data-cell-index="${cell.index}" title="Cancel">
+                            <span class="material-symbols-outlined text-[14px]">close</span>
+                          </button>
+                          <button class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-110 transition-transform btn-rerun-cell shadow-md shadow-primary/20" data-cell-index="${cell.index}" data-log-id="${cell.inputLogId}" data-tool="${cell.toolName}" title="Rerun Cell">
+                            <span class="material-symbols-outlined text-[14px]">play_arrow</span>
+                          </button>
+                        </div>
                       </div>
-                      <div class="flex items-center gap-1.5 shrink-0 pt-0.5">
-                        <button class="w-7 h-7 rounded-full bg-surface-container-highest text-outline flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors btn-cancel-edit" data-cell-index="${cell.index}" title="Cancel">
-                          <span class="material-symbols-outlined text-[14px]">close</span>
-                        </button>
-                        <button class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-110 transition-transform btn-rerun-cell shadow-md shadow-primary/20" data-cell-index="${cell.index}" data-log-id="${cell.inputLogId}" data-tool="${cell.toolName}" title="Rerun Cell">
-                          <span class="material-symbols-outlined text-[14px]">play_arrow</span>
-                        </button>
-                      </div>
-                    </div>
                     ${cell.toolName === 'sql' ? `
                     <div class="px-3 pb-1.5 flex items-center justify-between text-[10px] font-mono text-outline select-none border-t border-outline-variant/5 pt-1.5 mt-1.5">
                       <span>SQL Mode</span>
@@ -862,7 +887,7 @@ function bindInteractions(container: HTMLElement) {
     }
   });
 
-  // Real-time LOC line counting
+  // Real-time LOC line counting & Gutter update
   container.addEventListener('input', (e) => {
     const textarea = e.target as HTMLTextAreaElement;
     if (textarea && textarea.id && textarea.id.startsWith('cell-input-')) {
@@ -871,6 +896,25 @@ function bindInteractions(container: HTMLElement) {
       const label = container.querySelector(`#cell-loc-${idxStr}`);
       if (label) {
         label.textContent = `${lineCount} ${lineCount === 1 ? 'line' : 'lines'}`;
+      }
+      // Update gutter line numbers
+      updateLineNumbers(textarea);
+    }
+  });
+
+  // Attach scroll & initial line counts on focus
+  container.addEventListener('focusin', (e) => {
+    const textarea = e.target as HTMLTextAreaElement;
+    if (textarea && textarea.id && textarea.id.startsWith('cell-input-')) {
+      // Sync line numbers immediately
+      updateLineNumbers(textarea);
+      
+      // Bind scroll sync if not already bound
+      if (!textarea.dataset.hasScrollListener) {
+        textarea.dataset.hasScrollListener = 'true';
+        textarea.addEventListener('scroll', () => {
+          updateLineGutterScroll(textarea);
+        });
       }
     }
   });
@@ -944,11 +988,14 @@ function bindInteractions(container: HTMLElement) {
           <div class="flex-1 w-full" id="cell-edit-${tempId}">
              <div class="glass-panel p-1.5 rounded-xl group focus-within:border-${borderFocusClass}/30 transition-all duration-300 shadow-lg shadow-${borderFocusClass}/5 bg-surface-container-lowest/80 border-outline-variant/10">
                 <div class="flex flex-col w-full">
-                  <div class="flex items-start gap-3 px-3">
-                    <div class="flex-1 min-w-0 py-1.5">
-                      <textarea id="cell-input-${tempId}" class="w-full bg-transparent border-none text-on-surface focus:ring-0 resize-none py-0 text-sm font-mono custom-scrollbar placeholder-outline-variant" rows="${isMarkdown ? 3 : 2}" placeholder="${placeholder}"></textarea>
+                  <div class="flex items-stretch gap-3 px-3">
+                    ${(type === 'sql' || type === 'python') ? `
+                    <div id="cell-gutter-${tempId}" class="w-8 select-none text-right font-mono text-sm leading-relaxed text-outline/30 pr-2 border-r border-outline-variant/10 whitespace-pre overflow-hidden pt-0 pointer-events-none">1</div>
+                    ` : ''}
+                    <div class="flex-1 min-w-0 py-0.5">
+                      <textarea id="cell-input-${tempId}" class="w-full bg-transparent border-none text-on-surface focus:ring-0 resize-none py-0 text-sm font-mono leading-relaxed custom-scrollbar placeholder-outline-variant" rows="${isMarkdown ? 3 : 2}" placeholder="${placeholder}"></textarea>
                     </div>
-                    <div class="flex items-center gap-1.5 shrink-0 pt-0.5">
+                    <div class="flex items-start gap-1.5 shrink-0 pt-0.5">
                       <button class="w-7 h-7 rounded-full bg-surface-container-highest text-outline flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors btn-cancel-insert" title="Cancel">
                         <span class="material-symbols-outlined text-[14px]">close</span>
                       </button>
