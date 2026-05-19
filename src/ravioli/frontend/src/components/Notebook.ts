@@ -354,9 +354,11 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
     nextCellIndexTag.innerHTML = `In [${nextIndex}]:`;
   }
 
-  // Update Logs only if they changed and we are NOT streaming
+  // Update Logs only if they changed and we are NOT in an active streaming or editing state
   const cellContainer = container.querySelector('#cell-container') as HTMLElement;
-  const isStreaming = cellContainer?.querySelector('#streaming-content') !== null;
+  const isStreaming = cellContainer?.querySelector('#streaming-content') !== null ||
+                      cellContainer?.querySelector('.new-cell-block') !== null ||
+                      cellContainer?.querySelector('.cell-edit-view:not(.hidden)') !== null;
   
   if (cellContainer && logsJson !== lastLogsJson && !isStreaming) {
     lastLogsJson = logsJson;
