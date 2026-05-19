@@ -1052,6 +1052,7 @@ function bindInteractions(container: HTMLElement) {
           
           const newLogs = await api.listLogs(activeId!);
           lastLogsJson = '';
+          executingCells.delete(logId);
           store.setLogs(newLogs);
         } catch (e) {
            console.error(e);
