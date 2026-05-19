@@ -49,7 +49,7 @@ def create_analysis(
         description=analysis_in.description,
         analysis_metadata=analysis_in.analysis_metadata,
         notebook=notebook,
-        owner=analysis_in.owner or current_user.id,
+        owner=analysis_in.owner,
         owner_id=analysis_in.owner_id or current_user.id,
         owner_type=analysis_in.owner_type or "user",
         created_by=current_user.id,

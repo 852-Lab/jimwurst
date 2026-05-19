@@ -15,11 +15,11 @@ function renderMarkdown(content: string) {
   
   // Transform GitHub style alerts: > [!TYPE]
   // This regex matches the blockquote with alert marker
-  let transformed = content.replace(/^> \[!(IMPORTANT|NOTE|TIP|WARNING|CAUTION)\]\n((?:>.*\n?)+)/gm, (match, type, body) => {
+  let transformed = content.replace(/^> \[!(IMPORTANT|NOTE|TIP|WARNING|CAUTION)\]\n((?:>.*\n?)+)/gm, (_match, type, body) => {
     const lowerType = type.toLowerCase();
     const icon = type === 'IMPORTANT' ? 'priority_high' : 'info';
     // Remove the leading '>' from each line of the body
-    const cleanBody = body.split('\n').map(line => line.replace(/^>\s?/, '')).join('\n');
+    const cleanBody = body.split('\n').map((line: string) => line.replace(/^>\s?/, '')).join('\n');
     return `
 <div class="markdown-alert markdown-alert-${lowerType}">
   <div class="markdown-alert-title">
@@ -153,11 +153,11 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
   
   const attachedSources = selectedDataSourceIds
     .map((id: string) => dataSources.find(ds => ds.id === id))
-    .filter(Boolean);
+    .filter((ds): ds is NonNullable<typeof ds> => !!ds);
     
   const attachedKnowledges = (analysis.analysis_metadata?.knowledge_pages || [])
     .map((id: string) => knowledgePages.find(kp => kp.id === id))
-    .filter(Boolean);
+    .filter((kp): kp is NonNullable<typeof kp> => !!kp);
 
   const ownerName = analysis.owner_user?.name || 'Admin';
 

@@ -10,7 +10,6 @@ import { renderData } from './components/Data';
 import { renderSettings } from './components/Settings';
 import { renderGovernance } from './components/Governance';
 import { renderAuth } from './components/Auth';
-import type { User } from './types';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
 
