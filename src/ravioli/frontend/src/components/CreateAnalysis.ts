@@ -210,7 +210,7 @@ export function renderCreateAnalysis() {
     const knowledgePagesHtml = knowledgePages.length > 0
       ? `
         <div class="space-y-3">
-          <p class="text-[10px] font-label-sm text-outline uppercase tracking-widest opacity-60">2. Append Context from Knowledge Base</p>
+          <p class="text-[10px] font-label-sm text-outline uppercase tracking-widest opacity-60">2. Append Context from Knowledge Base (Optional)</p>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
             ${knowledgePages.map(kp => {
         const isSelected = selectedKnowledgePageIds.includes(kp.id);
@@ -238,7 +238,7 @@ export function renderCreateAnalysis() {
       `
       : `
         <div class="space-y-3">
-          <p class="text-[10px] font-label-sm text-outline uppercase tracking-widest opacity-60">2. Append Context from Knowledge Base</p>
+          <p class="text-[10px] font-label-sm text-outline uppercase tracking-widest opacity-60">2. Append Context from Knowledge Base (Optional)</p>
           <div class="p-4 rounded-xl bg-surface-container-low border border-dashed border-outline-variant/10 text-center">
             <span class="material-symbols-outlined text-outline opacity-40 text-2xl" data-icon="local_library">local_library</span>
             <p class="text-xs text-outline opacity-50 mt-1">No knowledge articles found.</p>
