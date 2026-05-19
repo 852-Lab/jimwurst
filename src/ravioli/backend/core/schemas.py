@@ -107,6 +107,23 @@ class InsightStats(BaseModel):
     analyses_count: int
     contributors_count: int
 
+# --- Lineage Schemas ---
+
+class LineageNode(BaseModel):
+    id: str
+    type: str  # "datasource", "analysis", "insight", "knowledge"
+    label: str
+    metadata: Optional[dict] = None
+
+class LineageEdge(BaseModel):
+    source: str
+    target: str
+    type: Optional[str] = None
+
+class LineageResponse(BaseModel):
+    nodes: List[LineageNode]
+    edges: List[LineageEdge]
+
 # --- User Schemas ---
 
 class UserBase(BaseModel):

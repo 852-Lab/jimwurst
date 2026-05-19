@@ -187,3 +187,21 @@ export interface KnowledgePageUpdate {
   owner_id?: string;
   parent_id?: string;
 }
+
+export interface LineageNode {
+  id: string;
+  type: 'datasource' | 'analysis' | 'insight' | 'knowledge';
+  label: string;
+  metadata?: Record<string, any>;
+}
+
+export interface LineageEdge {
+  source: string;
+  target: string;
+  type?: string;
+}
+
+export interface LineageResponse {
+  nodes: LineageNode[];
+  edges: LineageEdge[];
+}

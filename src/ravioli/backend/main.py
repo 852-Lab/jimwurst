@@ -67,6 +67,122 @@ def seed_db():
             db.commit()
             print(f"Backfilled {updated_count} data sources with owner_id: {user.name}")
             
+        # Seed lineage dummy data if no data sources exist
+        if db.query(models.DataSource).count() == 0:
+            ds_id = uuid.uuid4()
+            ds = models.DataSource(
+                id=ds_id,
+                filename="spotify_streams_2026.csv",
+                original_filename="spotify_streams_2026.csv",
+                content_type="text/csv",
+                size_bytes=1024 * 45,
+                table_name="spotify_streams",
+                schema_name="main",
+                row_count=12450,
+                status="completed",
+                owner_id=user.id,
+                owner_type="user",
+                created_by=user.id,
+                updated_by=user.id
+            )
+            db.add(ds)
+            
+            ana_id = uuid.uuid4()
+            ana = models.Analysis(
+                id=ana_id,
+                title="Quick Insight: spotify_streams_2026.csv",
+                description="Seeded data lineage template analysis.",
+                status="completed",
+                result="Analyzed Spotify streaming patterns for Q1 2026.",
+                analysis_metadata={"file_id": str(ds_id)},
+                owner_id=user.id,
+                owner_type="user",
+                created_by=user.id,
+                updated_by=user.id
+            )
+            db.add(ana)
+            
+            ins1_id = uuid.uuid4()
+            ins1 = models.Insight(
+                id=ins1_id,
+                analysis_id=ana_id,
+                content="Peak streaming activity is concentrated on Friday evenings between 7 PM and 10 PM.",
+                source_label="Quick Insight: spotify_streams_2026.csv",
+                is_verified=True,
+                is_published=True,
+                owner_id=user.id,
+                owner_type="user",
+                created_by=user.id,
+                updated_by=user.id
+            )
+            
+            ins2_id = uuid.uuid4()
+            ins2 = models.Insight(
+                id=ins2_id,
+                analysis_id=ana_id,
+                content="User retention is 85% higher for curated playlists compared to algorithmic radio.",
+                source_label="Quick Insight: spotify_streams_2026.csv",
+                is_verified=True,
+                is_published=True,
+                owner_id=user.id,
+                owner_type="user",
+                created_by=user.id,
+                updated_by=user.id
+            )
+            
+            ins3_id = uuid.uuid4()
+            ins3 = models.Insight(
+                id=ins3_id,
+                analysis_id=ana_id,
+                content="Friday promotional campaigns should target curated playlist listeners to maximize conversion.",
+                source_label="Quick Insight: spotify_streams_2026.csv",
+                is_verified=True,
+                is_published=True,
+                owner_id=user.id,
+                owner_type="user",
+                created_by=user.id,
+                updated_by=user.id
+            )
+            
+            ins4_id = uuid.uuid4()
+            ins4 = models.Insight(
+                id=ins4_id,
+                analysis_id=ana_id,
+                content="Server capacity needs to scale by 2x on Friday evening streams to handle traffic spike.",
+                source_label="Quick Insight: spotify_streams_2026.csv",
+                is_verified=True,
+                is_published=True,
+                owner_id=user.id,
+                owner_type="user",
+                created_by=user.id,
+                updated_by=user.id
+            )
+            
+            db.add_all([ins1, ins2, ins3, ins4])
+            db.commit()
+            
+            # Add relationships / derived links (M:M secondary table)
+            link1 = models.InsightLink(parent_id=ins1_id, child_id=ins3_id)
+            link2 = models.InsightLink(parent_id=ins2_id, child_id=ins3_id)
+            link3 = models.InsightLink(parent_id=ins1_id, child_id=ins4_id)
+            db.add_all([link1, link2, link3])
+            
+            kp_id = uuid.uuid4()
+            kp = models.KnowledgePage(
+                id=kp_id,
+                title="Q1 Spotify Marketing Strategy",
+                source="insight",
+                source_id=str(ins3_id),
+                owner_id=str(user.id),
+                owner_type="user",
+                created_by=user.id,
+                updated_by=user.id,
+                reviewed_by=user.id
+            )
+            db.add(kp)
+            db.commit()
+            print("Seeded lineage dummy data structure successfully.")
+            
     except Exception as e:
         print(f"Error seeding database: {e}")
     finally:
@@ -75,6 +191,7 @@ def seed_db():
 def _migrate_columns():
     """Add new columns to existing tables using IF NOT EXISTS (idempotent)."""
     migrations = [
+        "CREATE TABLE IF NOT EXISTS app.insight_links (parent_id UUID REFERENCES app.insights(id) ON DELETE CASCADE, child_id UUID REFERENCES app.insights(id) ON DELETE CASCADE, PRIMARY KEY (parent_id, child_id))",
         "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS assumptions TEXT",
         "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS limitations TEXT",
         "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS insight_metadata JSONB",

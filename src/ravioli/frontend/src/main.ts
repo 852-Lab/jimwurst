@@ -177,9 +177,30 @@ function startIngestionPollingIfNeeded() {
 }
 
 // Subscription
-store.subscribe(() => {
+let lastSessionUserId = '';
+
+store.subscribe(async () => {
   const activeId = store.getActiveAnalysisId();
   const currentUser = store.getCurrentUser();
+
+  // Load user data dynamically on successful login
+  if (currentUser && currentUser.id !== lastSessionUserId) {
+    lastSessionUserId = currentUser.id;
+    try {
+      const [analyses, sources, pages] = await Promise.all([
+        api.listAnalyses().catch(() => []),
+        api.listFiles().catch(() => []),
+        api.listKnowledgePages().catch(() => [])
+      ]);
+      store.setAnalyses(analyses);
+      store.setDataSources(sources);
+      store.setKnowledgePages(pages);
+    } catch (err) {
+      console.error('Failed to fetch user session data', err);
+    }
+  } else if (!currentUser) {
+    lastSessionUserId = '';
+  }
 
   // Handle polling intervals separately from UI rendering to avoid clearing them unnecessarily
   if (activeId && activeId !== currentPollId) {
