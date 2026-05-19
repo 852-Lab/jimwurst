@@ -99,7 +99,7 @@ export function renderCreateAnalysis() {
   }
 
   function renderQuick() {
-    const fileListHtml = isFetchingFiles 
+    const fileListHtml = isFetchingFiles
       ? `
         <div class="pt-6 text-center space-y-2">
           <div class="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
@@ -178,8 +178,8 @@ export function renderCreateAnalysis() {
           <p class="text-[10px] font-label-sm text-outline uppercase tracking-widest opacity-60">1. Select Data Sources to Ingest</p>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
             ${dataSources.map(ds => {
-              const isSelected = selectedDataSourceIds.includes(ds.id);
-              return `
+        const isSelected = selectedDataSourceIds.includes(ds.id);
+        return `
                 <button type="button" class="ds-select-btn flex items-center justify-between p-3 rounded-xl bg-surface-container-low hover:bg-surface-container-high transition-all group text-left border ${isSelected ? 'border-primary bg-primary/[0.03]' : 'border-transparent'} cursor-pointer" data-ds-id="${ds.id}">
                   <div class="flex items-center gap-3 overflow-hidden">
                     <div class="w-8 h-8 rounded-lg bg-surface-container-highest flex items-center justify-center text-outline group-hover:text-primary transition-colors">
@@ -193,7 +193,7 @@ export function renderCreateAnalysis() {
                   <span class="material-symbols-outlined text-primary text-sm ${isSelected ? 'opacity-100 scale-100' : 'opacity-0 scale-75'} transition-all" data-icon="check_circle">check_circle</span>
                 </button>
               `;
-            }).join('')}
+      }).join('')}
           </div>
         </div>
       `
@@ -213,16 +213,16 @@ export function renderCreateAnalysis() {
           <p class="text-[10px] font-label-sm text-outline uppercase tracking-widest opacity-60">2. Append Context from Knowledge Base</p>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
             ${knowledgePages.map(kp => {
-              const isSelected = selectedKnowledgePageIds.includes(kp.id);
-              const iconEmoji = kp.icon?.emoji || 'description';
-              const iconType = kp.icon?.type === 'emoji' ? 'emoji' : 'icon';
-              return `
+        const isSelected = selectedKnowledgePageIds.includes(kp.id);
+        const iconEmoji = kp.icon?.emoji || 'description';
+        const iconType = kp.icon?.type === 'emoji' ? 'emoji' : 'icon';
+        return `
                 <button type="button" class="kp-select-btn flex items-center justify-between p-3 rounded-xl bg-surface-container-low hover:bg-surface-container-high transition-all group text-left border ${isSelected ? 'border-secondary bg-secondary/[0.03]' : 'border-transparent'} cursor-pointer" data-kp-id="${kp.id}">
                   <div class="flex items-center gap-3 overflow-hidden">
                     <div class="w-8 h-8 rounded-lg bg-surface-container-highest flex items-center justify-center text-outline group-hover:text-secondary transition-colors">
-                      ${iconType === 'emoji' 
-                        ? `<span class="text-lg">${iconEmoji}</span>` 
-                        : `<span class="material-symbols-outlined text-lg" data-icon="${iconEmoji}">${iconEmoji}</span>`}
+                      ${iconType === 'emoji'
+            ? `<span class="text-lg">${iconEmoji}</span>`
+            : `<span class="material-symbols-outlined text-lg" data-icon="${iconEmoji}">${iconEmoji}</span>`}
                     </div>
                     <div class="overflow-hidden">
                       <p class="text-sm text-white font-medium truncate">${kp.title}</p>
@@ -232,7 +232,7 @@ export function renderCreateAnalysis() {
                   <span class="material-symbols-outlined text-secondary text-sm ${isSelected ? 'opacity-100 scale-100' : 'opacity-0 scale-75'} transition-all" data-icon="check_circle">check_circle</span>
                 </button>
               `;
-            }).join('')}
+      }).join('')}
           </div>
         </div>
       `
@@ -251,7 +251,7 @@ export function renderCreateAnalysis() {
         <div class="space-y-5">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="space-y-2 group">
-              <label for="analysis-title" class="text-[10px] font-label-sm text-outline uppercase tracking-widest opacity-60 group-focus-within:opacity-100 transition-opacity">Sequence Title</label>
+              <label for="analysis-title" class="text-[10px] font-label-sm text-outline uppercase tracking-widest opacity-60 group-focus-within:opacity-100 transition-opacity">Title</label>
               <input 
                 type="text" 
                 id="analysis-title" 
@@ -261,7 +261,7 @@ export function renderCreateAnalysis() {
             </div>
 
             <div class="space-y-2 group">
-              <label for="analysis-desc" class="text-[10px] font-label-sm text-outline uppercase tracking-widest opacity-60 group-focus-within:opacity-100 transition-opacity">Operational Context</label>
+              <label for="analysis-desc" class="text-[10px] font-label-sm text-outline uppercase tracking-widest opacity-60 group-focus-within:opacity-100 transition-opacity">Description</label>
               <textarea 
                 id="analysis-desc" 
                 placeholder="What mysteries shall we unravel today?" 
@@ -304,7 +304,7 @@ export function renderCreateAnalysis() {
     container.querySelector('#mode-quick')?.addEventListener('click', async () => {
       mode = 'quick';
       updateUI();
-      
+
       // Fetch existing files
       isFetchingFiles = true;
       updateUI();
@@ -332,7 +332,7 @@ export function renderCreateAnalysis() {
     const fileInput = container.querySelector('#file-input') as HTMLInputElement;
 
     dropZone?.addEventListener('click', () => fileInput.click());
-    
+
     fileInput?.addEventListener('change', async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) handleFileUpload(file);
@@ -366,7 +366,7 @@ export function renderCreateAnalysis() {
       btn.addEventListener('click', () => {
         const dsId = btn.getAttribute('data-ds-id');
         if (!dsId) return;
-        
+
         const checkIcon = btn.querySelector('.material-symbols-outlined[data-icon="check_circle"]');
         if (selectedDataSourceIds.includes(dsId)) {
           selectedDataSourceIds = selectedDataSourceIds.filter(id => id !== dsId);
@@ -388,7 +388,7 @@ export function renderCreateAnalysis() {
       btn.addEventListener('click', () => {
         const kpId = btn.getAttribute('data-kp-id');
         if (!kpId) return;
-        
+
         const checkIcon = btn.querySelector('.material-symbols-outlined[data-icon="check_circle"]');
         if (selectedKnowledgePageIds.includes(kpId)) {
           selectedKnowledgePageIds = selectedKnowledgePageIds.filter(id => id !== kpId);
@@ -410,7 +410,7 @@ export function renderCreateAnalysis() {
     container.querySelector('#confirm-create')?.addEventListener('click', async () => {
       const titleInput = container.querySelector('#analysis-title') as HTMLInputElement;
       const descInput = container.querySelector('#analysis-desc') as HTMLTextAreaElement;
-      
+
       const title = titleInput.value.trim();
       if (!title) {
         titleInput.classList.add('border-error');
@@ -422,8 +422,8 @@ export function renderCreateAnalysis() {
       btn.innerHTML = '<span>Initializing Deep Dive...</span>';
 
       try {
-        const newAnalysis = await api.createAnalysis({ 
-          title, 
+        const newAnalysis = await api.createAnalysis({
+          title,
           description: descInput.value.trim(),
           analysis_metadata: {
             type: 'deep_dive',
