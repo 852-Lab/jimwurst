@@ -54,3 +54,25 @@ def test_list_logs_for_analysis(client, session):
     data = response.json()
     assert len(data) == 1
     assert data[0]["content"] == "Thinking..."
+
+def test_delete_log(client, session):
+    log_id = uuid.uuid4()
+    
+    class MockLog:
+        def __init__(self):
+            self.id = log_id
+            self.analysis_id = uuid.uuid4()
+            self.log_type = "user_query"
+            self.timestamp = datetime.now(UTC)
+            
+    mock_log = MockLog()
+    
+    # Mock database queries
+    session.query().filter().first.return_value = mock_log
+    session.query().filter().order_by().all.return_value = []
+    
+    # Execute request
+    response = client.delete(f"/api/v1/analysis-logs/{log_id}")
+    
+    # Assertions
+    assert response.status_code == 204

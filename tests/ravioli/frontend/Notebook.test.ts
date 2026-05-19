@@ -7,6 +7,7 @@ vi.mock('../../../src/ravioli/frontend/src/services/api', () => ({
   api: {
     listLogs: vi.fn(),
     getJupyterStatus: vi.fn().mockResolvedValue({ status: 'connected' }),
+    deleteLog: vi.fn().mockResolvedValue(undefined),
   }
 }));
 
@@ -138,5 +139,32 @@ describe('Notebook Component - Stability & Granular Updates', () => {
 
     expect(staticView.classList.contains('hidden')).toBe(true);
     expect(editView.classList.contains('hidden')).toBe(false);
+  });
+
+  it('triggers delete confirmation and API call on delete button click', async () => {
+    const mockAnalysis = { id: 'a1', title: 'Deep Research', status: 'completed' };
+    store.setAnalyses([mockAnalysis] as any);
+    store.setActiveAnalysisId('a1');
+    store.setLogs([
+      { id: 'l1', content: 'Delete me cell', log_type: 'user_query', tool_name: 'markdown' }
+    ] as any);
+
+    const notebook = renderNotebook();
+    const deleteBtn = notebook.querySelector('.btn-delete-cell') as HTMLElement;
+    expect(deleteBtn).not.toBeNull();
+
+    // Mock window.confirm
+    const originalConfirm = window.confirm;
+    window.confirm = vi.fn().mockReturnValue(true);
+    
+    // Import api from the mock to spy on deleteLog
+    const { api } = await import('../../../src/ravioli/frontend/src/services/api');
+
+    deleteBtn.click();
+
+    expect(window.confirm).toHaveBeenCalledWith('Are you sure you want to delete this cell?');
+    expect(api.deleteLog).toHaveBeenCalledWith('l1');
+
+    window.confirm = originalConfirm;
   });
 });

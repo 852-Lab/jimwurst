@@ -433,9 +433,14 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
              <!-- Static View -->
              <div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg cell-static-view relative p-1.5" id="cell-static-${cell.index}">
                 <div class="pr-8">${renderMarkdown(cell.inputContent || '*Double click or edit to add Text/Markdown content...*')}</div>
-                <button class="absolute top-2 right-2 p-1.5 rounded-lg bg-surface-container-highest/80 text-outline hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity btn-edit-cell" data-cell-index="${cell.index}" title="Edit Markdown">
-                  <span class="material-symbols-outlined text-[14px]">edit</span>
-                </button>
+                <div class="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button class="p-1.5 rounded-lg bg-surface-container-highest/80 text-outline hover:text-indigo-400 btn-edit-cell" data-cell-index="${cell.index}" title="Edit Markdown">
+                    <span class="material-symbols-outlined text-[14px]">edit</span>
+                  </button>
+                  <button class="p-1.5 rounded-lg bg-surface-container-highest/80 text-outline hover:text-error btn-delete-cell" data-cell-index="${cell.index}" data-log-id="${cell.inputLogId}" title="Delete Cell">
+                    <span class="material-symbols-outlined text-[14px]">delete</span>
+                  </button>
+                </div>
              </div>
              
              <!-- Edit View -->
@@ -511,9 +516,14 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
               <!-- Static View -->
               <div class="flex-1 font-mono text-sm ${inputColor} bg-surface-container-lowest/80 border border-outline-variant/10 rounded-xl p-3.5 shadow-inner overflow-x-auto relative cell-static-view transition-all" id="cell-static-${cell.index}">
                  <div class="pr-8 whitespace-pre-wrap">${cell.inputContent}</div>
-                 <button class="absolute top-2 right-2 p-1.5 rounded-lg bg-surface-container-highest/80 text-outline hover:text-${focusColor} opacity-0 group-hover/input:opacity-100 transition-opacity btn-edit-cell" data-cell-index="${cell.index}" title="Edit Cell">
-                   <span class="material-symbols-outlined text-[14px]">edit</span>
-                 </button>
+                 <div class="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover/input:opacity-100 transition-opacity">
+                   <button class="p-1.5 rounded-lg bg-surface-container-highest/80 text-outline hover:text-${focusColor} btn-edit-cell" data-cell-index="${cell.index}" title="Edit Cell">
+                     <span class="material-symbols-outlined text-[14px]">edit</span>
+                   </button>
+                   <button class="p-1.5 rounded-lg bg-surface-container-highest/80 text-outline hover:text-error btn-delete-cell" data-cell-index="${cell.index}" data-log-id="${cell.inputLogId}" title="Delete Cell">
+                     <span class="material-symbols-outlined text-[14px]">delete</span>
+                   </button>
+                 </div>
               </div>
               
               <!-- Edit View -->
@@ -889,6 +899,23 @@ function bindInteractions(container: HTMLElement) {
       return;
     }
     
+    // Delete Cell
+    const deleteBtn = target.closest('.btn-delete-cell') as HTMLElement;
+    if (deleteBtn) {
+      const logId = deleteBtn.getAttribute('data-log-id');
+      if (logId && confirm('Are you sure you want to delete this cell?')) {
+        try {
+          await api.deleteLog(logId);
+          const newLogs = await api.listLogs(activeId);
+          lastLogsJson = '';
+          store.setLogs(newLogs);
+        } catch (e) {
+          console.error('Failed to delete cell', e);
+        }
+      }
+      return;
+    }
+
     // Cancel Edit Mode
     const cancelBtn = target.closest('.btn-cancel-edit') as HTMLElement;
     if (cancelBtn) {
