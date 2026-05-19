@@ -408,36 +408,62 @@ export function renderCreateAnalysis() {
 
     // Deep Dive Confirm
     container.querySelector('#confirm-create')?.addEventListener('click', async () => {
+      console.log('Initialize Deep Dive button clicked!');
       const titleInput = container.querySelector('#analysis-title') as HTMLInputElement;
       const descInput = container.querySelector('#analysis-desc') as HTMLTextAreaElement;
+
+      if (!titleInput) {
+        console.error('Title input element #analysis-title not found!');
+        alert('Critical UI Error: Title input element could not be found.');
+        return;
+      }
 
       const title = titleInput.value.trim();
       if (!title) {
         titleInput.classList.add('border-error');
+        alert('Please enter a Title for your analysis before initializing.');
         return;
       }
 
       const btn = container.querySelector('#confirm-create') as HTMLButtonElement;
-      btn.disabled = true;
-      btn.innerHTML = '<span>Initializing Deep Dive...</span>';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>Initializing Deep Dive...</span>';
+      }
 
       try {
-        const newAnalysis = await api.createAnalysis({
+        console.log('Dispatching api.createAnalysis request with:', {
           title,
-          description: descInput.value.trim(),
+          description: descInput?.value.trim() || '',
           analysis_metadata: {
             type: 'deep_dive',
             data_sources: selectedDataSourceIds,
             knowledge_pages: selectedKnowledgePageIds
           }
         });
+
+        const newAnalysis = await api.createAnalysis({
+          title,
+          description: descInput?.value.trim() || '',
+          analysis_metadata: {
+            type: 'deep_dive',
+            data_sources: selectedDataSourceIds,
+            knowledge_pages: selectedKnowledgePageIds
+          }
+        });
+        
+        console.log('Deep Dive Analysis created successfully:', newAnalysis);
+        
         const currentAnalyses = store.getAnalyses();
         store.setAnalyses([newAnalysis, ...currentAnalyses]);
         store.setActiveAnalysisId(newAnalysis.id);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Failed to create analysis', err);
-        btn.disabled = false;
-        btn.innerHTML = '<span>Initialize Deep Dive</span>';
+        alert(`Failed to initialize Deep Dive analysis: ${err.message || err}`);
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>Initialize Deep Dive</span>';
+        }
       }
     });
   }
