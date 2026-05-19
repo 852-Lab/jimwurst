@@ -1,6 +1,6 @@
 import jupyter_client
 import uuid
-from typing import Dict, Any, List
+from typing import Dict, List
 from queue import Empty
 import logging
 
