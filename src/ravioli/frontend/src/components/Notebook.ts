@@ -22,7 +22,7 @@ function parseAfterLogId(value: string | null): string | null {
   return /^[A-Za-z0-9_-]+$/.test(value) ? value : null;
 }
 
-function highlightSQL(code: string): string {
+export function highlightSQL(code: string): string {
   if (!code) return '';
   
   let html = code
@@ -30,28 +30,23 @@ function highlightSQL(code: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
     
-  const keywords = [
-    'SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'NOT', 'LIMIT', 'OFFSET',
-    'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'DROP', 'ALTER', 'TABLE',
-    'JOIN', 'INNER', 'LEFT', 'RIGHT', 'OUTER', 'ON', 'GROUP', 'BY',
-    'ORDER', 'HAVING', 'AS', 'IN', 'IS', 'NULL', 'LIKE', 'ILIKE',
-    'WITH', 'UNION', 'ALL', 'CASE', 'WHEN', 'THEN', 'ELSE', 'END',
-    'COUNT', 'SUM', 'AVG', 'MIN', 'MAX', 'CAST', 'COALESCE', 'DISTINCT'
-  ];
-  
-  html = html.replace(/(['"])(.*?)\1/g, '<span class="text-emerald-400">$1$2$1</span>');
-  html = html.replace(/(--.*)/g, '<span class="text-neutral-500 italic">$1</span>');
-  
-  keywords.forEach(kw => {
-    const regex = new RegExp(`\\b(${kw})\\b`, 'gi');
-    html = html.replace(regex, (match) => {
-      return `<span class="text-sky-400 font-bold">${match}</span>`;
-    });
+  const sqlRegex = /(--[^\n]*)|((['"])(?:[^\\]|\\.)*?\3)|(\b\d+\b)|(\b(?:SELECT|FROM|WHERE|AND|OR|NOT|LIMIT|OFFSET|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|TABLE|JOIN|INNER|LEFT|RIGHT|OUTER|ON|GROUP|BY|ORDER|HAVING|AS|IN|IS|NULL|LIKE|ILIKE|WITH|UNION|ALL|CASE|WHEN|THEN|ELSE|END|COUNT|SUM|AVG|MIN|MAX|CAST|COALESCE|DISTINCT)\b)/gi;
+
+  return html.replace(sqlRegex, (match, comment, stringVal, quote, numberVal, keyword) => {
+    if (comment) {
+      return `<span class="text-neutral-500 italic">${comment}</span>`;
+    }
+    if (stringVal) {
+      return `<span class="text-emerald-400">${stringVal}</span>`;
+    }
+    if (numberVal) {
+      return `<span class="text-amber-400">${numberVal}</span>`;
+    }
+    if (keyword) {
+      return `<span class="text-sky-400 font-bold">${keyword}</span>`;
+    }
+    return match;
   });
-  
-  html = html.replace(/\b(\d+)\b/g, '<span class="text-amber-400">$1</span>');
-  
-  return html;
 }
 
 function renderMarkdown(content: string) {
