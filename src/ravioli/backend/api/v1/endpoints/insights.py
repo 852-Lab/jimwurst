@@ -253,6 +253,7 @@ def get_insights_lineage(db: Session = Depends(get_db)):
                         type="documented_in"
                     ))
             except ValueError:
+                # source_id is not a UUID (e.g., non-insight source); skip creating an insight lineage edge.
                 pass
                 
     return schemas.LineageResponse(nodes=nodes, edges=edges)

@@ -1,5 +1,4 @@
 import uuid
-import pytest
 from unittest.mock import MagicMock
 from ravioli.backend.core.models import DataSource, Analysis, Insight, KnowledgePage
 
