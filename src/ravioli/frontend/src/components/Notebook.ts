@@ -173,6 +173,56 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
     }
   }
 
+  interface NotebookCell {
+    index: number;
+    inputContent: string;
+    inputLogId: string;
+    outputs: Array<{
+      id: string;
+      log_type: string;
+      content: string;
+      data?: any;
+    }>;
+  }
+
+  function groupLogsIntoCells(logsList: any[]): NotebookCell[] {
+    const cells: NotebookCell[] = [];
+    let cellCounter = 1;
+    let currentCell: NotebookCell | null = null;
+    
+    logsList.forEach(log => {
+      if (log.log_type === 'user_query') {
+        if (currentCell) {
+          cells.push(currentCell);
+        }
+        currentCell = {
+          index: cellCounter++,
+          inputContent: log.content,
+          inputLogId: log.id,
+          outputs: []
+        };
+      } else {
+        if (!currentCell) {
+          currentCell = {
+            index: cellCounter++,
+            inputContent: 'Initialize Sequence Brain',
+            inputLogId: log.id,
+            outputs: []
+          };
+        }
+        currentCell.outputs.push(log);
+      }
+    });
+    
+    if (currentCell) {
+      cells.push(currentCell);
+    }
+    
+    return cells;
+  }
+
+  const nextIndex = logs.filter(log => log.log_type === 'user_query').length + 1;
+
   // Active Analysis Shell
   if (isInitial || !container.querySelector('#notebook-shell')) {
     container.innerHTML = `
@@ -197,35 +247,39 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
         <!-- Dynamic Context Metadata Banner -->
         <div class="px-12 pt-8 z-10 shrink-0" id="metadata-banner-container"></div>
 
-        <div class="flex-1 overflow-y-auto px-12 pt-8 pb-32 space-y-12 custom-scrollbar" id="cell-container">
-          <!-- Logs will be updated here -->
+        <!-- Scrollable Cells Area -->
+        <div class="flex-1 overflow-y-auto px-12 pt-8 pb-32 space-y-8 custom-scrollbar" id="cell-container">
+          <!-- Logs grouped as Jupyter cells will be updated here -->
         </div>
 
-        <!-- Floating Interaction Cell -->
-        <div class="w-full px-12 pb-12 pt-6 bg-gradient-to-t from-background via-background/90 to-transparent relative z-20">
-          <div class="max-w-4xl mx-auto relative">
-            <div class="glass-panel p-2 rounded-[2rem] group focus-within:border-primary/30 transition-all duration-500 shadow-2xl shadow-primary/5">
-              <div class="flex items-center gap-4 px-4">
-                <button id="btn-magic" class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 hover:bg-primary/20 transition-colors relative group/magic" title="Magic Suggestions">
-                   <span class="material-symbols-outlined text-primary text-xl group-hover/magic:rotate-12 transition-transform" data-icon="auto_awesome">auto_awesome</span>
-                   <div id="magic-popover" class="absolute bottom-full left-0 mb-4 w-80 glass-panel p-4 rounded-2xl hidden animate-in fade-in slide-in-from-bottom-2 duration-300 z-50">
-                      <div class="flex items-center gap-2 mb-3 text-tertiary">
-                        <span class="material-symbols-outlined text-sm" data-icon="lightbulb">lightbulb</span>
-                        <span class="text-[10px] font-label-md uppercase tracking-[0.2em]">Neural Suggestions</span>
-                      </div>
-                      <div id="magic-suggestions-list" class="space-y-2"></div>
-                   </div>
-                </button>
-                <div class="flex-1 min-w-0 py-2">
-                  <textarea id="cell-input" class="w-full bg-transparent border-none text-on-surface focus:ring-0 resize-none py-2 text-lg font-body-lg max-h-48 custom-scrollbar" placeholder="Ask Kowalski a follow-up question..." rows="1"></textarea>
-                </div>
-                <div class="flex items-center pr-2">
-                  <button id="btn-execute" class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-110 transition-transform disabled:opacity-50 disabled:scale-100 group/btn shadow-lg shadow-primary/20">
-                    <span class="material-symbols-outlined text-xl group-hover/btn:translate-x-0.5 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+        <!-- Jupyter-Style Interactive Cell Input -->
+        <div class="w-full px-12 pb-12 pt-6 bg-gradient-to-t from-background via-background/90 to-transparent relative z-20 border-t border-outline-variant/5">
+          <div class="max-w-4xl mx-auto flex items-start gap-4">
+             <div class="font-mono text-xs font-bold text-primary/40 pt-5 select-none w-14 text-right shrink-0" id="next-cell-index-tag">
+                In [${nextIndex}]:
+             </div>
+             <div class="flex-1 glass-panel p-2 rounded-2xl group focus-within:border-primary/30 transition-all duration-500 shadow-2xl shadow-primary/5 bg-surface-container-low/60">
+                <div class="flex items-center gap-4 px-4">
+                  <button id="btn-magic" class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 hover:bg-primary/20 transition-colors relative group/magic" title="Magic Suggestions">
+                     <span class="material-symbols-outlined text-primary text-xl group-hover/magic:rotate-12 transition-transform" data-icon="auto_awesome">auto_awesome</span>
+                     <div id="magic-popover" class="absolute bottom-full left-0 mb-4 w-80 glass-panel p-4 rounded-2xl hidden animate-in fade-in slide-in-from-bottom-2 duration-300 z-50">
+                        <div class="flex items-center gap-2 mb-3 text-tertiary">
+                          <span class="material-symbols-outlined text-sm" data-icon="lightbulb">lightbulb</span>
+                          <span class="text-[10px] font-label-md uppercase tracking-[0.2em]">Neural Suggestions</span>
+                        </div>
+                        <div id="magic-suggestions-list" class="space-y-2"></div>
+                     </div>
                   </button>
+                  <div class="flex-1 min-w-0 py-2">
+                    <textarea id="cell-input" class="w-full bg-transparent border-none text-on-surface focus:ring-0 resize-none py-2 text-lg font-body-lg max-h-48 custom-scrollbar" placeholder="Enter follow-up query..." rows="1"></textarea>
+                  </div>
+                  <div class="flex items-center pr-2">
+                    <button id="btn-execute" class="w-10 h-10 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-110 transition-transform disabled:opacity-50 disabled:scale-100 group/btn shadow-lg shadow-primary/20">
+                      <span class="material-symbols-outlined text-xl group-hover/btn:translate-x-0.5 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </div>
+             </div>
           </div>
         </div>
       </div>
@@ -301,6 +355,12 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
     `;
   }
 
+  // Update Active Input Cell Tag
+  const nextCellIndexTag = container.querySelector('#next-cell-index-tag');
+  if (nextCellIndexTag) {
+    nextCellIndexTag.innerHTML = `In [${nextIndex}]:`;
+  }
+
   // Update Logs only if they changed and we are NOT streaming
   const cellContainer = container.querySelector('#cell-container') as HTMLElement;
   const isStreaming = cellContainer?.querySelector('#streaming-content') !== null;
@@ -309,61 +369,85 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
     lastLogsJson = logsJson;
     
     let html = '';
+    
+    // 1. Executive Summary as Cell 0 / Overview
     if (analysis.result) {
       html += `
-        <div class="glass-panel p-12 rounded-[2rem] space-y-8 border-primary/20 bg-primary/[0.02] relative overflow-hidden group">
-          <div class="flex items-center gap-4 text-primary relative z-10">
-            <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <span class="material-symbols-outlined text-2xl" data-icon="auto_awesome">auto_awesome</span>
-            </div>
-            <h3 class="text-xl font-headline-sm uppercase tracking-[0.2em]">Executive Insights</h3>
+        <div class="glass-panel p-6 rounded-3xl space-y-6 bg-surface-container-low/30 border-outline-variant/10 relative overflow-hidden flex items-start gap-4">
+          <div class="font-mono text-xs font-bold text-tertiary/40 pt-4 select-none w-14 text-right shrink-0">
+            Overview:
           </div>
-          <div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg relative z-10">
-            ${renderMarkdown(analysis.result)}
-          </div>
-          
-          ${analysis.analysis_metadata?.followup_questions?.length ? `
-            <div class="pt-12 border-t border-outline-variant/10 space-y-6 relative z-10">
-              <div class="flex items-center gap-3 text-tertiary">
-                <span class="material-symbols-outlined text-xl" data-icon="explore">explore</span>
-                <p class="text-[10px] font-label-md uppercase tracking-[0.3em]">Follow-up Sequences</p>
+          <div class="flex-1 space-y-6 min-w-0">
+            <div class="flex items-center gap-4 text-primary">
+              <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <span class="material-symbols-outlined text-2xl" data-icon="auto_awesome">auto_awesome</span>
               </div>
-              <div class="grid grid-cols-1 gap-3">
-                ${analysis.analysis_metadata.followup_questions.map((q: string) => `
-                  <button class="followup-question-btn flex items-center justify-between w-full px-6 py-4 text-left text-sm font-body-md text-on-surface-variant bg-surface-container-low hover:bg-surface-container-high border border-outline-variant/10 rounded-xl transition-all duration-300 group hover:border-primary/30 hover:translate-x-1" data-question="${q.replace(/"/g, '&quot;')}">
-                    <span class="group-hover:text-white transition-colors">${q}</span>
-                    <span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors text-lg opacity-0 group-hover:opacity-100" data-icon="arrow_forward_ios">arrow_forward_ios</span>
-                  </button>
-                `).join('')}
-              </div>
+              <h3 class="text-xl font-headline-sm uppercase tracking-[0.2em]">Executive Insights</h3>
             </div>
-          ` : ''}
+            <div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg">
+              ${renderMarkdown(analysis.result)}
+            </div>
+            
+            ${analysis.analysis_metadata?.followup_questions?.length ? `
+              <div class="pt-6 border-t border-outline-variant/10 space-y-4">
+                <div class="flex items-center gap-3 text-tertiary">
+                  <span class="material-symbols-outlined text-xl" data-icon="explore">explore</span>
+                  <p class="text-[10px] font-label-md uppercase tracking-[0.3em]">Follow-up Sequences</p>
+                </div>
+                <div class="grid grid-cols-1 gap-2">
+                  ${analysis.analysis_metadata.followup_questions.map((q: string) => `
+                    <button class="followup-question-btn flex items-center justify-between w-full px-5 py-3 text-left text-sm font-body-md text-on-surface-variant bg-surface-container-low hover:bg-surface-container-high border border-outline-variant/10 rounded-xl transition-all duration-300 group hover:border-primary/30 hover:translate-x-1" data-question="${q.replace(/"/g, '&quot;')}">
+                      <span class="group-hover:text-white transition-colors">${q}</span>
+                      <span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors text-lg opacity-0 group-hover:opacity-100" data-icon="arrow_forward_ios">arrow_forward_ios</span>
+                    </button>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+          </div>
         </div>
       `;
     }
 
-    html += logs.map(log => `
-      <div class="group mt-12">
-        <div class="flex items-center gap-4 mb-4">
-           <div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 overflow-hidden border border-outline-variant/20">
-              ${log.log_type === 'user_query' 
-                ? `<span class="material-symbols-outlined text-outline text-sm" data-icon="person">person</span>` 
-                : `<img src="/src/assets/kowalski.png" class="w-full h-full object-cover" alt="Kowalski">`}
-           </div>
-           <span class="text-[10px] uppercase tracking-[0.2em] text-outline font-label-sm">
-              ${log.log_type === 'user_query' ? 'Operator' : 'Kowalski'}
-           </span>
-        </div>
-        <div class="pl-12">
-          <div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg">
-            ${renderMarkdown(log.content)}
-          </div>
-          ${log.data && log.data.type === 'chart' ? `
-            <div class="mt-6 glass-panel p-6 rounded-2xl border-primary/20 h-80 relative">
-              <canvas id="chart-${log.id}"></canvas>
+    // 2. Parse and Group logs list into Jupyter Notebook cell cards
+    const notebookCells = groupLogsIntoCells(logs);
+    
+    html += notebookCells.map(cell => `
+      <div class="glass-panel p-6 rounded-3xl space-y-6 bg-surface-container-low/30 border-outline-variant/10 relative overflow-hidden group hover:border-primary/20 transition-all duration-300 animate-in fade-in duration-300">
+         <!-- Cell Header: Input (In [X]) -->
+         <div class="flex items-start gap-4">
+            <div class="font-mono text-xs font-bold text-primary/50 pt-2.5 select-none w-14 text-right shrink-0">
+               In [${cell.index}]:
             </div>
-          ` : ''}
-        </div>
+            <div class="flex-1 font-mono text-sm text-primary-fixed-dim bg-surface-container-lowest/80 border border-outline-variant/10 rounded-xl p-3.5 shadow-inner overflow-x-auto">
+               ${cell.inputContent}
+            </div>
+         </div>
+
+         <!-- Cell Divider Line -->
+         <div class="h-px bg-outline-variant/10 ml-18 mr-2"></div>
+
+         <!-- Cell Body: Output (Out [X]) -->
+         <div class="flex items-start gap-4">
+            <div class="font-mono text-xs font-bold text-secondary/50 pt-1 select-none w-14 text-right shrink-0">
+               Out [${cell.index}]:
+            </div>
+            <div class="flex-1 space-y-6 min-w-0">
+               ${cell.outputs.length === 0 
+                 ? `<span class="text-xs text-outline italic">No output generated</span>`
+                 : cell.outputs.map(out => `
+                     <div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg">
+                       ${renderMarkdown(out.content)}
+                     </div>
+                     ${out.data && out.data.type === 'chart' ? `
+                       <div class="mt-4 glass-panel p-6 rounded-2xl border-primary/20 h-80 relative bg-surface-container-lowest/30">
+                         <canvas id="chart-${out.id}"></canvas>
+                       </div>
+                     ` : ''}
+                   `).join('')
+               }
+            </div>
+         </div>
       </div>
     `).join('');
 
@@ -445,37 +529,43 @@ function bindInteractions(container: HTMLElement) {
     const cellContainer = container.querySelector('#cell-container');
     if (!cellContainer) return;
 
-    // Add user query bubble
-    const userBubble = document.createElement('div');
-    userBubble.className = 'group mt-12';
-    userBubble.innerHTML = `
-      <div class="flex items-center gap-4 mb-4">
-         <div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 border border-outline-variant/20">
-            <span class="material-symbols-outlined text-outline text-sm" data-icon="person">person</span>
-         </div>
-         <span class="text-[10px] uppercase tracking-[0.2em] text-outline font-label-sm">Operator</span>
-      </div>
-      <div class="pl-12"><div class="prose prose-invert text-on-surface-variant">${renderMarkdown(question)}</div></div>
-    `;
-    cellContainer.appendChild(userBubble);
+    const logs = store.getLogs();
+    const nextIndex = logs.filter(log => log.log_type === 'user_query').length + 1;
 
-    // Add Kowalski streaming bubble
-    const agentBubble = document.createElement('div');
-    agentBubble.className = 'group mt-12';
-    agentBubble.innerHTML = `
-      <div class="flex items-center gap-4 mb-4">
-         <div class="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center shrink-0 overflow-hidden border border-outline-variant/20">
-            <img src="/src/assets/kowalski.png" class="w-full h-full object-cover" alt="Kowalski">
-         </div>
-         <span class="text-[10px] uppercase tracking-[0.2em] text-outline font-label-sm">Kowalski</span>
-      </div>
-      <div class="pl-12"><div class="prose prose-invert text-on-surface-variant" id="streaming-content"><span class="inline-block w-1 h-4 bg-primary animate-pulse"></span></div></div>
+    // Create a live streaming Notebook Cell Card
+    const liveCellCard = document.createElement('div');
+    liveCellCard.className = 'glass-panel p-6 rounded-3xl space-y-6 bg-surface-container-low/30 border-outline-variant/10 relative overflow-hidden group border-primary/20 animate-in fade-in duration-300';
+    liveCellCard.innerHTML = `
+       <!-- Cell Header: Input (In [X]) -->
+       <div class="flex items-start gap-4">
+          <div class="font-mono text-xs font-bold text-primary/50 pt-2.5 select-none w-14 text-right shrink-0">
+             In [${nextIndex}]:
+          </div>
+          <div class="flex-1 font-mono text-sm text-primary-fixed-dim bg-surface-container-lowest/80 border border-outline-variant/10 rounded-xl p-3.5 shadow-inner overflow-x-auto">
+             ${question}
+          </div>
+       </div>
+
+       <!-- Cell Divider Line -->
+       <div class="h-px bg-outline-variant/10 ml-18 mr-2"></div>
+
+       <!-- Cell Body: Output (Out [X]) -->
+       <div class="flex items-start gap-4">
+          <div class="font-mono text-xs font-bold text-secondary/50 pt-1 select-none w-14 text-right shrink-0 flex items-center justify-end gap-1">
+             <span class="material-symbols-outlined text-[10px] animate-spin" data-icon="progress_activity">progress_activity</span>
+             <span>Out [*]:</span>
+          </div>
+          <div class="flex-1 prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg animate-pulse" id="streaming-content">
+             <span class="inline-block w-1 h-4 bg-primary animate-pulse"></span>
+          </div>
+       </div>
     `;
-    cellContainer.appendChild(agentBubble);
+    
+    cellContainer.appendChild(liveCellCard);
     cellContainer.scrollTop = cellContainer.scrollHeight;
 
     let fullText = "";
-    const streamingContent = agentBubble.querySelector('#streaming-content');
+    const streamingContent = liveCellCard.querySelector('#streaming-content');
 
     api.streamQuestion(activeId, question, 
       (token) => {
@@ -486,7 +576,17 @@ function bindInteractions(container: HTMLElement) {
         }
       },
       async () => {
-        if (streamingContent) streamingContent.innerHTML = renderMarkdown(fullText);
+        if (streamingContent) {
+          streamingContent.innerHTML = renderMarkdown(fullText);
+          streamingContent.classList.remove('animate-pulse');
+        }
+        
+        // Remove loading state from Out index gutter
+        const label = liveCellCard.querySelector('.text-secondary\\/50') as HTMLElement;
+        if (label) {
+          label.innerHTML = `Out [${nextIndex}]:`;
+        }
+
         btn.removeAttribute('disabled');
         const newLogs = await api.listLogs(activeId);
         lastLogsJson = JSON.stringify(newLogs); // Mark as updated to avoid immediate re-render from poll
@@ -513,4 +613,5 @@ function bindInteractions(container: HTMLElement) {
     });
   });
 }
+
 
