@@ -469,7 +469,7 @@ async function hydrateFeed(container: HTMLElement) {
         if (!insightId) return;
 
         // Switch to Focused Lineage Mode for this Insight!
-        focusedInsightId = insightId;
+        focusedInsightId = insightId.startsWith('insight-') ? insightId : `insight-${insightId}`;
         maxUpstreamCount = 5;
         maxDownstreamCount = 5;
 
