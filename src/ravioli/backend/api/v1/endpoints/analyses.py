@@ -280,6 +280,51 @@ async def process_analysis_question(analysis_id: str, question: str):
             role = "Operator" if log.log_type == "user_query" else "Kowalski"
             context_str += f"{role}: {log.content}\n"
 
+        # Fetch detailed info of selected data sources and knowledge pages to augment context
+        ds_context_parts = []
+        kb_context_parts = []
+        if analysis.analysis_metadata:
+            selected_ds_ids = analysis.analysis_metadata.get("data_sources", [])
+            selected_kb_ids = analysis.analysis_metadata.get("knowledge_pages", [])
+            
+            # Fetch data source descriptions
+            if selected_ds_ids:
+                for ds_id_str in selected_ds_ids:
+                    try:
+                        ds_uuid = UUID(str(ds_id_str))
+                        ds_obj = db.query(models.DataSource).filter(models.DataSource.id == ds_uuid).first()
+                        if ds_obj:
+                            desc = ds_obj.description or "No description"
+                            ds_context_parts.append(f"- Data Source '{ds_obj.original_filename}' (Table: {ds_obj.table_name}): {desc}")
+                    except Exception as ex:
+                        logger.error(f"Error fetching data source for context: {ex}")
+                        
+            # Fetch knowledge page contents
+            if selected_kb_ids:
+                for kb_id_str in selected_kb_ids:
+                    try:
+                        kb_uuid = UUID(str(kb_id_str))
+                        kb_obj = db.query(models.KnowledgePage).filter(models.KnowledgePage.id == kb_uuid).first()
+                        if kb_obj:
+                            # Extract page text from content blocks
+                            blocks = kb_obj.content or []
+                            text_content = ""
+                            for block in blocks:
+                                if block.get("type") == "paragraph":
+                                    paragraph = block.get("paragraph", {})
+                                    rich_text = paragraph.get("rich_text", [])
+                                    text_content += " ".join([t.get("plain_text", "") for t in rich_text]) + "\n"
+                            
+                            kb_context_parts.append(f"- Knowledge Page '{kb_obj.title}':\n{text_content.strip()}")
+                    except Exception as ex:
+                        logger.error(f"Error fetching knowledge page for context: {ex}")
+
+        # Prepend attached sources and knowledges to context
+        if ds_context_parts:
+            context_str = "ATTACHED DATA SOURCES:\n" + "\n".join(ds_context_parts) + "\n\n" + context_str
+        if kb_context_parts:
+            context_str = "ATTACHED KNOWLEDGE BASE CONTEXT:\n" + "\n".join(kb_context_parts) + "\n\n" + context_str
+
         # Generate answer
         agent = KowalskiAgent(db)
         answer = await skill_comm.generate_answer(filename, summary, context_str, question, agent.generate)
@@ -346,15 +391,67 @@ async def stream_question(
         # Determine table context if available
         table_name = None
         schema_name = "main"
-        file_id = analysis.analysis_metadata.get("file_id")
+        file_id = None
+        if analysis.analysis_metadata:
+            file_id = analysis.analysis_metadata.get("file_id")
+            if not file_id:
+                ds_list = analysis.analysis_metadata.get("data_sources", [])
+                if ds_list and len(ds_list) > 0:
+                    file_id = ds_list[0]
+
         if file_id:
             try:
-                source = db.query(models.DataSource).filter(models.DataSource.id == UUID(file_id)).first()
+                source = db.query(models.DataSource).filter(models.DataSource.id == UUID(str(file_id))).first()
                 if source:
                     table_name = source.table_name
                     schema_name = source.schema_name
             except Exception as e:
                 logger.error(f"Error resolving table context for analysis {analysis_id}: {e}")
+
+        # Fetch detailed info of selected data sources and knowledge pages to augment context
+        ds_context_parts = []
+        kb_context_parts = []
+        if analysis.analysis_metadata:
+            selected_ds_ids = analysis.analysis_metadata.get("data_sources", [])
+            selected_kb_ids = analysis.analysis_metadata.get("knowledge_pages", [])
+            
+            # Fetch data source descriptions
+            if selected_ds_ids:
+                for ds_id_str in selected_ds_ids:
+                    try:
+                        ds_uuid = UUID(str(ds_id_str))
+                        ds_obj = db.query(models.DataSource).filter(models.DataSource.id == ds_uuid).first()
+                        if ds_obj:
+                            desc = ds_obj.description or "No description"
+                            ds_context_parts.append(f"- Data Source '{ds_obj.original_filename}' (Table: {ds_obj.table_name}): {desc}")
+                    except Exception as ex:
+                        logger.error(f"Error fetching data source for context: {ex}")
+                        
+            # Fetch knowledge page contents
+            if selected_kb_ids:
+                for kb_id_str in selected_kb_ids:
+                    try:
+                        kb_uuid = UUID(str(kb_id_str))
+                        kb_obj = db.query(models.KnowledgePage).filter(models.KnowledgePage.id == kb_uuid).first()
+                        if kb_obj:
+                            # Extract page text from content blocks
+                            blocks = kb_obj.content or []
+                            text_content = ""
+                            for block in blocks:
+                                if block.get("type") == "paragraph":
+                                    paragraph = block.get("paragraph", {})
+                                    rich_text = paragraph.get("rich_text", [])
+                                    text_content += " ".join([t.get("plain_text", "") for t in rich_text]) + "\n"
+                            
+                            kb_context_parts.append(f"- Knowledge Page '{kb_obj.title}':\n{text_content.strip()}")
+                    except Exception as ex:
+                        logger.error(f"Error fetching knowledge page for context: {ex}")
+
+        # Prepend attached sources and knowledges to context
+        if ds_context_parts:
+            context_str = "ATTACHED DATA SOURCES:\n" + "\n".join(ds_context_parts) + "\n\n" + context_str
+        if kb_context_parts:
+            context_str = "ATTACHED KNOWLEDGE BASE CONTEXT:\n" + "\n".join(kb_context_parts) + "\n\n" + context_str
 
         try:
             # 1. Engage the SQL Agent with progress streaming

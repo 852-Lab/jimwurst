@@ -7,6 +7,8 @@ export function renderCreateAnalysis() {
   let mode: CreationMode = 'select';
   let existingFiles: any[] = [];
   let isFetchingFiles = false;
+  let selectedDataSourceIds: string[] = [];
+  let selectedKnowledgePageIds: string[] = [];
   const container = document.createElement('main');
   container.className = 'flex-1 ml-64 relative overflow-hidden bg-background h-screen flex flex-col items-center justify-center';
 
@@ -167,36 +169,121 @@ export function renderCreateAnalysis() {
   }
 
   function renderDeep() {
-    return `
-      <div class="glass-panel p-10 rounded-3xl space-y-8 max-w-xl mx-auto w-full">
-        <div class="space-y-8">
-          <div class="space-y-2 group">
-            <label for="analysis-title" class="text-[10px] font-label-sm text-outline uppercase tracking-widest opacity-60 group-focus-within:opacity-100 transition-opacity">Sequence Title</label>
-            <input 
-              type="text" 
-              id="analysis-title" 
-              placeholder="e.g., Market Volatility Analysis" 
-              class="w-full bg-transparent border-b border-outline-variant/30 py-3 text-white focus:outline-none focus:border-primary-fixed-dim transition-colors text-xl font-headline-sm"
-            />
-          </div>
+    const dataSources = store.getDataSources().filter(ds => ds.status === 'completed');
+    const knowledgePages = store.getKnowledgePages();
 
-          <div class="space-y-2 group">
-            <label for="analysis-desc" class="text-[10px] font-label-sm text-outline uppercase tracking-widest opacity-60 group-focus-within:opacity-100 transition-opacity">Operational Context</label>
-            <textarea 
-              id="analysis-desc" 
-              placeholder="What mysteries shall we unravel today?" 
-              rows="3"
-              class="w-full bg-transparent border-b border-outline-variant/30 py-3 text-on-surface-variant focus:outline-none focus:border-primary-fixed-dim transition-colors resize-none font-body-lg"
-            ></textarea>
+    const dataSourcesHtml = dataSources.length > 0
+      ? `
+        <div class="space-y-3">
+          <p class="text-[10px] font-label-sm text-outline uppercase tracking-widest opacity-60">1. Select Data Sources to Ingest</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+            ${dataSources.map(ds => {
+              const isSelected = selectedDataSourceIds.includes(ds.id);
+              return `
+                <button type="button" class="ds-select-btn flex items-center justify-between p-3 rounded-xl bg-surface-container-low hover:bg-surface-container-high transition-all group text-left border ${isSelected ? 'border-primary bg-primary/[0.03]' : 'border-transparent'} cursor-pointer" data-ds-id="${ds.id}">
+                  <div class="flex items-center gap-3 overflow-hidden">
+                    <div class="w-8 h-8 rounded-lg bg-surface-container-highest flex items-center justify-center text-outline group-hover:text-primary transition-colors">
+                      <span class="material-symbols-outlined text-lg" data-icon="database">database</span>
+                    </div>
+                    <div class="overflow-hidden">
+                      <p class="text-sm text-white font-medium truncate">${ds.original_filename}</p>
+                      <p class="text-[10px] text-outline-variant uppercase tracking-tighter">${(ds.size_bytes / 1024).toFixed(1)} KB • ${ds.row_count || 0} rows</p>
+                    </div>
+                  </div>
+                  <span class="material-symbols-outlined text-primary text-sm ${isSelected ? 'opacity-100 scale-100' : 'opacity-0 scale-75'} transition-all" data-icon="check_circle">check_circle</span>
+                </button>
+              `;
+            }).join('')}
           </div>
         </div>
+      `
+      : `
+        <div class="space-y-3">
+          <p class="text-[10px] font-label-sm text-outline uppercase tracking-widest opacity-60">1. Select Data Sources to Ingest</p>
+          <div class="p-4 rounded-xl bg-surface-container-low border border-dashed border-outline-variant/10 text-center">
+            <span class="material-symbols-outlined text-outline opacity-40 text-2xl" data-icon="database">database</span>
+            <p class="text-xs text-outline opacity-50 mt-1">No completed data sources found.</p>
+          </div>
+        </div>
+      `;
 
-        <div class="flex items-center justify-end gap-8 pt-4">
-          <button id="back-to-select" class="text-sm font-label-sm text-outline hover:text-white uppercase tracking-widest transition-colors">
+    const knowledgePagesHtml = knowledgePages.length > 0
+      ? `
+        <div class="space-y-3">
+          <p class="text-[10px] font-label-sm text-outline uppercase tracking-widest opacity-60">2. Append Context from Knowledge Base</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+            ${knowledgePages.map(kp => {
+              const isSelected = selectedKnowledgePageIds.includes(kp.id);
+              const iconEmoji = kp.icon?.emoji || 'description';
+              const iconType = kp.icon?.type === 'emoji' ? 'emoji' : 'icon';
+              return `
+                <button type="button" class="kp-select-btn flex items-center justify-between p-3 rounded-xl bg-surface-container-low hover:bg-surface-container-high transition-all group text-left border ${isSelected ? 'border-secondary bg-secondary/[0.03]' : 'border-transparent'} cursor-pointer" data-kp-id="${kp.id}">
+                  <div class="flex items-center gap-3 overflow-hidden">
+                    <div class="w-8 h-8 rounded-lg bg-surface-container-highest flex items-center justify-center text-outline group-hover:text-secondary transition-colors">
+                      ${iconType === 'emoji' 
+                        ? `<span class="text-lg">${iconEmoji}</span>` 
+                        : `<span class="material-symbols-outlined text-lg" data-icon="${iconEmoji}">${iconEmoji}</span>`}
+                    </div>
+                    <div class="overflow-hidden">
+                      <p class="text-sm text-white font-medium truncate">${kp.title}</p>
+                      <p class="text-[10px] text-outline-variant uppercase tracking-tighter">${kp.ownership_type || 'individual'} ownership</p>
+                    </div>
+                  </div>
+                  <span class="material-symbols-outlined text-secondary text-sm ${isSelected ? 'opacity-100 scale-100' : 'opacity-0 scale-75'} transition-all" data-icon="check_circle">check_circle</span>
+                </button>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `
+      : `
+        <div class="space-y-3">
+          <p class="text-[10px] font-label-sm text-outline uppercase tracking-widest opacity-60">2. Append Context from Knowledge Base</p>
+          <div class="p-4 rounded-xl bg-surface-container-low border border-dashed border-outline-variant/10 text-center">
+            <span class="material-symbols-outlined text-outline opacity-40 text-2xl" data-icon="local_library">local_library</span>
+            <p class="text-xs text-outline opacity-50 mt-1">No knowledge articles found.</p>
+          </div>
+        </div>
+      `;
+
+    return `
+      <div class="glass-panel p-8 rounded-3xl space-y-6 max-w-2xl mx-auto w-full">
+        <div class="space-y-5">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="space-y-2 group">
+              <label for="analysis-title" class="text-[10px] font-label-sm text-outline uppercase tracking-widest opacity-60 group-focus-within:opacity-100 transition-opacity">Sequence Title</label>
+              <input 
+                type="text" 
+                id="analysis-title" 
+                placeholder="e.g., Q3 Financial Review" 
+                class="w-full bg-transparent border-b border-outline-variant/30 py-2 text-white focus:outline-none focus:border-primary transition-colors text-lg font-headline-sm"
+              />
+            </div>
+
+            <div class="space-y-2 group">
+              <label for="analysis-desc" class="text-[10px] font-label-sm text-outline uppercase tracking-widest opacity-60 group-focus-within:opacity-100 transition-opacity">Operational Context</label>
+              <textarea 
+                id="analysis-desc" 
+                placeholder="What mysteries shall we unravel today?" 
+                rows="2"
+                class="w-full bg-transparent border-b border-outline-variant/30 py-2 text-on-surface-variant focus:outline-none focus:border-primary transition-colors resize-none font-body-lg"
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- Select Data Sources -->
+          ${dataSourcesHtml}
+
+          <!-- Append Knowledge Page -->
+          ${knowledgePagesHtml}
+        </div>
+
+        <div class="flex items-center justify-between pt-4 border-t border-outline-variant/10">
+          <button id="back-to-select" class="text-sm font-label-sm text-outline hover:text-white uppercase tracking-widest transition-colors cursor-pointer">
             Back
           </button>
-          <button id="confirm-create" class="btn-primary flex items-center gap-3 group">
-            <span>Initialize</span>
+          <button id="confirm-create" class="btn-primary flex items-center gap-3 group cursor-pointer">
+            <span>Initialize Deep Dive</span>
             <span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform" data-icon="rocket_launch">rocket_launch</span>
           </button>
         </div>
@@ -234,6 +321,9 @@ export function renderCreateAnalysis() {
 
     container.querySelector('#mode-deep')?.addEventListener('click', () => {
       mode = 'deep';
+      // Reset selected states when re-entering Deep Dive setup
+      selectedDataSourceIds = [];
+      selectedKnowledgePageIds = [];
       updateUI();
     });
 
@@ -271,6 +361,51 @@ export function renderCreateAnalysis() {
       });
     });
 
+    // Direct DOM bindings for Deep Dive Selectors
+    container.querySelectorAll('.ds-select-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const dsId = btn.getAttribute('data-ds-id');
+        if (!dsId) return;
+        
+        const checkIcon = btn.querySelector('.material-symbols-outlined[data-icon="check_circle"]');
+        if (selectedDataSourceIds.includes(dsId)) {
+          selectedDataSourceIds = selectedDataSourceIds.filter(id => id !== dsId);
+          btn.classList.remove('border-primary', 'bg-primary/[0.03]');
+          btn.classList.add('border-transparent');
+          checkIcon?.classList.remove('opacity-100', 'scale-100');
+          checkIcon?.classList.add('opacity-0', 'scale-75');
+        } else {
+          selectedDataSourceIds.push(dsId);
+          btn.classList.remove('border-transparent');
+          btn.classList.add('border-primary', 'bg-primary/[0.03]');
+          checkIcon?.classList.remove('opacity-0', 'scale-75');
+          checkIcon?.classList.add('opacity-100', 'scale-100');
+        }
+      });
+    });
+
+    container.querySelectorAll('.kp-select-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const kpId = btn.getAttribute('data-kp-id');
+        if (!kpId) return;
+        
+        const checkIcon = btn.querySelector('.material-symbols-outlined[data-icon="check_circle"]');
+        if (selectedKnowledgePageIds.includes(kpId)) {
+          selectedKnowledgePageIds = selectedKnowledgePageIds.filter(id => id !== kpId);
+          btn.classList.remove('border-secondary', 'bg-secondary/[0.03]');
+          btn.classList.add('border-transparent');
+          checkIcon?.classList.remove('opacity-100', 'scale-100');
+          checkIcon?.classList.add('opacity-0', 'scale-75');
+        } else {
+          selectedKnowledgePageIds.push(kpId);
+          btn.classList.remove('border-transparent');
+          btn.classList.add('border-secondary', 'bg-secondary/[0.03]');
+          checkIcon?.classList.remove('opacity-0', 'scale-75');
+          checkIcon?.classList.add('opacity-100', 'scale-100');
+        }
+      });
+    });
+
     // Deep Dive Confirm
     container.querySelector('#confirm-create')?.addEventListener('click', async () => {
       const titleInput = container.querySelector('#analysis-title') as HTMLInputElement;
@@ -284,12 +419,17 @@ export function renderCreateAnalysis() {
 
       const btn = container.querySelector('#confirm-create') as HTMLButtonElement;
       btn.disabled = true;
-      btn.innerHTML = '<span>Initializing...</span>';
+      btn.innerHTML = '<span>Initializing Deep Dive...</span>';
 
       try {
         const newAnalysis = await api.createAnalysis({ 
           title, 
-          description: descInput.value.trim() 
+          description: descInput.value.trim(),
+          analysis_metadata: {
+            type: 'deep_dive',
+            data_sources: selectedDataSourceIds,
+            knowledge_pages: selectedKnowledgePageIds
+          }
         });
         const currentAnalyses = store.getAnalyses();
         store.setAnalyses([newAnalysis, ...currentAnalyses]);
@@ -297,7 +437,7 @@ export function renderCreateAnalysis() {
       } catch (err) {
         console.error('Failed to create analysis', err);
         btn.disabled = false;
-        btn.innerHTML = '<span>Initialize</span>';
+        btn.innerHTML = '<span>Initialize Deep Dive</span>';
       }
     });
   }

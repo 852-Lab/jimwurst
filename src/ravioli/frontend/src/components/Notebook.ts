@@ -2,6 +2,7 @@ import { store } from '../store';
 import { api } from '../services/api';
 import MarkdownIt from 'markdown-it';
 import Chart from 'chart.js/auto';
+import { format } from 'date-fns';
 
 const md = new MarkdownIt({
   html: false,
@@ -141,6 +142,37 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
     return;
   }
 
+  // Resolve Attached context resources, owner, and timestamp
+  const dataSources = store.getDataSources();
+  const knowledgePages = store.getKnowledgePages();
+  
+  let selectedDataSourceIds = analysis.analysis_metadata?.data_sources || [];
+  if (selectedDataSourceIds.length === 0 && analysis.analysis_metadata?.file_id) {
+    selectedDataSourceIds = [analysis.analysis_metadata.file_id];
+  }
+  
+  const attachedSources = selectedDataSourceIds
+    .map((id: string) => dataSources.find(ds => ds.id === id))
+    .filter(Boolean);
+    
+  const attachedKnowledges = (analysis.analysis_metadata?.knowledge_pages || [])
+    .map((id: string) => knowledgePages.find(kp => kp.id === id))
+    .filter(Boolean);
+
+  const ownerName = analysis.owner_user?.name || 'Admin';
+
+  let formattedDate = 'Just now';
+  if (analysis.updated_at) {
+    try {
+      const parsedDate = new Date(analysis.updated_at);
+      if (!isNaN(parsedDate.getTime())) {
+        formattedDate = format(parsedDate, 'MMM d, yyyy HH:mm');
+      }
+    } catch (e) {
+      console.warn("Failed to parse date", e);
+    }
+  }
+
   // Active Analysis Shell
   if (isInitial || !container.querySelector('#notebook-shell')) {
     container.innerHTML = `
@@ -161,6 +193,9 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
             </button>
           </div>
         </header>
+
+        <!-- Dynamic Context Metadata Banner -->
+        <div class="px-12 pt-8 z-10 shrink-0" id="metadata-banner-container"></div>
 
         <div class="flex-1 overflow-y-auto px-12 pt-8 pb-32 space-y-12 custom-scrollbar" id="cell-container">
           <!-- Logs will be updated here -->
@@ -197,6 +232,61 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
     `;
     
     bindInteractions(container);
+  }
+
+  // Update Dynamic Context Metadata Banner
+  const banner = container.querySelector('#metadata-banner-container');
+  if (banner) {
+    banner.innerHTML = `
+      <div class="glass-panel p-5 rounded-2xl border-outline-variant/10 bg-surface-container-low/40 relative overflow-hidden flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
+        <!-- Left side: Attached Context Resources -->
+        <div class="space-y-2 flex-1 min-w-0">
+          <div class="flex items-center gap-2 text-outline-variant text-[10px] font-label-md uppercase tracking-[0.2em] opacity-80">
+            <span class="material-symbols-outlined text-sm" data-icon="inventory_2">inventory_2</span>
+            <span>Active Context Resources</span>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            ${attachedSources.length === 0 && attachedKnowledges.length === 0
+              ? `<span class="text-xs text-outline italic">No context resources attached</span>`
+              : ''
+            }
+            ${attachedSources.map(ds => `
+              <div class="flex items-center gap-1.5 px-3 py-1 bg-primary/10 border border-primary/20 text-primary text-xs rounded-full min-w-0 hover:bg-primary/20 transition-colors" title="DuckDB Data Source Table: ${ds.table_name}">
+                <span class="material-symbols-outlined text-[14px]" data-icon="database">database</span>
+                <span class="truncate max-w-[150px] font-medium">${ds.original_filename}</span>
+              </div>
+            `).join('')}
+            ${attachedKnowledges.map(kp => `
+              <div class="flex items-center gap-1.5 px-3 py-1 bg-emerald/10 border border-emerald/20 text-emerald-400 text-xs rounded-full min-w-0 hover:bg-emerald/20 transition-colors">
+                <span class="material-symbols-outlined text-[14px]" data-icon="local_library">local_library</span>
+                <span class="truncate max-w-[150px] font-medium">${kp.title}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Right side: Owner & Update Timestamp -->
+        <div class="flex gap-6 md:border-l border-outline-variant/10 md:pl-6 shrink-0 w-full md:w-auto justify-between md:justify-end">
+          <!-- Owner -->
+          <div class="flex flex-col gap-0.5 min-w-[100px]">
+            <span class="text-[9px] uppercase tracking-widest text-outline opacity-60 font-bold">Owner</span>
+            <div class="flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-sm text-secondary" data-icon="shield">shield</span>
+              <span class="text-xs text-white font-medium truncate max-w-[120px]">${ownerName}</span>
+            </div>
+          </div>
+          
+          <!-- Updated Time -->
+          <div class="flex flex-col gap-0.5 min-w-[120px]">
+            <span class="text-[9px] uppercase tracking-widest text-outline opacity-60 font-bold">Latest Edition</span>
+            <div class="flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-sm text-outline" data-icon="history">history</span>
+              <span class="text-xs text-white font-medium">${formattedDate}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   // Update Status
