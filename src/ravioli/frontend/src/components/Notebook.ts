@@ -82,20 +82,40 @@ function toggleComment(textarea: HTMLTextAreaElement) {
 
 function updateLineNumbers(textarea: HTMLTextAreaElement) {
   const idStr = textarea.id.replace('cell-input-', '');
-  const gutter = textarea.closest('.glass-panel')?.querySelector(`#cell-gutter-${idStr}`) as HTMLElement;
-  if (gutter) {
-    const lines = textarea.value.split('\n');
-    const lineNumbers = lines.map((_, i) => i + 1).join('\n');
-    gutter.textContent = lineNumbers;
-    gutter.scrollTop = textarea.scrollTop;
+  const parent = textarea.closest('.glass-panel');
+  if (parent) {
+    const gutter = parent.querySelector(`#cell-gutter-${idStr}`) as HTMLElement;
+    if (gutter) {
+      const lines = textarea.value.split('\n');
+      const lineNumbers = lines.map((_, i) => i + 1).join('\n');
+      gutter.textContent = lineNumbers;
+      gutter.scrollTop = textarea.scrollTop;
+    }
+
+    const highlight = parent.querySelector(`#cell-highlight-${idStr}`) as HTMLElement;
+    if (highlight) {
+      const isSql = highlight.getAttribute('data-tool') === 'sql';
+      highlight.innerHTML = isSql ? highlightSQL(textarea.value) : textarea.value;
+      highlight.scrollTop = textarea.scrollTop;
+      highlight.scrollLeft = textarea.scrollLeft;
+    }
   }
 }
 
 function updateLineGutterScroll(textarea: HTMLTextAreaElement) {
   const idStr = textarea.id.replace('cell-input-', '');
-  const gutter = textarea.closest('.glass-panel')?.querySelector(`#cell-gutter-${idStr}`) as HTMLElement;
-  if (gutter) {
-    gutter.scrollTop = textarea.scrollTop;
+  const parent = textarea.closest('.glass-panel');
+  if (parent) {
+    const gutter = parent.querySelector(`#cell-gutter-${idStr}`) as HTMLElement;
+    if (gutter) {
+      gutter.scrollTop = textarea.scrollTop;
+    }
+
+    const highlight = parent.querySelector(`#cell-highlight-${idStr}`) as HTMLElement;
+    if (highlight) {
+      highlight.scrollTop = textarea.scrollTop;
+      highlight.scrollLeft = textarea.scrollLeft;
+    }
   }
 }
 
@@ -716,8 +736,12 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
                           return lines.map((_, i) => i + 1).join('\n');
                         })()}</div>
                         ` : ''}
-                        <div class="flex-1 min-w-0 py-0.5">
-                          <textarea id="cell-input-${cell.index}" class="w-full bg-transparent border-none text-primary-fixed-dim focus:ring-0 resize-none py-0 text-sm font-mono leading-relaxed max-h-48 custom-scrollbar" rows="2">${cell.inputContent}</textarea>
+                        <div class="flex-1 min-w-0 py-0.5 relative">
+                          ${cell.toolName === 'sql' ? `
+                          <!-- Highlight Backdrop -->
+                          <div id="cell-highlight-${cell.index}" data-tool="${cell.toolName}" class="absolute inset-0 w-full bg-transparent text-primary-fixed-dim py-0.5 px-0 text-sm font-mono leading-relaxed whitespace-pre-wrap overflow-hidden pointer-events-none border border-transparent custom-scrollbar select-none">${highlightSQL(cell.inputContent)}</div>
+                          ` : ''}
+                          <textarea id="cell-input-${cell.index}" class="w-full bg-transparent border border-transparent ${cell.toolName === 'sql' ? 'text-transparent caret-white' : 'text-primary-fixed-dim'} focus:ring-0 resize-none py-0.5 px-0 text-sm font-mono leading-relaxed max-h-48 custom-scrollbar relative z-10" rows="2">${cell.inputContent}</textarea>
                         </div>
                         <div class="flex items-start gap-1.5 shrink-0 pt-0.5">
                           <button class="w-7 h-7 rounded-full bg-surface-container-highest text-outline flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors btn-cancel-edit" data-cell-index="${cell.index}" title="Cancel">
