@@ -40,6 +40,10 @@ class Analysis(Base):
     owner_type: Mapped[Optional[str]] = mapped_column(String(50)) # 'user' or 'group'
 
     # Relationships
+    owner_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[owner_id], primaryjoin="and_(foreign(Analysis.owner_id)==User.id, Analysis.owner_type=='user')", viewonly=True)
+    creator_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by], viewonly=True)
+    owner_group: Mapped[Optional["UserGroup"]] = relationship("UserGroup", foreign_keys=[owner], viewonly=True)
+
     logs: Mapped[List["AnalysisLog"]] = relationship("AnalysisLog", back_populates="analysis", cascade="all, delete-orphan")
     insights: Mapped[List["Insight"]] = relationship("Insight", back_populates="analysis", cascade="all, delete-orphan")
 

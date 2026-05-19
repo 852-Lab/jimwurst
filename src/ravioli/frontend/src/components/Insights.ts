@@ -1314,6 +1314,27 @@ function openNodeDetailsDrawer(container: HTMLElement, node: LineageNode) {
     });
   }
 
+  // Append universal ownership details to the details grid
+  const ownerName = meta.owner_name || 'System / None';
+  const creatorName = meta.creator_name || 'System / AI';
+  
+  grid.innerHTML += `
+    <div class="flex flex-col gap-0.5">
+      <span class="text-[9px] uppercase tracking-wider text-outline opacity-40 font-bold">Owner</span>
+      <div class="flex items-center gap-1.5 mt-0.5">
+        <span class="material-symbols-outlined text-[12px] text-primary" data-icon="shield_person">shield_person</span>
+        <span class="text-xs font-semibold text-white truncate max-w-[120px]">${ownerName}</span>
+      </div>
+    </div>
+    <div class="flex flex-col gap-0.5">
+      <span class="text-[9px] uppercase tracking-wider text-outline opacity-40 font-bold">Creator</span>
+      <div class="flex items-center gap-1.5 mt-0.5">
+        <span class="material-symbols-outlined text-[12px] text-secondary" data-icon="person">person</span>
+        <span class="text-xs font-semibold text-white truncate max-w-[120px]">${creatorName}</span>
+      </div>
+    </div>
+  `;
+
   if (node.id !== focusedInsightId) {
     const focusBtn = document.createElement('button');
     focusBtn.className = 'px-5 py-2.5 rounded-full bg-primary/10 border border-primary/20 hover:bg-primary/20 text-[10px] font-bold uppercase tracking-[0.15em] text-primary transition-all duration-300 flex items-center gap-1.5';

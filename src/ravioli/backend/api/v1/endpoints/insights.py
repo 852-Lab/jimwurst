@@ -149,7 +149,11 @@ def get_insights_lineage(db: Session = Depends(get_db)):
     edges = []
     
     # 1. Fetch and add DataSources
-    datasources = db.query(models.DataSource).all()
+    datasources = db.query(models.DataSource).options(
+        joinedload(models.DataSource.owner_user),
+        joinedload(models.DataSource.owner_group),
+        joinedload(models.DataSource.creator_user)
+    ).all()
     for ds in datasources:
         nodes.append(schemas.LineageNode(
             id=f"datasource-{ds.id}",
@@ -161,12 +165,19 @@ def get_insights_lineage(db: Session = Depends(get_db)):
                 "content_type": ds.content_type,
                 "row_count": ds.row_count,
                 "size_bytes": ds.size_bytes,
-                "has_pii": ds.has_pii
+                "has_pii": ds.has_pii,
+                "owner_name": ds.owner_user.name if ds.owner_type == "user" and ds.owner_user else (ds.owner_group.name if ds.owner_type == "group" and ds.owner_group else None),
+                "owner_type": ds.owner_type,
+                "creator_name": ds.creator_user.name if ds.creator_user else None
             }
         ))
         
     # 2. Fetch and add Analyses
-    analyses = db.query(models.Analysis).all()
+    analyses = db.query(models.Analysis).options(
+        joinedload(models.Analysis.owner_user),
+        joinedload(models.Analysis.owner_group),
+        joinedload(models.Analysis.creator_user)
+    ).all()
     for ana in analyses:
         nodes.append(schemas.LineageNode(
             id=f"analysis-{ana.id}",
@@ -176,7 +187,10 @@ def get_insights_lineage(db: Session = Depends(get_db)):
                 "id": str(ana.id),
                 "status": ana.status,
                 "description": ana.description,
-                "created_at": ana.created_at.isoformat() if ana.created_at else None
+                "created_at": ana.created_at.isoformat() if ana.created_at else None,
+                "owner_name": ana.owner_user.name if ana.owner_type == "user" and ana.owner_user else (ana.owner_group.name if ana.owner_type == "group" and ana.owner_group else None),
+                "owner_type": ana.owner_type,
+                "creator_name": ana.creator_user.name if ana.creator_user else None
             }
         ))
         # Add edge: DataSource -> Analysis
@@ -199,7 +213,12 @@ def get_insights_lineage(db: Session = Depends(get_db)):
                     ))
                     
     # 3. Fetch and add Insights (with parents loaded)
-    insights = db.query(models.Insight).options(joinedload(models.Insight.parents)).all()
+    insights = db.query(models.Insight).options(
+        joinedload(models.Insight.parents),
+        joinedload(models.Insight.owner_user),
+        joinedload(models.Insight.owner_group),
+        joinedload(models.Insight.creator_user)
+    ).all()
     for ins in insights:
         nodes.append(schemas.LineageNode(
             id=f"insight-{ins.id}",
@@ -210,7 +229,10 @@ def get_insights_lineage(db: Session = Depends(get_db)):
                 "content": ins.content,
                 "is_verified": ins.is_verified,
                 "is_published": ins.is_published,
-                "source_label": ins.source_label
+                "source_label": ins.source_label,
+                "owner_name": ins.owner_user.name if ins.owner_type == "user" and ins.owner_user else (ins.owner_group.name if ins.owner_type == "group" and ins.owner_group else None),
+                "owner_type": ins.owner_type,
+                "creator_name": ins.creator_user.name if ins.creator_user else None
             }
         ))
         # Add edge: Analysis -> Insight
@@ -228,7 +250,11 @@ def get_insights_lineage(db: Session = Depends(get_db)):
             ))
 
     # 4. Fetch and add KnowledgePages
-    pages = db.query(models.KnowledgePage).all()
+    pages = db.query(models.KnowledgePage).options(
+        joinedload(models.KnowledgePage.owner_user),
+        joinedload(models.KnowledgePage.owner_group),
+        joinedload(models.KnowledgePage.creator_user)
+    ).all()
     for page in pages:
         nodes.append(schemas.LineageNode(
             id=f"knowledge-{page.id}",
@@ -238,7 +264,10 @@ def get_insights_lineage(db: Session = Depends(get_db)):
                 "id": str(page.id),
                 "source": page.source,
                 "source_id": page.source_id,
-                "updated_at": page.updated_at.isoformat() if page.updated_at else None
+                "updated_at": page.updated_at.isoformat() if page.updated_at else None,
+                "owner_name": page.owner_user.name if page.owner_type == "user" and page.owner_user else (page.owner_group.name if page.owner_type == "group" and page.owner_group else None),
+                "owner_type": page.owner_type,
+                "creator_name": page.creator_user.name if page.creator_user else None
             }
         ))
         # Add edge: Insight -> KnowledgePage

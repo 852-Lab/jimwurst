@@ -49,16 +49,16 @@ def test_get_insights_lineage(client, session):
 
     # Configure session queries to return our mocks
     mock_query_ds = MagicMock()
-    mock_query_ds.all.return_value = [mock_ds]
+    mock_query_ds.options.return_value.all.return_value = [mock_ds]
 
     mock_query_ana = MagicMock()
-    mock_query_ana.all.return_value = [mock_ana]
+    mock_query_ana.options.return_value.all.return_value = [mock_ana]
 
     mock_query_ins = MagicMock()
     mock_query_ins.options.return_value.all.return_value = [mock_ins]
 
     mock_query_kp = MagicMock()
-    mock_query_kp.all.return_value = [mock_kp]
+    mock_query_kp.options.return_value.all.return_value = [mock_kp]
 
     session.query.side_effect = lambda model: {
         DataSource: mock_query_ds,
