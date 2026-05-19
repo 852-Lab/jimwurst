@@ -9,7 +9,6 @@ let activeDays = 7;
 let activeView: 'feed' | 'lineage' = 'feed';
 let summaryCache: Map<number, InsightsSummary> = new Map();
 let currentLineageData: LineageResponse | null = null;
-let resizeObserver: ResizeObserver | null = null;
 let selectedNodeId: string | null = null;
 
 // Focused Subgraph Lineage State
