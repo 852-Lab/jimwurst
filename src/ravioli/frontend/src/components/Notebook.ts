@@ -177,6 +177,7 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
     index: number;
     inputContent: string;
     inputLogId: string;
+    toolName: 'python' | 'sql' | 'chat' | 'markdown';
     outputs: Array<{
       id: string;
       log_type: string;
@@ -199,6 +200,7 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
           index: cellCounter++,
           inputContent: log.content,
           inputLogId: log.id,
+          toolName: (log.tool_name || 'chat') as 'python' | 'sql' | 'chat' | 'markdown',
           outputs: []
         };
       } else {
@@ -207,6 +209,7 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
             index: cellCounter++,
             inputContent: 'Initialize Sequence Brain',
             inputLogId: log.id,
+            toolName: 'chat',
             outputs: []
           };
         }
@@ -252,17 +255,21 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
         <!-- Add Cell Footer Bar -->
         <div class="shrink-0 flex items-center justify-center gap-3 py-4 px-12 border-t border-outline-variant/10 bg-surface-container-low/40 backdrop-blur-sm" id="add-cell-bar">
           <span class="text-[10px] text-outline uppercase tracking-widest font-label-sm opacity-60 mr-2">Add cell</span>
-          <button class="btn-add-cell flex items-center gap-1.5 px-4 py-1.5 bg-surface-container-highest border border-outline-variant/20 text-outline text-[11px] rounded-full hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-all duration-200 group/add" data-type="python">
-            <span class="material-symbols-outlined text-[14px] group-hover/add:text-primary" data-icon="code">code</span>
+          <button class="btn-add-cell flex items-center gap-1.5 px-4 py-1.5 bg-surface-container-highest border border-outline-variant/20 text-outline text-[11px] rounded-full hover:bg-emerald-500/10 hover:border-emerald-500/30 hover:text-emerald-400 transition-all duration-200 group/add" data-type="python">
+            <span class="material-symbols-outlined text-[14px] group-hover/add:text-emerald-400" data-icon="code">code</span>
             Python
           </button>
-          <button class="btn-add-cell flex items-center gap-1.5 px-4 py-1.5 bg-surface-container-highest border border-outline-variant/20 text-outline text-[11px] rounded-full hover:bg-secondary/10 hover:border-secondary/30 hover:text-secondary transition-all duration-200 group/add" data-type="sql">
-            <span class="material-symbols-outlined text-[14px] group-hover/add:text-secondary" data-icon="database">database</span>
+          <button class="btn-add-cell flex items-center gap-1.5 px-4 py-1.5 bg-surface-container-highest border border-outline-variant/20 text-outline text-[11px] rounded-full hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-all duration-200 group/add" data-type="sql">
+            <span class="material-symbols-outlined text-[14px] group-hover/add:text-primary" data-icon="database">database</span>
             SQL
           </button>
-          <button class="btn-add-cell flex items-center gap-1.5 px-4 py-1.5 bg-surface-container-highest border border-outline-variant/20 text-outline text-[11px] rounded-full hover:bg-tertiary/10 hover:border-tertiary/30 hover:text-tertiary transition-all duration-200 group/add" data-type="chat">
-            <span class="material-symbols-outlined text-[14px] group-hover/add:text-tertiary" data-icon="smart_toy">smart_toy</span>
+          <button class="btn-add-cell flex items-center gap-1.5 px-4 py-1.5 bg-surface-container-highest border border-outline-variant/20 text-outline text-[11px] rounded-full hover:bg-secondary/10 hover:border-secondary/30 hover:text-secondary transition-all duration-200 group/add" data-type="chat">
+            <span class="material-symbols-outlined text-[14px] group-hover/add:text-secondary" data-icon="smart_toy">smart_toy</span>
             Chat AI
+          </button>
+          <button class="btn-add-cell flex items-center gap-1.5 px-4 py-1.5 bg-surface-container-highest border border-outline-variant/20 text-outline text-[11px] rounded-full hover:bg-indigo-400/10 hover:border-indigo-400/30 hover:text-indigo-400 transition-all duration-200 group/add" data-type="markdown">
+            <span class="material-symbols-outlined text-[14px] group-hover/add:text-indigo-400" data-icon="article">article</span>
+            Text / MD
           </button>
         </div>
       </div>
@@ -407,95 +414,174 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
     // 2. Parse and Group logs list into Jupyter Notebook cell cards
     const notebookCells = groupLogsIntoCells(logs);
     
-    html += notebookCells.map(cell => `
-      <div class="glass-panel p-6 rounded-3xl space-y-6 bg-surface-container-low/30 border-outline-variant/10 relative overflow-hidden group hover:border-primary/20 transition-all duration-300 animate-in fade-in duration-300">
-         <!-- Cell Header: Input (In [X]) -->
-         <div class="flex items-start gap-4 group/input relative">
-            <div class="font-mono text-xs font-bold text-primary/50 pt-2.5 select-none w-14 text-right shrink-0" id="cell-in-label-${cell.index}">
-               In [${cell.index}]:
-            </div>
-            
-            <!-- Static View -->
-            <div class="flex-1 font-mono text-sm text-primary-fixed-dim bg-surface-container-lowest/80 border border-outline-variant/10 rounded-xl p-3.5 shadow-inner overflow-x-auto relative cell-static-view transition-all" id="cell-static-${cell.index}">
-               <div class="pr-8">${cell.inputContent}</div>
-               <button class="absolute top-2 right-2 p-1.5 rounded-lg bg-surface-container-highest/80 text-outline hover:text-primary opacity-0 group-hover/input:opacity-100 transition-opacity btn-edit-cell" data-cell-index="${cell.index}" title="Edit Cell">
-                 <span class="material-symbols-outlined text-[14px]">edit</span>
-               </button>
-            </div>
-            
-            <!-- Edit View -->
-            <div class="flex-1 hidden cell-edit-view w-full" id="cell-edit-${cell.index}">
-               <div class="glass-panel p-1.5 rounded-xl group focus-within:border-primary/30 transition-all duration-300 shadow-lg shadow-primary/5 bg-surface-container-low/80 border-primary/30">
-                  <div class="flex items-start gap-3 px-3">
-                    <div class="flex-1 min-w-0 py-1.5">
-                      <textarea id="cell-input-${cell.index}" class="w-full bg-transparent border-none text-primary-fixed-dim focus:ring-0 resize-none py-0 text-sm font-mono max-h-48 custom-scrollbar" rows="1">${cell.inputContent}</textarea>
-                    </div>
-                    <div class="flex items-center gap-1.5 shrink-0 pt-0.5">
-                      <button class="w-7 h-7 rounded-full bg-surface-container-highest text-outline flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors btn-cancel-edit" data-cell-index="${cell.index}" title="Cancel">
-                        <span class="material-symbols-outlined text-[14px]">close</span>
-                      </button>
-                      <button class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-110 transition-transform btn-rerun-cell shadow-md shadow-primary/20" data-cell-index="${cell.index}" data-log-id="${cell.inputLogId}" title="Rerun Cell">
-                        <span class="material-symbols-outlined text-[14px]">play_arrow</span>
-                      </button>
-                    </div>
-                  </div>
-               </div>
-            </div>
-         </div>
-
-         <!-- Cell Divider Line -->
-         <div class="h-px bg-outline-variant/10 ml-18 mr-2 transition-opacity" id="cell-divider-${cell.index}"></div>
-
-          <div class="flex items-start gap-4">
-            <div class="font-mono text-xs font-bold text-secondary/50 pt-1 select-none w-14 text-right shrink-0">
-               Out [${cell.index}]:
-            </div>
-             <div class="flex-1 space-y-6 min-w-0 overflow-x-auto">
-                ${cell.outputs.length === 0 
-                  ? `<span class="text-xs text-outline italic">No output generated</span>`
-                  : cell.outputs.map(out => {
-                      let contentHtml = out.content && out.content.trim() !== '[SQL Execution Result]' && out.content.trim() !== '[Python Execution Result]' 
-                          ? `<div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg">${renderMarkdown(out.content)}</div>` 
-                          : '';
-                      
-                      let dataHtml = '';
-                      if (out.data) {
-                        if (out.data.type === 'chart') {
-                          dataHtml += `<div class="mt-4 glass-panel p-6 rounded-2xl border-primary/20 h-80 relative bg-surface-container-lowest/30"><canvas id="chart-${out.id}"></canvas></div>`;
-                        }
-                        if (out.data.sql_outputs) {
-                          dataHtml += out.data.sql_outputs.map((so: any) => renderRichOutput(so)).join('');
-                        }
-                        if (out.data.jupyter_outputs) {
-                          dataHtml += out.data.jupyter_outputs.map((jo: any) => renderRichOutput(jo)).join('');
-                        }
-                      }
-                      
-                      return contentHtml + dataHtml;
-                    }).join('')
-                }
+    html += notebookCells.map(cell => {
+      if (cell.toolName === 'markdown') {
+        return `
+          <div class="glass-panel p-6 rounded-3xl bg-surface-container-low/30 border-outline-variant/10 relative overflow-hidden group hover:border-indigo-400/20 transition-all duration-300 animate-in fade-in duration-300">
+             <!-- Static View -->
+             <div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg cell-static-view relative p-1.5" id="cell-static-${cell.index}">
+                <div class="pr-8">${renderMarkdown(cell.inputContent || '*Double click or edit to add Text/Markdown content...*')}</div>
+                <button class="absolute top-2 right-2 p-1.5 rounded-lg bg-surface-container-highest/80 text-outline hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity btn-edit-cell" data-cell-index="${cell.index}" title="Edit Markdown">
+                  <span class="material-symbols-outlined text-[14px]">edit</span>
+                </button>
              </div>
-         </div>
-      </div>
+             
+             <!-- Edit View -->
+             <div class="hidden cell-edit-view w-full" id="cell-edit-${cell.index}">
+                <div class="glass-panel p-1.5 rounded-xl group focus-within:border-indigo-400/30 transition-all duration-300 shadow-lg shadow-indigo-400/5 bg-surface-container-low/80 border-indigo-400/30">
+                   <div class="flex items-start gap-3 px-3">
+                     <div class="flex-1 min-w-0 py-1.5">
+                       <textarea id="cell-input-${cell.index}" class="w-full bg-transparent border-none text-on-surface focus:ring-0 resize-none py-0 text-sm font-mono max-h-64 custom-scrollbar" rows="3" placeholder="Write markdown here...">${cell.inputContent}</textarea>
+                     </div>
+                     <div class="flex items-center gap-1.5 shrink-0 pt-0.5">
+                       <button class="w-7 h-7 rounded-full bg-surface-container-highest text-outline flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors btn-cancel-edit" data-cell-index="${cell.index}" title="Cancel">
+                         <span class="material-symbols-outlined text-[14px]">close</span>
+                       </button>
+                       <button class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-110 transition-transform btn-rerun-cell shadow-md shadow-primary/20" data-cell-index="${cell.index}" data-log-id="${cell.inputLogId}" data-tool="markdown" title="Save Markdown">
+                         <span class="material-symbols-outlined text-[14px]">done</span>
+                       </button>
+                     </div>
+                   </div>
+                </div>
+             </div>
 
-      <!-- Colab-style Floating Toolbar -->
-      <div class="relative group/toolbar py-2 -my-2 z-20 flex justify-center items-center opacity-0 hover:opacity-100 transition-opacity">
-        <div class="absolute inset-x-0 top-1/2 h-px bg-primary/30 scale-x-0 group-hover/toolbar:scale-x-100 transition-transform duration-500 origin-center pointer-events-none"></div>
-        <div class="flex items-center gap-1 bg-surface-container-highest px-3 py-1.5 rounded-full border border-primary/20 shadow-xl shadow-primary/5 relative z-10 translate-y-2 group-hover/toolbar:translate-y-0 transition-all duration-300">
-          <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-primary flex items-center gap-1 hover:bg-primary/20 px-2 py-1 rounded-lg transition-colors" data-type="sql" data-after="${cell.inputLogId}">
-            <span class="material-symbols-outlined text-[14px]">database</span> SQL
-          </button>
-          <div class="w-px h-3 bg-outline-variant/30 mx-1"></div>
-          <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-emerald-400 flex items-center gap-1 hover:bg-emerald-400/20 px-2 py-1 rounded-lg transition-colors" data-type="python" data-after="${cell.inputLogId}">
-            <span class="material-symbols-outlined text-[14px]">code</span> Python
-          </button>
-          <div class="w-px h-3 bg-outline-variant/30 mx-1"></div>
-          <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-secondary flex items-center gap-1 hover:bg-secondary/20 px-2 py-1 rounded-lg transition-colors" data-type="chat" data-after="${cell.inputLogId}">
-            <span class="material-symbols-outlined text-[14px]">auto_awesome</span> Chat
-          </button>
+             <!-- Colab-style Floating Toolbar -->
+             <div class="relative group/toolbar py-2 -my-2 z-20 flex justify-center items-center opacity-0 hover:opacity-100 transition-opacity mt-4">
+               <div class="absolute inset-x-0 top-1/2 h-px bg-primary/30 scale-x-0 group-hover/toolbar:scale-x-100 transition-transform duration-500 origin-center pointer-events-none"></div>
+               <div class="flex items-center gap-1 bg-surface-container-highest px-3 py-1.5 rounded-full border border-primary/20 shadow-xl shadow-primary/5 relative z-10 translate-y-2 group-hover/toolbar:translate-y-0 transition-all duration-300">
+                 <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-emerald-400 flex items-center gap-1 hover:bg-emerald-400/20 px-2 py-1 rounded-lg transition-colors" data-type="python" data-after="${cell.inputLogId}">
+                   <span class="material-symbols-outlined text-[14px]">code</span> Python
+                 </button>
+                 <div class="w-px h-3 bg-outline-variant/30 mx-1"></div>
+                 <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-primary flex items-center gap-1 hover:bg-primary/20 px-2 py-1 rounded-lg transition-colors" data-type="sql" data-after="${cell.inputLogId}">
+                   <span class="material-symbols-outlined text-[14px]">database</span> SQL
+                 </button>
+                 <div class="w-px h-3 bg-outline-variant/30 mx-1"></div>
+                 <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-secondary flex items-center gap-1 hover:bg-secondary/20 px-2 py-1 rounded-lg transition-colors" data-type="chat" data-after="${cell.inputLogId}">
+                   <span class="material-symbols-outlined text-[14px]">auto_awesome</span> Chat
+                 </button>
+                 <div class="w-px h-3 bg-outline-variant/30 mx-1"></div>
+                 <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-indigo-400 flex items-center gap-1 hover:bg-indigo-400/20 px-2 py-1 rounded-lg transition-colors" data-type="markdown" data-after="${cell.inputLogId}">
+                   <span class="material-symbols-outlined text-[14px]">article</span> Text
+                 </button>
+               </div>
+             </div>
+          </div>
+        `;
+      }
+
+      // Code / Chat cells
+      let icon = "auto_awesome";
+      let color = "text-secondary";
+      let inputColor = "text-primary-fixed-dim";
+      let focusColor = "primary";
+      if (cell.toolName === "sql") {
+         icon = "database";
+         color = "text-primary";
+         inputColor = "text-primary";
+         focusColor = "primary";
+      } else if (cell.toolName === "python") {
+         icon = "code";
+         color = "text-emerald-400";
+         inputColor = "text-emerald-400";
+         focusColor = "emerald-400";
+      }
+
+      return `
+        <div class="glass-panel p-6 rounded-3xl space-y-6 bg-surface-container-low/30 border-outline-variant/10 relative overflow-hidden group hover:border-primary/20 transition-all duration-300 animate-in fade-in duration-300">
+           <!-- Cell Header: Input (In [X]) -->
+           <div class="flex items-start gap-4 group/input relative">
+              <div class="font-mono text-xs font-bold ${color}/80 pt-2.5 select-none w-14 text-right shrink-0 flex items-center justify-end gap-1" id="cell-in-label-${cell.index}">
+                 <span class="material-symbols-outlined text-[14px]">${icon}</span>
+                 In [${cell.index}]:
+              </div>
+              
+              <!-- Static View -->
+              <div class="flex-1 font-mono text-sm ${inputColor} bg-surface-container-lowest/80 border border-outline-variant/10 rounded-xl p-3.5 shadow-inner overflow-x-auto relative cell-static-view transition-all" id="cell-static-${cell.index}">
+                 <div class="pr-8 whitespace-pre-wrap">${cell.inputContent}</div>
+                 <button class="absolute top-2 right-2 p-1.5 rounded-lg bg-surface-container-highest/80 text-outline hover:text-${focusColor} opacity-0 group-hover/input:opacity-100 transition-opacity btn-edit-cell" data-cell-index="${cell.index}" title="Edit Cell">
+                   <span class="material-symbols-outlined text-[14px]">edit</span>
+                 </button>
+              </div>
+              
+              <!-- Edit View -->
+              <div class="flex-1 hidden cell-edit-view w-full" id="cell-edit-${cell.index}">
+                 <div class="glass-panel p-1.5 rounded-xl group focus-within:border-primary/30 transition-all duration-300 shadow-lg shadow-primary/5 bg-surface-container-low/80 border-primary/30">
+                    <div class="flex items-start gap-3 px-3">
+                      <div class="flex-1 min-w-0 py-1.5">
+                        <textarea id="cell-input-${cell.index}" class="w-full bg-transparent border-none text-primary-fixed-dim focus:ring-0 resize-none py-0 text-sm font-mono max-h-48 custom-scrollbar" rows="2">${cell.inputContent}</textarea>
+                      </div>
+                      <div class="flex items-center gap-1.5 shrink-0 pt-0.5">
+                        <button class="w-7 h-7 rounded-full bg-surface-container-highest text-outline flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors btn-cancel-edit" data-cell-index="${cell.index}" title="Cancel">
+                          <span class="material-symbols-outlined text-[14px]">close</span>
+                        </button>
+                        <button class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-110 transition-transform btn-rerun-cell shadow-md shadow-primary/20" data-cell-index="${cell.index}" data-log-id="${cell.inputLogId}" data-tool="${cell.toolName}" title="Rerun Cell">
+                          <span class="material-symbols-outlined text-[14px]">play_arrow</span>
+                        </button>
+                      </div>
+                    </div>
+                 </div>
+              </div>
+           </div>
+  
+           <!-- Cell Divider Line -->
+           <div class="h-px bg-outline-variant/10 ml-18 mr-2 transition-opacity" id="cell-divider-${cell.index}"></div>
+  
+            <div class="flex items-start gap-4">
+              <div class="font-mono text-xs font-bold text-secondary/50 pt-1 select-none w-14 text-right shrink-0">
+                 Out [${cell.index}]:
+              </div>
+               <div class="flex-1 space-y-6 min-w-0 overflow-x-auto">
+                  ${cell.outputs.length === 0 
+                    ? `<span class="text-xs text-outline italic">No output generated</span>`
+                    : cell.outputs.map(out => {
+                        let contentHtml = out.content && out.content.trim() !== '[SQL Execution Result]' && out.content.trim() !== '[Python Execution Result]' 
+                            ? `<div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg">${renderMarkdown(out.content)}</div>` 
+                            : '';
+                        
+                        let dataHtml = '';
+                        if (out.data) {
+                          if (out.data.type === 'chart') {
+                            dataHtml += `<div class="mt-4 glass-panel p-6 rounded-2xl border-primary/20 h-80 relative bg-surface-container-lowest/30"><canvas id="chart-${out.id}"></canvas></div>`;
+                          }
+                          if (out.data.sql_outputs) {
+                            dataHtml += out.data.sql_outputs.map((so: any) => renderRichOutput(so)).join('');
+                          }
+                          if (out.data.jupyter_outputs) {
+                            dataHtml += out.data.jupyter_outputs.map((jo: any) => renderRichOutput(jo)).join('');
+                          }
+                        }
+                        
+                        return contentHtml + dataHtml;
+                      }).join('')
+                  }
+               </div>
+           </div>
+
+           <!-- Colab-style Floating Toolbar -->
+           <div class="relative group/toolbar py-2 -my-2 z-20 flex justify-center items-center opacity-0 hover:opacity-100 transition-opacity mt-4">
+             <div class="absolute inset-x-0 top-1/2 h-px bg-primary/30 scale-x-0 group-hover/toolbar:scale-x-100 transition-transform duration-500 origin-center pointer-events-none"></div>
+             <div class="flex items-center gap-1 bg-surface-container-highest px-3 py-1.5 rounded-full border border-primary/20 shadow-xl shadow-primary/5 relative z-10 translate-y-2 group-hover/toolbar:translate-y-0 transition-all duration-300">
+               <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-emerald-400 flex items-center gap-1 hover:bg-emerald-400/20 px-2 py-1 rounded-lg transition-colors" data-type="python" data-after="${cell.inputLogId}">
+                 <span class="material-symbols-outlined text-[14px]">code</span> Python
+               </button>
+               <div class="w-px h-3 bg-outline-variant/30 mx-1"></div>
+               <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-primary flex items-center gap-1 hover:bg-primary/20 px-2 py-1 rounded-lg transition-colors" data-type="sql" data-after="${cell.inputLogId}">
+                 <span class="material-symbols-outlined text-[14px]">database</span> SQL
+               </button>
+               <div class="w-px h-3 bg-outline-variant/30 mx-1"></div>
+               <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-secondary flex items-center gap-1 hover:bg-secondary/20 px-2 py-1 rounded-lg transition-colors" data-type="chat" data-after="${cell.inputLogId}">
+                 <span class="material-symbols-outlined text-[14px]">auto_awesome</span> Chat
+               </button>
+               <div class="w-px h-3 bg-outline-variant/30 mx-1"></div>
+               <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-indigo-400 flex items-center gap-1 hover:bg-indigo-400/20 px-2 py-1 rounded-lg transition-colors" data-type="markdown" data-after="${cell.inputLogId}">
+                 <span class="material-symbols-outlined text-[14px]">article</span> Text
+               </button>
+             </div>
+           </div>
         </div>
-      </div>
-    `).join('');
+      `;
+    }).join('');
 
     cellContainer.innerHTML = html;
 
@@ -510,40 +596,50 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
           <p class="text-sm text-outline text-center max-w-sm mb-10 leading-relaxed">Choose a cell type to begin. You can mix Python, SQL, and AI chat freely — just like Jupyter.</p>
 
           <div class="flex items-center gap-4">
-            <button class="btn-first-cell group flex flex-col items-center gap-3 px-8 py-6 rounded-3xl bg-surface-container-low border border-outline-variant/15 hover:border-primary/40 hover:bg-primary/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10" data-type="python">
-              <div class="w-12 h-12 rounded-2xl bg-primary/15 group-hover:bg-primary/25 flex items-center justify-center transition-colors">
-                <span class="material-symbols-outlined text-2xl text-primary" data-icon="code">code</span>
+            <button class="btn-first-cell group flex flex-col items-center gap-3 px-8 py-6 rounded-3xl bg-surface-container-low border border-outline-variant/15 hover:border-emerald-400/40 hover:bg-emerald-400/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-400/10" data-type="python">
+              <div class="w-12 h-12 rounded-2xl bg-emerald-400/15 group-hover:bg-emerald-400/25 flex items-center justify-center transition-colors">
+                <span class="material-symbols-outlined text-2xl text-emerald-400" data-icon="code">code</span>
               </div>
               <div class="text-center">
-                <div class="text-sm font-bold text-primary tracking-wide">Python</div>
+                <div class="text-sm font-bold text-emerald-400 tracking-wide">Python</div>
                 <div class="text-[11px] text-outline mt-0.5">Pandas, NumPy, Matplotlib</div>
               </div>
             </button>
 
-            <button class="btn-first-cell group flex flex-col items-center gap-3 px-8 py-6 rounded-3xl bg-surface-container-low border border-outline-variant/15 hover:border-secondary/40 hover:bg-secondary/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-secondary/10" data-type="sql">
-              <div class="w-12 h-12 rounded-2xl bg-secondary/15 group-hover:bg-secondary/25 flex items-center justify-center transition-colors">
-                <span class="material-symbols-outlined text-2xl text-secondary" data-icon="database">database</span>
+            <button class="btn-first-cell group flex flex-col items-center gap-3 px-8 py-6 rounded-3xl bg-surface-container-low border border-outline-variant/15 hover:border-primary/40 hover:bg-primary/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10" data-type="sql">
+              <div class="w-12 h-12 rounded-2xl bg-primary/15 group-hover:bg-primary/25 flex items-center justify-center transition-colors">
+                <span class="material-symbols-outlined text-2xl text-primary" data-icon="database">database</span>
               </div>
               <div class="text-center">
-                <div class="text-sm font-bold text-secondary tracking-wide">SQL</div>
+                <div class="text-sm font-bold text-primary tracking-wide">SQL</div>
                 <div class="text-[11px] text-outline mt-0.5">Query with DuckDB</div>
               </div>
             </button>
 
-            <button class="btn-first-cell group flex flex-col items-center gap-3 px-8 py-6 rounded-3xl bg-surface-container-low border border-outline-variant/15 hover:border-tertiary/40 hover:bg-tertiary/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-tertiary/10" data-type="chat">
-              <div class="w-12 h-12 rounded-2xl bg-tertiary/15 group-hover:bg-tertiary/25 flex items-center justify-center transition-colors">
-                <span class="material-symbols-outlined text-2xl text-tertiary" data-icon="smart_toy">smart_toy</span>
+            <button class="btn-first-cell group flex flex-col items-center gap-3 px-8 py-6 rounded-3xl bg-surface-container-low border border-outline-variant/15 hover:border-secondary/40 hover:bg-secondary/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-secondary/10" data-type="chat">
+              <div class="w-12 h-12 rounded-2xl bg-secondary/15 group-hover:bg-secondary/25 flex items-center justify-center transition-colors">
+                <span class="material-symbols-outlined text-2xl text-secondary" data-icon="smart_toy">smart_toy</span>
               </div>
               <div class="text-center">
-                <div class="text-sm font-bold text-tertiary tracking-wide">Chat AI</div>
-                <div class="text-[11px] text-outline mt-0.5">Ask a question in plain English</div>
+                <div class="text-sm font-bold text-secondary tracking-wide">Chat AI</div>
+                <div class="text-[11px] text-outline mt-0.5">Ask questions in plain English</div>
+              </div>
+            </button>
+
+            <button class="btn-first-cell group flex flex-col items-center gap-3 px-8 py-6 rounded-3xl bg-surface-container-low border border-outline-variant/15 hover:border-indigo-400/40 hover:bg-indigo-400/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-400/10" data-type="markdown">
+              <div class="w-12 h-12 rounded-2xl bg-indigo-400/15 group-hover:bg-indigo-400/25 flex items-center justify-center transition-colors">
+                <span class="material-symbols-outlined text-2xl text-indigo-400" data-icon="article">article</span>
+              </div>
+              <div class="text-center">
+                <div class="text-sm font-bold text-indigo-400 tracking-wide">Text / MD</div>
+                <div class="text-[11px] text-outline mt-0.5">Write rich text & notes</div>
               </div>
             </button>
           </div>
 
           <div class="mt-10 flex items-center gap-2 text-[11px] text-outline/50">
             <span class="material-symbols-outlined text-[14px]">keyboard</span>
-            <span>Or use the <span class="font-mono text-outline/80">+ Python / SQL / Chat AI</span> bar below</span>
+            <span>Or use the <span class="font-mono text-outline/80">+ Python / SQL / Chat AI / Text</span> bar below</span>
           </div>
         </div>
       `;
@@ -564,8 +660,17 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
 function bindInteractions(container: HTMLElement) {
   const activeId = store.getActiveAnalysisId();
 
+  // Double click to edit cell static view
+  container.addEventListener('dblclick', (e) => {
+    const staticView = (e.target as HTMLElement).closest('.cell-static-view') as HTMLElement;
+    if (staticView) {
+      const editBtn = staticView.querySelector('.btn-edit-cell') as HTMLElement;
+      editBtn?.click();
+    }
+  });
+
   function createCellEditBlock(
-    type: 'python' | 'sql' | 'chat',
+    type: 'python' | 'sql' | 'chat' | 'markdown',
     afterLogId: string | null,
     targetElement: HTMLElement,
     toolbarNode?: HTMLElement
@@ -586,27 +691,36 @@ function bindInteractions(container: HTMLElement) {
        icon = "code";
        color = "text-emerald-400";
        placeholder = "Enter Python script...";
+    } else if (type === "markdown") {
+       icon = "article";
+       color = "text-indigo-400";
+       placeholder = "Write Text or Markdown notes...";
     }
+
+    const isMarkdown = type === "markdown";
+    const borderFocusClass = type === "markdown" ? "indigo-400" : (type === "sql" ? "primary" : (type === "python" ? "emerald-400" : "secondary"));
 
     newCell.innerHTML = `
        <div class="flex items-start gap-4">
+          ${isMarkdown ? '' : `
           <div class="font-mono text-xs font-bold ${color}/80 pt-2.5 select-none w-14 text-right shrink-0 flex items-center justify-end gap-1">
              <span class="material-symbols-outlined text-[14px]">${icon}</span>
              In [*]:
           </div>
+          `}
           
           <div class="flex-1 w-full" id="cell-edit-${tempId}">
-             <div class="glass-panel p-1.5 rounded-xl group focus-within:border-${color.split('-')[1] || 'primary'}/30 transition-all duration-300 shadow-lg shadow-${color.split('-')[1] || 'primary'}/5 bg-surface-container-lowest/80 border-outline-variant/10">
+             <div class="glass-panel p-1.5 rounded-xl group focus-within:border-${borderFocusClass}/30 transition-all duration-300 shadow-lg shadow-${borderFocusClass}/5 bg-surface-container-lowest/80 border-outline-variant/10">
                 <div class="flex items-start gap-3 px-3">
                   <div class="flex-1 min-w-0 py-1.5">
-                    <textarea id="cell-input-${tempId}" class="w-full bg-transparent border-none text-on-surface focus:ring-0 resize-none py-0 text-sm font-mono custom-scrollbar placeholder-outline-variant" rows="2" placeholder="${placeholder}"></textarea>
+                    <textarea id="cell-input-${tempId}" class="w-full bg-transparent border-none text-on-surface focus:ring-0 resize-none py-0 text-sm font-mono custom-scrollbar placeholder-outline-variant" rows="${isMarkdown ? 3 : 2}" placeholder="${placeholder}"></textarea>
                   </div>
                   <div class="flex items-center gap-1.5 shrink-0 pt-0.5">
                     <button class="w-7 h-7 rounded-full bg-surface-container-highest text-outline flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors btn-cancel-insert" title="Cancel">
                       <span class="material-symbols-outlined text-[14px]">close</span>
                     </button>
                     <button class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-110 transition-transform btn-execute-new-cell shadow-md shadow-primary/20" data-type="${type}" data-after="${afterLogId || '__first__'}" data-temp-id="${tempId}" title="Run Cell">
-                      <span class="material-symbols-outlined text-[14px]">play_arrow</span>
+                      <span class="material-symbols-outlined text-[14px]">${isMarkdown ? 'done' : 'play_arrow'}</span>
                     </button>
                   </div>
                 </div>
@@ -729,7 +843,7 @@ function bindInteractions(container: HTMLElement) {
     // "First Cell" welcome screen chooser
     const firstCellBtn = target.closest('.btn-first-cell') as HTMLElement;
     if (firstCellBtn) {
-      const type = firstCellBtn.getAttribute('data-type') as 'python' | 'sql' | 'chat';
+      const type = firstCellBtn.getAttribute('data-type') as 'python' | 'sql' | 'chat' | 'markdown';
       if (!type) return;
       const cellContainer = container.querySelector('#cell-container');
       if (!cellContainer) return;
@@ -785,6 +899,22 @@ function bindInteractions(container: HTMLElement) {
       if (!question) return;
       
       rerunBtn.disabled = true;
+
+      const toolName = rerunBtn.getAttribute('data-tool');
+      if (toolName === 'markdown') {
+        rerunBtn.innerHTML = `<span class="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>`;
+        try {
+           await api.executeMarkdown(activeId, question, logId, null);
+           const newLogs = await api.listLogs(activeId);
+           lastLogsJson = JSON.stringify(newLogs);
+           store.setLogs(newLogs);
+        } catch (e) {
+           console.error(e);
+           rerunBtn.disabled = false;
+           rerunBtn.innerHTML = `<span class="material-symbols-outlined text-[14px]">done</span>`;
+        }
+        return;
+      }
       
       // Update cell UI to executing state
       container.querySelector(`#cell-edit-${idx}`)?.classList.add('hidden');
@@ -858,7 +988,7 @@ function bindInteractions(container: HTMLElement) {
     // Insert New Unexecuted Cell
     const insertBtn = target.closest('.btn-insert-cell') as HTMLElement;
     if (insertBtn) {
-      const type = insertBtn.getAttribute('data-type') as 'python' | 'sql' | 'chat';
+      const type = insertBtn.getAttribute('data-type') as 'python' | 'sql' | 'chat' | 'markdown';
       const afterLogId = insertBtn.getAttribute('data-after');
       const toolbarNode = insertBtn.closest('.group\\/toolbar') as HTMLElement;
       
@@ -886,6 +1016,21 @@ function bindInteractions(container: HTMLElement) {
 
        const cellBody = runNewBtn.closest('.glass-panel.rounded-3xl');
        if (!cellBody) return;
+
+       if (type === 'markdown') {
+          runNewBtn.innerHTML = `<span class="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>`;
+          try {
+             await api.executeMarkdown(activeId, question, null, afterLogId);
+             const newLogs = await api.listLogs(activeId);
+             lastLogsJson = JSON.stringify(newLogs);
+             store.setLogs(newLogs);
+          } catch (e) {
+             console.error(e);
+             runNewBtn.disabled = false;
+             runNewBtn.innerHTML = `<span class="material-symbols-outlined text-[14px]">done</span>`;
+          }
+          return;
+       }
 
        // Transition UI to executing state
        const editView = container.querySelector(`#cell-edit-${tempId}`);

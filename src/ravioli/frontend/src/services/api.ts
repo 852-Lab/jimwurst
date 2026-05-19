@@ -102,6 +102,17 @@ export const api = {
     return response.json();
   },
   
+  async executeMarkdown(analysisId: string, code: string, replaceLogId: string | null, insertAfterLogId: string | null): Promise<any> {
+    const response = await fetch(`${API_BASE}/analyses/${analysisId}/execute-markdown`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, replace_log_id: replaceLogId, insert_after_log_id: insertAfterLogId }),
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Failed to save Markdown cell');
+    return response.json();
+  },
+  
   async getSuggestedPrompts(analysisId: string): Promise<string[]> {
     const response = await fetch(`${API_BASE}/analyses/${analysisId}/suggested-prompts`, { credentials: 'include' });
     if (!response.ok) return [];

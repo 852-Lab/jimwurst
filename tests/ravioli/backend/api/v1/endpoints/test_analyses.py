@@ -154,12 +154,42 @@ def test_get_suggested_prompts(client, session, mocker):
     assert data[0] == "Prompt 1"
     assert mock_skill.called
 
-def test_get_suggested_prompts_not_found(client, session):
-    # Mock session to return None
-    session.query().filter().first.return_value = None
+def test_execute_markdown_cell(client, session):
+    analysis_id = uuid.uuid4()
     
-    # Execute request
-    response = client.get(f"/api/v1/analyses/{uuid.uuid4()}/suggested-prompts")
+    # Mock Analysis
+    class MockAnalysis:
+        def __init__(self):
+            self.id = analysis_id
+            self.title = "Test Analysis"
+            self.analysis_metadata = {}
+            self.notebook = {}
+            
+    mock_analysis = MockAnalysis()
     
-    # Assertions
-    assert response.status_code == 404
+    # When query filter first is called, return mock analysis
+    session.query().filter().first.return_value = mock_analysis
+    
+    # Execute Markdown creation request
+    payload = {
+        "code": "# Hello Markdown\nThis is a note.",
+        "replace_log_id": None,
+        "insert_after_log_id": None
+    }
+    
+    # Setup session.refresh to assign a dummy UUID to the created log
+    def mock_refresh_log(obj):
+        obj.id = uuid.uuid4()
+        obj.timestamp = datetime.now(UTC)
+        
+    session.refresh.side_effect = mock_refresh_log
+
+    response = client.post(f"/api/v1/analyses/{analysis_id}/execute-markdown", json=payload)
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert "log_id" in data
+    assert session.add.called
+    assert session.commit.called
+

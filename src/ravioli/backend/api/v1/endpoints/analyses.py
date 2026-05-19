@@ -1031,6 +1031,50 @@ def execute_sql_cell(
     
     return {"status": "success", "outputs": outputs, "log_id": str(user_log.id)}
 
+@router.post("/{analysis_id}/execute-markdown")
+def execute_markdown_cell(
+    analysis_id: UUID,
+    payload: ExecutionRequest,
+    db: Session = Depends(get_db)
+):
+    analysis = db.query(models.Analysis).filter(models.Analysis.id == analysis_id).first()
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Analysis not found")
+        
+    user_log = None
+    if payload.replace_log_id:
+        user_log = db.query(models.AnalysisLog).filter(models.AnalysisLog.id == payload.replace_log_id).first()
+        if user_log:
+            user_log.content = payload.code
+            db.commit()
+            all_logs = db.query(models.AnalysisLog).filter(models.AnalysisLog.analysis_id == analysis_id).order_by(models.AnalysisLog.timestamp.asc()).all()
+            target_idx = -1
+            for idx, log in enumerate(all_logs):
+                if log.id == payload.replace_log_id:
+                    target_idx = idx
+                    break
+            if target_idx != -1:
+                for log in all_logs[target_idx+1:]:
+                    if log.log_type == "user_query":
+                        break
+                    db.delete(log)
+                db.commit()
+
+    if not user_log:
+        user_log = models.AnalysisLog(
+            analysis_id=analysis_id,
+            log_type="user_query",
+            content=payload.code,
+            tool_name="markdown"
+        )
+        if payload.insert_after_log_id:
+            user_log.timestamp = get_interpolated_timestamp(db, analysis_id, payload.insert_after_log_id)
+        db.add(user_log)
+        db.commit()
+        db.refresh(user_log)
+        
+    return {"status": "success", "outputs": [], "log_id": str(user_log.id)}
+
 @router.get("/{analysis_id}/jupyter-status")
 def get_jupyter_status(analysis_id: UUID, db: Session = Depends(get_db)):
     """
