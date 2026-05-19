@@ -642,8 +642,9 @@ function setupLineageInteractions(container: HTMLElement, data: LineageResponse)
   const nodes = container.querySelectorAll('.lineage-node');
   const paths = container.querySelectorAll('.lineage-path');
   const detailsPanel = container.querySelector('#node-details-panel') as HTMLElement;
+  const graphContainer = container.querySelector('#lineage-graph-container') as HTMLElement;
 
-  if (!detailsPanel) return;
+  if (!detailsPanel || !graphContainer) return;
 
   // 1. Recursive Ancestors and Descendants trace helper
   function traceConnectedSubGraph(hoveredId: string) {
@@ -682,10 +683,148 @@ function setupLineageInteractions(container: HTMLElement, data: LineageResponse)
     return { nodes: activeNodes, paths: activePaths };
   }
 
-  // 2. Hover Trace Listeners
+  // 2. Drag & Drop + Hover Highlight implementation
   nodes.forEach(node => {
-    node.addEventListener('mouseenter', () => {
-      const nodeId = node.getAttribute('data-node-id');
+    const nodeEl = node as HTMLElement;
+    let isDragging = false;
+    let hasMoved = false;
+    let startX = 0;
+    let startY = 0;
+    let nodeLeft = 0;
+    let nodeTop = 0;
+
+    // Mouse handlers
+    const onMouseDown = (e: MouseEvent) => {
+      // Avoid text highlight conflicts
+      e.preventDefault();
+      
+      isDragging = true;
+      hasMoved = false;
+      startX = e.clientX;
+      startY = e.clientY;
+      nodeLeft = nodeEl.offsetLeft;
+      nodeTop = nodeEl.offsetTop;
+
+      nodeEl.style.cursor = 'grabbing';
+      nodeEl.classList.add('shadow-2xl', 'scale-[1.03]');
+      nodeEl.style.zIndex = '50';
+
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        hasMoved = true;
+      }
+
+      // Calculate absolute offset in relative viewport canvas
+      const newLeft = nodeLeft + dx;
+      const newTop = nodeTop + dy;
+
+      nodeEl.style.left = `${newLeft}px`;
+      nodeEl.style.top = `${newTop}px`;
+
+      // Live update Bezier curves at 60fps
+      drawLineageConnectors(container, data);
+    };
+
+    const onMouseUp = (e: MouseEvent) => {
+      if (!isDragging) return;
+      isDragging = false;
+
+      nodeEl.style.cursor = 'pointer';
+      nodeEl.classList.remove('shadow-2xl', 'scale-[1.03]');
+      nodeEl.style.zIndex = '10';
+
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+
+      // If dragging has not occurred, interpret it as a selection click
+      if (!hasMoved) {
+        const nodeId = nodeEl.getAttribute('data-node-id');
+        if (nodeId) {
+          const nodeData = data.nodes.find(n => n.id === nodeId);
+          if (nodeData) {
+            openNodeDetailsDrawer(container, nodeData);
+          }
+        }
+      }
+    };
+
+    // Touch handlers for hybrid tablets
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      
+      isDragging = true;
+      hasMoved = false;
+      startX = touch.clientX;
+      startY = touch.clientY;
+      nodeLeft = nodeEl.offsetLeft;
+      nodeTop = nodeEl.offsetTop;
+
+      nodeEl.classList.add('shadow-2xl', 'scale-[1.03]');
+      nodeEl.style.zIndex = '50';
+
+      window.addEventListener('touchmove', onTouchMove, { passive: false });
+      window.addEventListener('touchend', onTouchEnd);
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!isDragging || e.touches.length !== 1) return;
+      e.preventDefault(); // suppress viewport scroll bounce
+      
+      const touch = e.touches[0];
+      const dx = touch.clientX - startX;
+      const dy = touch.clientY - startY;
+
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        hasMoved = true;
+      }
+
+      const newLeft = nodeLeft + dx;
+      const newTop = nodeTop + dy;
+
+      nodeEl.style.left = `${newLeft}px`;
+      nodeEl.style.top = `${newTop}px`;
+
+      drawLineageConnectors(container, data);
+    };
+
+    const onTouchEnd = () => {
+      if (!isDragging) return;
+      isDragging = false;
+
+      nodeEl.classList.remove('shadow-2xl', 'scale-[1.03]');
+      nodeEl.style.zIndex = '10';
+
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
+
+      if (!hasMoved) {
+        const nodeId = nodeEl.getAttribute('data-node-id');
+        if (nodeId) {
+          const nodeData = data.nodes.find(n => n.id === nodeId);
+          if (nodeData) {
+            openNodeDetailsDrawer(container, nodeData);
+          }
+        }
+      }
+    };
+
+    // Attach listeners
+    nodeEl.addEventListener('mousedown', onMouseDown);
+    nodeEl.addEventListener('touchstart', onTouchStart, { passive: true });
+
+    // Hover Highlight Traces
+    nodeEl.addEventListener('mouseenter', () => {
+      const nodeId = nodeEl.getAttribute('data-node-id');
       if (!nodeId) return;
 
       const subGraph = traceConnectedSubGraph(nodeId);
@@ -713,8 +852,7 @@ function setupLineageInteractions(container: HTMLElement, data: LineageResponse)
       });
     });
 
-    node.addEventListener('mouseleave', () => {
-      // Restore standard visuals
+    nodeEl.addEventListener('mouseleave', () => {
       nodes.forEach(n => {
         n.classList.remove('lineage-dimmed');
         n.classList.remove('lineage-active');
@@ -724,24 +862,11 @@ function setupLineageInteractions(container: HTMLElement, data: LineageResponse)
         p.classList.remove('lineage-active');
       });
     });
-
-    // 3. Node Selection Details Drawer
-    node.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const nodeId = node.getAttribute('data-node-id');
-      if (!nodeId) return;
-
-      const nodeData = data.nodes.find(n => n.id === nodeId);
-      if (!nodeData) return;
-
-      openNodeDetailsDrawer(container, nodeData);
-    });
   });
 
   // Drawer dismiss triggers
   container.querySelector('#close-details-btn')?.addEventListener('click', closeNodeDetailsDrawer);
   container.querySelector('#lineage-graph-container')?.addEventListener('click', (e) => {
-    // Only close if click is in the grid canvas background
     const target = e.target as HTMLElement;
     if (target.id === 'lineage-graph-container' || target.id === 'dag-nodes-container') {
       closeNodeDetailsDrawer();

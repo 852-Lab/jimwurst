@@ -181,6 +181,8 @@
 }
 
 .lineage-path {
+  stroke: rgba(255, 255, 255, 0.24) !important;
+  stroke-width: 2px !important;
   transition: stroke 0.3s ease, stroke-width 0.3s ease, opacity 0.3s ease;
 }
 
