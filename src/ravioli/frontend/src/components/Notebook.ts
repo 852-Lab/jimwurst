@@ -1044,7 +1044,7 @@ function bindInteractions(container: HTMLElement) {
              newCellBlock?.remove();
 
              const newLogs = await api.listLogs(activeId);
-             lastLogsJson = JSON.stringify(newLogs);
+             lastLogsJson = '';
              store.setLogs(newLogs);
           } catch (e) {
              console.error(e);
@@ -1090,8 +1090,11 @@ function bindInteractions(container: HTMLElement) {
                 if (streamingContent) streamingContent.innerHTML = renderMarkdown(fullText) + '<span class="inline-block w-1 h-4 bg-primary animate-pulse ml-1"></span>';
              },
              async () => {
+                const newCellBlock = runNewBtn.closest('.new-cell-block');
+                newCellBlock?.remove();
+
                 const newLogs = await api.listLogs(activeId);
-                lastLogsJson = JSON.stringify(newLogs);
+                lastLogsJson = '';
                 store.setLogs(newLogs);
              },
              (err) => console.error(err)
@@ -1103,8 +1106,12 @@ function bindInteractions(container: HTMLElement) {
              } else {
                 await api.executePython(activeId, question, null, afterLogId);
              }
+
+             const newCellBlock = runNewBtn.closest('.new-cell-block');
+             newCellBlock?.remove();
+
              const newLogs = await api.listLogs(activeId);
-             lastLogsJson = JSON.stringify(newLogs);
+             lastLogsJson = '';
              store.setLogs(newLogs);
           } catch (e) {
              console.error(e);
