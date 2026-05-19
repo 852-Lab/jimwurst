@@ -54,6 +54,8 @@ def test_create_knowledge_page(client, session, current_user):
     
     # Mock the return value of create to have timestamps and audit fields
     mock_page = create_mock_page(title="New Intelligence", owner_type="team")
+    mock_page.created_by = current_user.id
+    mock_page.updated_by = current_user.id
     def mock_add(x):
         x.id = mock_page.id
         x.created_at = mock_page.created_at
