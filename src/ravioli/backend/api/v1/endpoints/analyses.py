@@ -991,22 +991,8 @@ def execute_sql_cell(
     from ravioli.backend.data.olap.duckdb_manager import duckdb_manager
     import datetime
     
-    if analysis.analysis_metadata:
-        file_id = analysis.analysis_metadata.get("file_id")
-        if not file_id:
-            ds_list = analysis.analysis_metadata.get("data_sources", [])
-            if ds_list and len(ds_list) > 0:
-                file_id = ds_list[0]
-        if file_id:
-            try:
-                source = db.query(models.DataSource).filter(models.DataSource.id == UUID(str(file_id))).first()
-                if source:
-                    duckdb_manager.attach_file(str(source.id))
-            except Exception:
-                logger.exception("Failed to attach data source file for analysis %s (file_id=%s)", analysis_id, file_id)
-                
     try:
-        results = duckdb_manager.execute_query(payload.code)
+        results = duckdb_manager.query(payload.code)
         if hasattr(results, "to_dict"):
             rows = results.to_dict(orient="records")
         else:
@@ -1014,7 +1000,7 @@ def execute_sql_cell(
         outputs = [{"type": "table", "data": rows}]
     except Exception as e:
         logger.exception("SQL execution failed for analysis %s", analysis_id)
-        outputs = [{"type": "error", "ename": "SQLError", "evalue": "Query execution failed.", "traceback": []}]
+        outputs = [{"type": "error", "ename": type(e).__name__, "evalue": str(e), "traceback": []}]
         
     agent_log = models.AnalysisLog(
         analysis_id=analysis_id,

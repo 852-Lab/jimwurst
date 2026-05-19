@@ -8,6 +8,7 @@ vi.mock('../../../src/ravioli/frontend/src/services/api', () => ({
     listLogs: vi.fn(),
     getJupyterStatus: vi.fn().mockResolvedValue({ status: 'connected' }),
     deleteLog: vi.fn().mockResolvedValue(undefined),
+    executeSql: vi.fn().mockResolvedValue(undefined),
   }
 }));
 
@@ -166,5 +167,55 @@ describe('Notebook Component - Stability & Granular Updates', () => {
     expect(api.deleteLog).toHaveBeenCalledWith('l1');
 
     window.confirm = originalConfirm;
+  });
+
+  it('covers SQL cells: renders with vertical gutter, updates highlighting, and triggers executeSql on rerun', async () => {
+    const mockAnalysis = { id: 'a1', title: 'SQL Testing', status: 'completed' };
+    store.setAnalyses([mockAnalysis] as any);
+    store.setActiveAnalysisId('a1');
+    store.setLogs([
+      { id: 'l1', content: 'SELECT * FROM ravioli', log_type: 'user_query', tool_name: 'sql', index: 1 }
+    ] as any);
+
+    const notebook = renderNotebook();
+
+    // Verify SQL cell static view and capsular LOC displays correctly
+    expect(notebook.textContent).toContain('SELECT * FROM ravioli');
+    expect(notebook.textContent).toContain('SQL • 1 line');
+
+    // Trigger edit mode
+    const staticView = notebook.querySelector('#cell-static-1') as HTMLElement;
+    staticView.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+    // Verify edit mode elements (gutter + highlight backdrop + textarea exist)
+    const gutter = notebook.querySelector('#cell-gutter-1') as HTMLElement;
+    const highlight = notebook.querySelector('#cell-highlight-1') as HTMLElement;
+    const textarea = notebook.querySelector('#cell-input-1') as HTMLTextAreaElement;
+
+    expect(gutter).not.toBeNull();
+    expect(highlight).not.toBeNull();
+    expect(textarea).not.toBeNull();
+    expect(gutter.textContent).toBe('1');
+
+    // Change input value and dispatch focusin / input event
+    textarea.value = 'SELECT *\nFROM tables\nLIMIT 10';
+    textarea.dispatchEvent(new Event('focusin', { bubbles: true }));
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+
+    // Verify live updates of LOC capsule, gutter, and highlight backdrop HTML
+    const label = notebook.querySelector('#cell-loc-1') as HTMLElement;
+    expect(label.textContent).toBe('3 lines');
+    expect(gutter.textContent).toBe('1\n2\n3');
+    // Backdrop should contain beautifully formatted keywords
+    expect(highlight.innerHTML).toContain('text-sky-400');
+    expect(highlight.innerHTML).toContain('SELECT');
+
+    // Spy on executeSql and click rerun
+    const { api } = await import('../../../src/ravioli/frontend/src/services/api');
+    const rerunBtn = notebook.querySelector('.btn-rerun-cell') as HTMLElement;
+    expect(rerunBtn).not.toBeNull();
+
+    rerunBtn.click();
+    expect(api.executeSql).toHaveBeenCalled();
   });
 });
