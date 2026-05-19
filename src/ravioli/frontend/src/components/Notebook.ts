@@ -639,7 +639,7 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
               
               <!-- Static View -->
               <div class="flex-1 font-mono text-sm ${inputColor} bg-surface-container-lowest/80 border border-outline-variant/10 rounded-xl p-3.5 shadow-inner overflow-x-auto relative cell-static-view transition-all" id="cell-static-${cell.index}">
-                 <div class="pr-8 whitespace-pre-wrap">${cell.toolName === 'sql' ? highlightSQL(cell.inputContent) : cell.inputContent}</div>
+                                   <div class="pr-8 whitespace-pre-wrap">${cell.toolName === 'sql' ? highlightSQL(cell.inputContent) : cell.inputContent}</div>${cell.toolName === 'sql' ? `<div class="mt-3 flex items-center justify-between border-t border-outline-variant/5 pt-2"><span class="text-[10px] font-mono text-outline uppercase tracking-wider select-none bg-surface-container-highest/40 px-2 py-0.5 rounded border border-outline-variant/10">SQL • ${(() => { const l = (cell.inputContent || '').split('\n').length; return `${l} ${l === 1 ? 'line' : 'lines'}`; })()}</span></div>` : ''}
                  <div class="absolute top-2 right-2 flex items-center gap-1">
                    ${cell.toolName !== 'markdown' ? `
                    <button class="p-1.5 rounded-lg bg-surface-container-highest/80 text-outline hover:text-${focusColor} btn-run-static-cell transition-all" data-cell-index="${cell.index}" data-log-id="${cell.inputLogId}" data-tool="${cell.toolName}" title="Run Cell">
@@ -658,7 +658,8 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
               <!-- Edit View -->
               <div class="flex-1 hidden cell-edit-view w-full" id="cell-edit-${cell.index}">
                  <div class="glass-panel p-1.5 rounded-xl group focus-within:border-primary/30 transition-all duration-300 shadow-lg shadow-primary/5 bg-surface-container-low/80 border-primary/30">
-                    <div class="flex items-start gap-3 px-3">
+                    <div class="flex flex-col w-full">
+                      <div class="flex items-start gap-3 px-3">
                       <div class="flex-1 min-w-0 py-1.5">
                         <textarea id="cell-input-${cell.index}" class="w-full bg-transparent border-none text-primary-fixed-dim focus:ring-0 resize-none py-0 text-sm font-mono max-h-48 custom-scrollbar" rows="2">${cell.inputContent}</textarea>
                       </div>
@@ -671,7 +672,17 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
                         </button>
                       </div>
                     </div>
-                 </div>
+                    ${cell.toolName === 'sql' ? `
+                    <div class="px-3 pb-1.5 flex items-center justify-between text-[10px] font-mono text-outline select-none border-t border-outline-variant/5 pt-1.5 mt-1.5">
+                      <span>SQL Mode</span>
+                      <span id="cell-loc-${cell.index}">${(() => {
+                        const lineCount = (cell.inputContent || '').split('\n').length;
+                        return `${lineCount} ${lineCount === 1 ? 'line' : 'lines'}`;
+                      })()}</span>
+                    </div>
+                    ` : ''}
+                   </div>
+                </div>
               </div>
            </div>
   
@@ -820,6 +831,46 @@ function bindInteractions(container: HTMLElement) {
     }
   });
 
+  // Real-time LOC line counting
+  container.addEventListener('input', (e) => {
+    const textarea = e.target as HTMLTextAreaElement;
+    if (textarea && textarea.id && textarea.id.startsWith('cell-input-')) {
+      const idxStr = textarea.id.replace('cell-input-', '');
+      const lineCount = textarea.value.split('\n').length;
+      const label = container.querySelector(`#cell-loc-${idxStr}`);
+      if (label) {
+        label.textContent = `${lineCount} ${lineCount === 1 ? 'line' : 'lines'}`;
+      }
+    }
+  });
+
+  // Hotkeys: Ctrl+Enter to execute, Cmd+/ or Ctrl+/ to toggle comment
+  container.addEventListener('keydown', (e) => {
+    const textarea = e.target as HTMLTextAreaElement;
+    if (textarea && textarea.id && textarea.id.startsWith('cell-input-')) {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const isCmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+
+      // Ctrl + Enter to run
+      if (e.key === 'Enter' && e.ctrlKey) {
+        e.preventDefault();
+        const card = textarea.closest('.glass-panel');
+        if (card) {
+          const runBtn = card.querySelector('.btn-rerun-cell, .btn-execute-new-cell') as HTMLElement;
+          runBtn?.click();
+        }
+      }
+
+      // Cmd + / or Ctrl + / to toggle comment
+      if (e.key === '/' && isCmdOrCtrl) {
+        e.preventDefault();
+        toggleComment(textarea);
+        // Trigger input event to update line counts and autosize
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+  });
+
   function createCellEditBlock(
     type: 'python' | 'sql' | 'chat' | 'markdown',
     afterLogId: string | null,
@@ -862,18 +913,26 @@ function bindInteractions(container: HTMLElement) {
           
           <div class="flex-1 w-full" id="cell-edit-${tempId}">
              <div class="glass-panel p-1.5 rounded-xl group focus-within:border-${borderFocusClass}/30 transition-all duration-300 shadow-lg shadow-${borderFocusClass}/5 bg-surface-container-lowest/80 border-outline-variant/10">
-                <div class="flex items-start gap-3 px-3">
-                  <div class="flex-1 min-w-0 py-1.5">
-                    <textarea id="cell-input-${tempId}" class="w-full bg-transparent border-none text-on-surface focus:ring-0 resize-none py-0 text-sm font-mono custom-scrollbar placeholder-outline-variant" rows="${isMarkdown ? 3 : 2}" placeholder="${placeholder}"></textarea>
+                <div class="flex flex-col w-full">
+                  <div class="flex items-start gap-3 px-3">
+                    <div class="flex-1 min-w-0 py-1.5">
+                      <textarea id="cell-input-${tempId}" class="w-full bg-transparent border-none text-on-surface focus:ring-0 resize-none py-0 text-sm font-mono custom-scrollbar placeholder-outline-variant" rows="${isMarkdown ? 3 : 2}" placeholder="${placeholder}"></textarea>
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0 pt-0.5">
+                      <button class="w-7 h-7 rounded-full bg-surface-container-highest text-outline flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors btn-cancel-insert" title="Cancel">
+                        <span class="material-symbols-outlined text-[14px]">close</span>
+                      </button>
+                      <button class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-110 transition-transform btn-execute-new-cell shadow-md shadow-primary/20" data-type="${type}" data-after="${afterLogId || '__first__'}" data-temp-id="${tempId}" title="Run Cell">
+                        <span class="material-symbols-outlined text-[14px]">${isMarkdown ? 'done' : 'play_arrow'}</span>
+                      </button>
+                    </div>
                   </div>
-                  <div class="flex items-center gap-1.5 shrink-0 pt-0.5">
-                    <button class="w-7 h-7 rounded-full bg-surface-container-highest text-outline flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors btn-cancel-insert" title="Cancel">
-                      <span class="material-symbols-outlined text-[14px]">close</span>
-                    </button>
-                    <button class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center hover:scale-110 transition-transform btn-execute-new-cell shadow-md shadow-primary/20" data-type="${type}" data-after="${afterLogId || '__first__'}" data-temp-id="${tempId}" title="Run Cell">
-                      <span class="material-symbols-outlined text-[14px]">${isMarkdown ? 'done' : 'play_arrow'}</span>
-                    </button>
+                  ${type === 'sql' ? `
+                  <div class="px-3 pb-1.5 flex items-center justify-between text-[10px] font-mono text-outline select-none border-t border-outline-variant/5 pt-1.5 mt-1.5">
+                    <span>SQL Mode</span>
+                    <span id="cell-loc-${tempId}">1 line</span>
                   </div>
+                  ` : ''}
                 </div>
              </div>
           </div>
