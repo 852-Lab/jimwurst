@@ -818,7 +818,7 @@ function bindInteractions(container: HTMLElement) {
     const addBtn = (e.target as HTMLElement).closest('.btn-add-cell') as HTMLElement;
     if (!addBtn) return;
     const type = parseCellType(addBtn.getAttribute('data-type'));
-    if (!type || type === 'markdown') return;
+    if (!type) return;
     
     const cellContainer = container.querySelector('#cell-container');
     if (!cellContainer) return;
