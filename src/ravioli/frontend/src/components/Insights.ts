@@ -27,18 +27,46 @@ function insightPill(insight: Insight) {
   const dateStr = format(new Date(insight.created_at), 'MMM d');
   const source = insight.source_label ?? 'Unknown analysis';
 
+  // Extract owner, creator, and reviewer names
+  const ownerName = insight.owner_user?.name || insight.owner_group?.name || 'Admin';
+  const ownerTypeLabel = insight.owner_group ? 'Team' : 'User';
+  const creatorName = insight.creator_user?.name || 'Admin';
+  const reviewerName = insight.reviewer_user?.name;
+
   return `
     <div class="flex items-start gap-5 py-6 border-b border-white/5 last:border-0 group insight-card-hover rounded-xl px-4 -mx-4 transition-all duration-500">
       <div class="flex flex-col items-center gap-1 shrink-0 w-12 text-center">
         <span class="text-xl font-display-lg text-primary tabular-nums group-hover:scale-110 transition-transform duration-500">${dateStr.split(' ')[1]}</span>
         <span class="text-[9px] uppercase tracking-[0.2em] text-outline opacity-40 font-bold">${dateStr.split(' ')[0]}</span>
       </div>
-      <div class="flex-1 min-w-0 space-y-2">
+      <div class="flex-1 min-w-0 space-y-3">
         <p class="text-sm font-body-md text-on-surface-variant leading-relaxed group-hover:text-white transition-colors duration-500">${insight.content}</p>
-        <div class="flex items-center gap-2">
-          <span class="material-symbols-outlined text-primary text-xs opacity-50 group-hover:opacity-100 transition-opacity" data-icon="verified">verified</span>
-          <span class="text-[10px] uppercase tracking-[0.2em] text-outline font-label-sm opacity-30 group-hover:opacity-60 transition-opacity">${source}</span>
-          <span class="text-[10px] text-outline opacity-20">·</span>
+        <div class="flex flex-wrap items-center gap-y-2 gap-x-4">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary text-xs opacity-50 group-hover:opacity-100 transition-opacity" data-icon="verified">verified</span>
+            <span class="text-[10px] uppercase tracking-[0.2em] text-outline font-label-sm opacity-30 group-hover:opacity-60 transition-opacity">${source}</span>
+          </div>
+          <span class="text-[10px] text-outline opacity-20 hidden sm:inline">·</span>
+          
+          <!-- Owner & Creator metadata stack -->
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-1.5" title="Owner (${ownerTypeLabel})">
+              <span class="material-symbols-outlined text-[12px] text-primary opacity-40">shield</span>
+              <span class="text-[9px] uppercase tracking-[0.1em] text-outline opacity-40 font-bold">${ownerName}</span>
+            </div>
+            <div class="flex items-center gap-1.5" title="Creator">
+              <span class="material-symbols-outlined text-[12px] text-secondary opacity-40">person</span>
+              <span class="text-[9px] uppercase tracking-[0.1em] text-outline opacity-40 font-bold">${creatorName}</span>
+            </div>
+            ${reviewerName ? `
+              <div class="flex items-center gap-1.5" title="Approved by Reviewer">
+                <span class="material-symbols-outlined text-[12px] text-green-400 opacity-60">fact_check</span>
+                <span class="text-[9px] uppercase tracking-[0.1em] text-green-400 font-bold">Approved by: ${reviewerName}</span>
+              </div>
+            ` : ''}
+          </div>
+          
+          <span class="text-[10px] text-outline opacity-20 hidden sm:inline">·</span>
           <span class="text-[10px] uppercase tracking-[0.2em] text-outline font-label-sm opacity-30 group-hover:opacity-60 transition-opacity">${ago}</span>
         </div>
       </div>

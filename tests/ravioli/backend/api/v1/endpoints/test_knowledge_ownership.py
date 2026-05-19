@@ -28,6 +28,7 @@ def test_create_knowledge_page_with_ownership_type(client, session):
     # Mock the return value of create to have timestamps
     mock_page = create_mock_page(title="New Intelligence", ownership_type="team")
     session.add.side_effect = lambda x: setattr(x, 'id', mock_page.id) or setattr(x, 'created_at', mock_page.created_at) or setattr(x, 'updated_at', mock_page.updated_at)
+    session.query.return_value.filter.return_value.first.return_value = mock_page
     
     response = client.post("/api/v1/knowledge/", json=payload)
     

@@ -93,6 +93,12 @@ class Insight(InsightBase):
     updated_at: datetime
     created_by: Optional[UUID] = None
     updated_by: Optional[UUID] = None
+    reviewed_by: Optional[UUID] = None
+    
+    owner_user: Optional['User'] = None
+    owner_group: Optional['UserGroup'] = None
+    creator_user: Optional['User'] = None
+    reviewer_user: Optional['User'] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -194,8 +200,9 @@ class DataSource(DataSourceBase):
     updated_by: Optional[UUID] = None
     is_duplicate: bool = False
     
-    # Optional nested owner for detail views
-    # owner: Optional[User] = None
+    owner_user: Optional['User'] = None
+    owner_group: Optional['UserGroup'] = None
+    creator_user: Optional['User'] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -294,5 +301,11 @@ class KnowledgePage(KnowledgePageBase):
     updated_at: datetime
     created_by: Optional[UUID] = None
     updated_by: Optional[UUID] = None
+    reviewed_by: Optional[UUID] = None
+    
+    owner_user: Optional['User'] = None
+    owner_group: Optional['UserGroup'] = None
+    creator_user: Optional['User'] = None
+    reviewer_user: Optional['User'] = None
 
     model_config = ConfigDict(from_attributes=True)

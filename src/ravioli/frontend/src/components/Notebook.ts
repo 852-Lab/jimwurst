@@ -80,7 +80,7 @@ let lastLogsJson = '';
 export function renderNotebook() {
   const container = document.createElement('main');
   container.id = 'notebook-view';
-  container.className = 'flex-1 relative overflow-hidden bg-background h-screen flex flex-col';
+  container.className = 'flex-1 ml-64 relative overflow-hidden bg-background h-screen flex flex-col';
   
   updateNotebookUI(container, true);
   return container;

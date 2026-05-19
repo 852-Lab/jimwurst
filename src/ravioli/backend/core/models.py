@@ -163,6 +163,8 @@ class DataSource(Base):
     owner_type: Mapped[Optional[str]] = mapped_column(String(50), default="user") # 'user' or 'group'
     
     owner_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[owner_id], primaryjoin="and_(foreign(DataSource.owner_id)==User.id, DataSource.owner_type=='user')", viewonly=True)
+    creator_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by], viewonly=True)
+    owner_group: Mapped[Optional["UserGroup"]] = relationship("UserGroup", foreign_keys=[owner], viewonly=True)
 
 class Insight(Base):
     """
@@ -188,12 +190,18 @@ class Insight(Base):
     owner: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.user_groups.id"))
     created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
     updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
+    reviewed_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
 
     # Legacy Polymorphic Ownership
     owner_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True))
     owner_type: Mapped[Optional[str]] = mapped_column(String(50)) # 'user' or 'group'
 
     analysis: Mapped["Analysis"] = relationship("Analysis", back_populates="insights")
+    
+    creator_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by], viewonly=True)
+    owner_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[owner_id], primaryjoin="and_(foreign(Insight.owner_id)==User.id, Insight.owner_type=='user')", viewonly=True)
+    owner_group: Mapped[Optional["UserGroup"]] = relationship("UserGroup", foreign_keys=[owner], viewonly=True)
+    reviewer_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[reviewed_by], viewonly=True)
 
 
 class SystemSetting(Base):
@@ -244,6 +252,7 @@ class KnowledgePage(Base):
     owner: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.user_groups.id"))
     created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
     updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
+    reviewed_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
 
     # Legacy Polymorphic Ownership
     owner_type: Mapped[str] = mapped_column(String(50), default="user") # 'user' or 'group'
@@ -252,6 +261,11 @@ class KnowledgePage(Base):
     
     # Hierarchy support
     parent_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.knowledge_pages.id"))
+    
+    creator_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by], viewonly=True)
+    owner_user: Mapped[Optional["User"]] = relationship("User", primaryjoin="and_(foreign(KnowledgePage.owner_id)==cast(User.id, String), KnowledgePage.owner_type=='user')", viewonly=True)
+    owner_group: Mapped[Optional["UserGroup"]] = relationship("UserGroup", primaryjoin="and_(foreign(KnowledgePage.owner_id)==cast(UserGroup.id, String), KnowledgePage.owner_type=='group')", viewonly=True)
+    reviewer_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[reviewed_by], viewonly=True)
     
     # source tracking
     source: Mapped[str] = mapped_column(String(50), default="manual")

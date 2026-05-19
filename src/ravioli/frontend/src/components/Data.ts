@@ -38,7 +38,7 @@ export function renderData() {
                 <th class="px-8 py-4 font-medium">Rows</th>
                 <th class="px-8 py-4 font-medium">Status</th>
                 <th class="px-8 py-4 font-medium">Timeline</th>
-                <th class="px-8 py-4 font-medium">Author</th>
+                <th class="px-8 py-4 font-medium">Owner / Creator</th>
                 <th class="px-8 py-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
@@ -139,11 +139,23 @@ export function renderData() {
                     </div>
                   </td>
                   <td class="px-8 py-5">
-                    <div class="flex items-center gap-2">
-                      <div class="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center border border-primary/20">
-                        <span class="text-[10px] font-bold text-primary">${source.owner?.name?.[0] || 'A'}</span>
+                    <div class="flex flex-col gap-1.5 min-w-[140px]">
+                      <!-- Owner -->
+                      <div class="flex items-center gap-2" title="Owner">
+                        <div class="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center border border-primary/20 shrink-0">
+                          <span class="text-[8px] font-bold text-primary">${((source.owner_user?.name || source.owner_group?.name || source.owner?.name || 'Admin')[0]).toUpperCase()}</span>
+                        </div>
+                        <span class="text-xs text-neutral-300 font-medium truncate max-w-[100px]">${source.owner_user?.name || source.owner_group?.name || source.owner?.name || 'Admin'}</span>
+                        <span class="text-[8px] uppercase tracking-wider text-outline px-1 py-0.5 rounded bg-white/5 border border-white/5 shrink-0">${source.owner_group ? 'Team' : 'Owner'}</span>
                       </div>
-                      <span class="text-xs text-neutral-400 font-medium">${source.owner?.name || 'Admin'}</span>
+                      <!-- Creator -->
+                      <div class="flex items-center gap-2" title="Creator">
+                        <div class="w-5 h-5 rounded-full bg-secondary/20 flex items-center justify-center border border-secondary/20 shrink-0">
+                          <span class="text-[8px] font-bold text-secondary">${((source.creator_user?.name || 'Admin')[0]).toUpperCase()}</span>
+                        </div>
+                        <span class="text-[11px] text-neutral-500 font-medium truncate max-w-[100px]">${source.creator_user?.name || 'Admin'}</span>
+                        <span class="text-[8px] uppercase tracking-wider text-outline px-1 py-0.5 rounded bg-white/5 border border-white/5 shrink-0">Creator</span>
+                      </div>
                     </div>
                   </td>
                   <td class="px-8 py-5 text-right flex justify-end gap-2">

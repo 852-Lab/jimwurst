@@ -83,6 +83,7 @@ def _migrate_columns():
         "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS owner_type TEXT DEFAULT 'user'",
         "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES app.users(id)",
         "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES app.users(id)",
+        "ALTER TABLE app.insights ADD COLUMN IF NOT EXISTS reviewed_by UUID REFERENCES app.users(id)",
 
         "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS icon JSONB",
         "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS cover JSONB",
@@ -94,6 +95,7 @@ def _migrate_columns():
         "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS ownership_type TEXT DEFAULT 'individual'",
         "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES app.users(id)",
         "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES app.users(id)",
+        "ALTER TABLE app.knowledge_pages ADD COLUMN IF NOT EXISTS reviewed_by UUID REFERENCES app.users(id)",
 
         "ALTER TABLE app.data_sources ADD COLUMN IF NOT EXISTS owner_id UUID",
         "ALTER TABLE app.data_sources ADD COLUMN IF NOT EXISTS owner_type TEXT DEFAULT 'user'",
