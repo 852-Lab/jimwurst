@@ -49,6 +49,37 @@ export function highlightSQL(code: string): string {
   });
 }
 
+function toggleComment(textarea: HTMLTextAreaElement) {
+  const value = textarea.value;
+  const start = textarea.selectionStart;
+  const end = textarea.selectionEnd;
+  
+  const before = value.substring(0, start);
+  const after = value.substring(start);
+  
+  const lineStartIdx = before.lastIndexOf('\n') + 1;
+  const nextNewline = after.indexOf('\n');
+  const lineEndIdx = nextNewline !== -1 ? start + nextNewline : value.length;
+  
+  const currentLine = value.substring(lineStartIdx, lineEndIdx);
+  
+  let newLine: string;
+  let offset: number;
+  
+  if (/^\s*--/.test(currentLine)) {
+    newLine = currentLine.replace(/^(\s*)--\s?/, '$1');
+    offset = newLine.length - currentLine.length;
+  } else {
+    newLine = currentLine.replace(/^(\s*)/, '$1-- ');
+    offset = newLine.length - currentLine.length;
+  }
+  
+  textarea.value = value.substring(0, lineStartIdx) + newLine + value.substring(lineEndIdx);
+  
+  textarea.selectionStart = start + (start >= lineStartIdx + (currentLine.match(/^\s*/)?.[0].length || 0) ? offset : 0);
+  textarea.selectionEnd = end + (end >= lineStartIdx + (currentLine.match(/^\s*/)?.[0].length || 0) ? offset : 0);
+}
+
 function renderMarkdown(content: string) {
   if (!content) return '';
   
@@ -848,8 +879,7 @@ function bindInteractions(container: HTMLElement) {
   container.addEventListener('keydown', (e) => {
     const textarea = e.target as HTMLTextAreaElement;
     if (textarea && textarea.id && textarea.id.startsWith('cell-input-')) {
-      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-      const isCmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+      const isCmdOrCtrl = e.metaKey || e.ctrlKey;
 
       // Ctrl + Enter to run
       if (e.key === 'Enter' && e.ctrlKey) {
@@ -862,7 +892,7 @@ function bindInteractions(container: HTMLElement) {
       }
 
       // Cmd + / or Ctrl + / to toggle comment
-      if (e.key === '/' && isCmdOrCtrl) {
+      if ((e.key === '/' || e.code === 'Slash') && isCmdOrCtrl) {
         e.preventDefault();
         toggleComment(textarea);
         // Trigger input event to update line counts and autosize
