@@ -1013,7 +1013,8 @@ def execute_sql_cell(
             rows = results if isinstance(results, list) else []
         outputs = [{"type": "table", "data": rows}]
     except Exception as e:
-        outputs = [{"type": "error", "ename": "SQLError", "evalue": str(e), "traceback": []}]
+        logger.exception("SQL execution failed for analysis %s", analysis_id)
+        outputs = [{"type": "error", "ename": "SQLError", "evalue": "Query execution failed.", "traceback": []}]
         
     agent_log = models.AnalysisLog(
         analysis_id=analysis_id,
