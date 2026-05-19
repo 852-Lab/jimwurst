@@ -103,4 +103,40 @@ describe('Notebook Component - Stability & Granular Updates', () => {
     expect(notebook.textContent).not.toContain('Log 2');
     expect(notebook.textContent).toContain('I am currently streaming...');
   });
+
+  it('renders markdown cells correctly', () => {
+    const mockAnalysis = { id: 'a1', title: 'Deep Research', status: 'completed' };
+    store.setAnalyses([mockAnalysis] as any);
+    store.setActiveAnalysisId('a1');
+    store.setLogs([
+      { id: 'l1', content: '# Welcome to Markdown\nThis is **bold** text.', log_type: 'user_query', tool_name: 'markdown' }
+    ] as any);
+
+    const notebook = renderNotebook();
+    expect(notebook.querySelector('.cell-static-view')).not.toBeNull();
+    expect(notebook.textContent).toContain('Welcome to Markdown');
+    expect(notebook.querySelector('strong')?.textContent).toBe('bold');
+  });
+
+  it('triggers editing view when double-clicking static cell view', () => {
+    const mockAnalysis = { id: 'a1', title: 'Deep Research', status: 'completed' };
+    store.setAnalyses([mockAnalysis] as any);
+    store.setActiveAnalysisId('a1');
+    store.setLogs([
+      { id: 'l1', content: 'Double click test', log_type: 'user_query', tool_name: 'markdown' }
+    ] as any);
+
+    const notebook = renderNotebook();
+    const staticView = notebook.querySelector('#cell-static-1') as HTMLElement;
+    const editView = notebook.querySelector('#cell-edit-1') as HTMLElement;
+
+    expect(staticView.classList.contains('hidden')).toBe(false);
+    expect(editView.classList.contains('hidden')).toBe(true);
+
+    // Simulate double click
+    staticView.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+
+    expect(staticView.classList.contains('hidden')).toBe(true);
+    expect(editView.classList.contains('hidden')).toBe(false);
+  });
 });
