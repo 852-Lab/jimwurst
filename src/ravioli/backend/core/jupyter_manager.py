@@ -95,9 +95,13 @@ class _LazyDuckDB:
 try:
     con = _LazyDuckDB('{db_path}')
     
-    def read_sql(sql: str, *args):
-        \"\"\"Pandas-style convenience function to execute SQL and return a DataFrame.\"\"\"
-        return con.execute(sql, *args).df()
+    _original_read_sql = pd.read_sql
+    def _patched_read_sql(sql, con=None, **kwargs):
+        \"\"\"Patched pd.read_sql that automatically uses the DuckDB wrapper if no con is provided.\"\"\"
+        if con is None:
+            return globals()['con'].execute(sql).df()
+        return _original_read_sql(sql, con=con, **kwargs)
+    pd.read_sql = _patched_read_sql
         
     # Pre-load available tables so users can inspect them with `tables`
     tables = con.execute("SHOW ALL TABLES").df()[['schema', 'name']].copy()
