@@ -44,22 +44,59 @@ class JupyterManager:
             self.kernels[aid_str] = km
             self.clients[aid_str] = kc
             
-            # Setup environment with pre-imports, inline plotting, and read-only DuckDB connection
+            # Setup environment with pre-imports, inline plotting, and a lazy DuckDB wrapper.
+            # IMPORTANT: We do NOT hold a persistent duckdb connection in the kernel process.
+            # A persistent connection (even read_only=True) would conflict with the main backend's
+            # read-write DuckDBManager connection via OS-level file locking.
+            # Instead, _LazyDuckDB opens a fresh connection per execute() call and closes it
+            # immediately after fetching — same con.execute(sql).df() API, zero lock contention.
             db_path = str(settings.duckdb_path.absolute()).replace("\\", "\\\\")
             startup_code = f"""
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import duckdb
+import duckdb as _duckdb_module
 %matplotlib inline
 pd.set_option('display.notebook_repr_html', True)
+
+class _LazyDuckDBResult:
+    \"\"\"Holds eagerly-fetched results so .df() / .fetchall() / .fetchone() all work after the connection closes.\"\"\"
+    def __init__(self, df):
+        self._df = df
+    def df(self):
+        return self._df
+    def fetchdf(self):
+        return self._df
+    def fetchall(self):
+        return [tuple(r) for r in self._df.itertuples(index=False)]
+    def fetchone(self):
+        rows = self.fetchall()
+        return rows[0] if rows else None
+    def __repr__(self):
+        return repr(self._df)
+
+class _LazyDuckDB:
+    \"\"\"Opens a fresh read-only connection per query and closes it immediately — no persistent file lock.\"\"\"
+    def __init__(self, path):
+        self._path = path
+    def execute(self, sql, *args):
+        _c = _duckdb_module.connect(self._path, read_only=True)
+        try:
+            _rel = _c.execute(sql, *args)
+            _df = _rel.fetchdf()
+        finally:
+            _c.close()
+        return _LazyDuckDBResult(_df)
+
 try:
-    con = duckdb.connect('{db_path}', read_only=True)
-except Exception as e:
-    import logging
-    logging.getLogger('IPython').warning("Could not connect to DuckDB: " + str(e))
+    con = _LazyDuckDB('{db_path}')
+    con.execute("SELECT 1")  # validate path is accessible
+except Exception as _e:
+    import logging as _logging
+    _logging.getLogger('IPython').warning("DuckDB lazy wrapper init failed: " + str(_e))
 """
             kc.execute(startup_code)
+
             
         return self.clients[aid_str]
 
