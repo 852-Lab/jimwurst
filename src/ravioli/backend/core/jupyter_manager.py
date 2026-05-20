@@ -90,7 +90,7 @@ class _LazyDuckDB:
         
     def table(self, table_name):
         \"\"\"Convenience method to load an entire table directly into a DataFrame.\"\"\"
-        return self.execute(f"SELECT * FROM {table_name}").df()
+        return self.execute(f"SELECT * FROM {{table_name}}").df()
 
 try:
     con = _LazyDuckDB('{db_path}')
