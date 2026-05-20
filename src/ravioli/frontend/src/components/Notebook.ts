@@ -927,16 +927,6 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
   }
 }
 
-function highlightPython(code: string): string {
-  // Very basic syntax highlighting for Python
-  return code
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/\b(def|return|import|from|as|if|else|elif|for|in|while|try|except|with|class|pass|break|continue|None|True|False)\b/g, '<span class="text-secondary">$1</span>')
-    .replace(/([A-Z][a-zA-Z0-9_]*)/g, '<span class="text-primary">$1</span>')
-    .replace(/(['"])(.*?)\1/g, '<span class="text-emerald-400">$1$2$1</span>')
-    .replace(/(#.*)/g, '<span class="text-outline">$1</span>');
-}
-
 function bindInteractions(container: HTMLElement) {
   const activeId = store.getActiveAnalysisId();
 
@@ -959,15 +949,7 @@ function bindInteractions(container: HTMLElement) {
       if (label) {
         label.textContent = `${lineCount} ${lineCount === 1 ? 'line' : 'lines'}`;
       }
-      
-      // Update highlight backdrop
-      const highlight = container.querySelector(`#cell-highlight-${idxStr}`);
-      if (highlight) {
-        const tool = highlight.getAttribute('data-tool');
-        highlight.innerHTML = tool === 'sql' ? highlightSQL(textarea.value) : highlightPython(textarea.value);
-      }
-      
-      // Update gutter line numbers
+      // Update gutter line numbers & highlight backdrop
       updateLineNumbers(textarea);
     }
   });
@@ -1036,7 +1018,7 @@ function bindInteractions(container: HTMLElement) {
     } else if (type === "python") {
        icon = "code";
        color = "text-emerald-400";
-       placeholder = "# Import libraries and analyze data...";
+       placeholder = "# e.g. df = con.execute('SELECT * FROM my_table').df()  →  df.head()";
     } else if (type === "markdown") {
        icon = "article";
        color = "text-indigo-400";
