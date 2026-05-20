@@ -96,7 +96,7 @@ try:
     print("\\n🟢 Ravioli kernel ready — DuckDB connected.")
     print("Available tables (use `tables` to see full list):")
     for _, row in tables.iterrows():
-        print(f"  → {row['schema']}.{row['table']}")
+        print("  → " + str(row['schema']) + "." + str(row['table']))
     print("\\nExample: df = con.execute('SELECT * FROM {{}}.{{}}').df()".format(
         tables.iloc[0]['schema'] if len(tables) > 0 else 'schema',
         tables.iloc[0]['table'] if len(tables) > 0 else 'table'
