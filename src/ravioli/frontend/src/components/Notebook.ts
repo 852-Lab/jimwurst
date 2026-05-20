@@ -527,14 +527,19 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
       
       <!-- Context Resources -->
       ${attachedSources.map(ds => `
-        <button class="btn-preview-data flex items-center gap-1.5 px-2.5 py-0.5 bg-primary/10 border border-primary/20 text-primary text-[10px] rounded-full min-w-0 hover:bg-primary/20 hover:border-primary/40 transition-colors cursor-pointer group/ds" 
-          data-table="${ds.schema_name}.${ds.table_name}" 
-          data-filename="${ds.original_filename}"
-          title="Click to preview: ${ds.table_name} (${ds.row_count ?? '?'} rows)">
-          <span class="material-symbols-outlined text-[12px] group-hover/ds:rotate-12 transition-transform" data-icon="database">database</span>
-          <span class="truncate max-w-[120px] font-medium">${ds.original_filename}</span>
-          <span class="material-symbols-outlined text-[10px] opacity-50 group-hover/ds:opacity-100 transition-opacity">open_in_new</span>
-        </button>
+        <div class="flex items-center group/ds-wrapper">
+          <button class="btn-preview-data flex items-center gap-1.5 px-2.5 py-0.5 bg-primary/10 border border-primary/20 text-primary text-[10px] rounded-l-full min-w-0 hover:bg-primary/20 hover:border-primary/40 transition-colors cursor-pointer group/ds" 
+            data-table="${ds.schema_name}.${ds.table_name}" 
+            data-filename="${ds.original_filename}"
+            title="Click to preview: ${ds.table_name} (${ds.row_count ?? '?'} rows)">
+            <span class="material-symbols-outlined text-[12px] group-hover/ds:rotate-12 transition-transform" data-icon="database">database</span>
+            <span class="truncate max-w-[120px] font-medium">${ds.original_filename}</span>
+            <span class="material-symbols-outlined text-[10px] opacity-50 group-hover/ds:opacity-100 transition-opacity">open_in_new</span>
+          </button>
+          <button class="btn-insert-table flex items-center justify-center px-1.5 py-0.5 bg-primary/10 border border-l-0 border-primary/20 text-primary text-[10px] rounded-r-full hover:bg-primary/20 hover:border-primary/40 transition-colors cursor-pointer opacity-50 hover:opacity-100" data-table="${ds.schema_name}.${ds.table_name}" title="Insert table name into active cell">
+            <span class="material-symbols-outlined text-[12px]">add_circle</span>
+          </button>
+        </div>
       `).join('')}
       ${attachedKnowledges.map(kp => `
         <div class="flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald/10 border border-emerald/20 text-emerald-400 text-[10px] rounded-full min-w-0">
@@ -1550,6 +1555,41 @@ function bindInteractions(container: HTMLElement) {
        const filename = previewBtn.getAttribute('data-filename');
        if (fullTable) {
          showDataPreviewModal(fullTable, filename || 'Data Source');
+       }
+     }
+
+     // Insert Table Name trigger
+     const insertTableBtn = target.closest('.btn-insert-table') as HTMLElement;
+     if (insertTableBtn) {
+       const fullTable = insertTableBtn.getAttribute('data-table');
+       if (fullTable) {
+         let activeTextarea: HTMLTextAreaElement | null = null;
+         
+         // 1. Try currently focused
+         if (document.activeElement && document.activeElement.tagName === 'TEXTAREA' && container.contains(document.activeElement)) {
+           activeTextarea = document.activeElement as HTMLTextAreaElement;
+         } 
+         // 2. Try the new cell block
+         else if (container.querySelector('.new-cell-block textarea')) {
+           activeTextarea = container.querySelector('.new-cell-block textarea') as HTMLTextAreaElement;
+         }
+         // 3. Try any open edit view
+         else {
+           const editViews = container.querySelectorAll('.cell-edit-view:not(.hidden) textarea');
+           if (editViews.length > 0) {
+             activeTextarea = editViews[0] as HTMLTextAreaElement;
+           }
+         }
+
+         if (activeTextarea) {
+           const start = activeTextarea.selectionStart;
+           const end = activeTextarea.selectionEnd;
+           const val = activeTextarea.value;
+           activeTextarea.value = val.substring(0, start) + fullTable + val.substring(end);
+           activeTextarea.selectionStart = activeTextarea.selectionEnd = start + fullTable.length;
+           activeTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+           activeTextarea.focus();
+         }
        }
      }
   });

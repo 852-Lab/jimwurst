@@ -90,7 +90,17 @@ class _LazyDuckDB:
 
 try:
     con = _LazyDuckDB('{db_path}')
-    con.execute("SELECT 1")  # validate path is accessible
+    # Pre-load available tables so users can inspect them with `tables`
+    tables = con.execute("SHOW ALL TABLES").df()[['schema', 'name']].copy()
+    tables.columns = ['schema', 'table']
+    print("\\n🟢 Ravioli kernel ready — DuckDB connected.")
+    print("Available tables (use `tables` to see full list):")
+    for _, row in tables.iterrows():
+        print(f"  → {row['schema']}.{row['table']}")
+    print("\\nExample: df = con.execute('SELECT * FROM {{}}.{{}}').df()".format(
+        tables.iloc[0]['schema'] if len(tables) > 0 else 'schema',
+        tables.iloc[0]['table'] if len(tables) > 0 else 'table'
+    ))
 except Exception as _e:
     import logging as _logging
     _logging.getLogger('IPython').warning("DuckDB lazy wrapper init failed: " + str(_e))
