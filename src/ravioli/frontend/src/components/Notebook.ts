@@ -774,7 +774,7 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
                           <!-- Highlight Backdrop -->
                           <div id="cell-highlight-${cell.index}" data-tool="${cell.toolName}" class="absolute inset-0 w-full max-w-full bg-transparent text-primary-fixed-dim py-0.5 px-0 text-sm font-mono leading-relaxed whitespace-pre overflow-hidden pointer-events-none border border-transparent custom-scrollbar select-none">${cell.toolName === 'sql' ? highlightSQL(cell.inputContent) : highlightPython(cell.inputContent)}</div>
                           ` : ''}
-                          <textarea id="cell-input-${cell.index}" class="w-full max-w-full bg-transparent border border-transparent ${(cell.toolName === 'sql' || cell.toolName === 'python') ? 'text-transparent caret-white whitespace-pre overflow-x-auto' : 'text-primary-fixed-dim whitespace-pre-wrap break-words'} focus:ring-0 resize-none py-0.5 px-0 text-sm font-mono leading-relaxed max-h-48 custom-scrollbar relative z-10" rows="2">${cell.inputContent}</textarea>
+                          <textarea id="cell-input-${cell.index}" class="w-full max-w-full bg-transparent border border-transparent ${(cell.toolName === 'sql' || cell.toolName === 'python') ? 'text-transparent caret-white whitespace-pre overflow-x-auto' : 'text-primary-fixed-dim whitespace-pre-wrap break-words'} outline-none focus:outline-none focus:ring-0 resize-none py-0.5 px-0 text-sm font-mono leading-relaxed max-h-48 custom-scrollbar relative z-10" rows="2">${cell.inputContent}</textarea>
                         </div>
                         <div class="flex items-start gap-1.5 shrink-0 pt-0.5">
                           <button class="w-7 h-7 rounded-full bg-surface-container-highest text-outline flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors btn-cancel-edit" data-cell-index="${cell.index}" title="Cancel">
@@ -1054,7 +1054,7 @@ function bindInteractions(container: HTMLElement) {
                       <!-- Highlight Backdrop -->
                       <div id="cell-highlight-${tempId}" data-tool="${type}" class="absolute inset-0 w-full max-w-full bg-transparent text-on-surface py-0.5 px-0 text-sm font-mono leading-relaxed whitespace-pre overflow-hidden pointer-events-none border border-transparent custom-scrollbar select-none"></div>
                       ` : ''}
-                      <textarea id="cell-input-${tempId}" class="w-full max-w-full bg-transparent border border-transparent ${(type === 'sql' || type === 'python') ? 'text-transparent caret-white whitespace-pre overflow-x-auto' : 'text-on-surface whitespace-pre-wrap break-words'} focus:ring-0 resize-none py-0.5 px-0 text-sm font-mono leading-relaxed custom-scrollbar placeholder-outline-variant relative z-10" rows="${isMarkdown ? 3 : 2}" placeholder="${placeholder}"></textarea>
+                      <textarea id="cell-input-${tempId}" class="w-full max-w-full bg-transparent border border-transparent ${(type === 'sql' || type === 'python') ? 'text-transparent caret-white whitespace-pre overflow-x-auto' : 'text-on-surface whitespace-pre-wrap break-words'} outline-none focus:outline-none focus:ring-0 resize-none py-0.5 px-0 text-sm font-mono leading-relaxed custom-scrollbar placeholder-outline-variant relative z-10" rows="${isMarkdown ? 3 : 2}" placeholder="${placeholder}"></textarea>
                     </div>
                     <div class="flex items-start gap-1.5 shrink-0 pt-0.5">
                       <button class="w-7 h-7 rounded-full bg-surface-container-highest text-outline flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors btn-cancel-insert" title="Cancel">
@@ -1349,9 +1349,11 @@ function bindInteractions(container: HTMLElement) {
       
       const txt = container.querySelector(`#cell-input-${idx}`) as HTMLTextAreaElement;
       if (txt) {
-         txt.style.height = 'auto';
-         txt.style.height = txt.scrollHeight + 'px';
-         txt.focus();
+         setTimeout(() => {
+            txt.style.height = 'auto';
+            txt.style.height = txt.scrollHeight + 'px';
+            txt.focus();
+         }, 0);
       }
       return;
     }
