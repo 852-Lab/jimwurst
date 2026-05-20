@@ -3,6 +3,7 @@ import uuid
 from typing import Dict, List
 from queue import Empty
 import logging
+from ravioli.backend.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +44,22 @@ class JupyterManager:
             self.kernels[aid_str] = km
             self.clients[aid_str] = kc
             
-            # Setup environment for pandas html rendering
-            kc.execute("import pandas as pd; pd.set_option('display.notebook_repr_html', True)")
+            # Setup environment with pre-imports, inline plotting, and read-only DuckDB connection
+            db_path = str(settings.duckdb_path.absolute()).replace("\\", "\\\\")
+            startup_code = f"""
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import duckdb
+%matplotlib inline
+pd.set_option('display.notebook_repr_html', True)
+try:
+    con = duckdb.connect('{db_path}', read_only=True)
+except Exception as e:
+    import logging
+    logging.getLogger('IPython').warning("Could not connect to DuckDB: " + str(e))
+"""
+            kc.execute(startup_code)
             
         return self.clients[aid_str]
 
