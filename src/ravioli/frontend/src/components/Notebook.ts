@@ -741,8 +741,8 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
               </div>
               
               <!-- Static View -->
-              <div class="flex-1 font-mono text-sm ${inputColor} bg-surface-container-lowest/80 border border-outline-variant/10 rounded-xl p-3.5 shadow-inner overflow-x-auto relative cell-static-view transition-all" id="cell-static-${cell.index}">
-                                   <div class="pr-8 whitespace-pre-wrap">${cell.toolName === 'sql' ? highlightSQL(cell.inputContent) : cell.toolName === 'python' ? highlightPython(cell.inputContent) : cell.inputContent}</div>${cell.toolName === 'sql' ? `<div class="mt-3 flex items-center justify-between border-t border-outline-variant/5 pt-2"><span class="text-[10px] font-mono text-outline uppercase tracking-wider select-none bg-surface-container-highest/40 px-2 py-0.5 rounded border border-outline-variant/10">SQL • ${(() => { const l = (cell.inputContent || '').split('\n').length; return `${l} ${l === 1 ? 'line' : 'lines'}`; })()}</span></div>` : cell.toolName === 'python' ? `<div class="mt-3 flex items-center justify-between border-t border-outline-variant/5 pt-2"><span class="text-[10px] font-mono text-outline uppercase tracking-wider select-none bg-surface-container-highest/40 px-2 py-0.5 rounded border border-outline-variant/10">Python • ${(() => { const l = (cell.inputContent || '').split('\n').length; return `${l} ${l === 1 ? 'line' : 'lines'}`; })()}</span></div>` : ''}
+              <div class="flex-1 min-w-0 font-mono text-sm ${inputColor} bg-surface-container-lowest/80 border border-outline-variant/10 rounded-xl p-3.5 shadow-inner overflow-x-auto relative cell-static-view transition-all" id="cell-static-${cell.index}">
+                                   <div class="pr-8 ${cell.toolName === 'markdown' ? 'whitespace-pre-wrap break-words' : 'whitespace-pre'}">${cell.toolName === 'sql' ? highlightSQL(cell.inputContent) : cell.toolName === 'python' ? highlightPython(cell.inputContent) : cell.inputContent}</div>${cell.toolName === 'sql' ? `<div class="mt-3 flex items-center justify-between border-t border-outline-variant/5 pt-2"><span class="text-[10px] font-mono text-outline uppercase tracking-wider select-none bg-surface-container-highest/40 px-2 py-0.5 rounded border border-outline-variant/10">SQL • ${(() => { const l = (cell.inputContent || '').split('\n').length; return `${l} ${l === 1 ? 'line' : 'lines'}`; })()}</span></div>` : cell.toolName === 'python' ? `<div class="mt-3 flex items-center justify-between border-t border-outline-variant/5 pt-2"><span class="text-[10px] font-mono text-outline uppercase tracking-wider select-none bg-surface-container-highest/40 px-2 py-0.5 rounded border border-outline-variant/10">Python • ${(() => { const l = (cell.inputContent || '').split('\n').length; return `${l} ${l === 1 ? 'line' : 'lines'}`; })()}</span></div>` : ''}
                  <div class="absolute top-2 right-2 flex items-center gap-1">
                    ${cell.toolName !== 'markdown' ? `
                    <button class="p-1.5 rounded-lg bg-surface-container-highest/80 text-outline hover:text-${focusColor} btn-run-static-cell transition-all" data-cell-index="${cell.index}" data-log-id="${cell.inputLogId}" data-tool="${cell.toolName}" title="Run Cell">
@@ -759,7 +759,7 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
               </div>
               
               <!-- Edit View -->
-              <div class="flex-1 hidden cell-edit-view w-full" id="cell-edit-${cell.index}">
+              <div class="flex-1 min-w-0 hidden cell-edit-view w-full" id="cell-edit-${cell.index}">
                  <div class="glass-panel p-1.5 rounded-xl group focus-within:border-primary/30 transition-all duration-300 shadow-lg shadow-primary/5 bg-surface-container-low/80 border-primary/30">
                     <div class="flex flex-col w-full">
                       <div class="flex items-stretch gap-3 px-3">
@@ -772,9 +772,9 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
                         <div class="flex-1 min-w-0 py-0.5 relative">
                           ${cell.toolName === 'sql' || cell.toolName === 'python' ? `
                           <!-- Highlight Backdrop -->
-                          <div id="cell-highlight-${cell.index}" data-tool="${cell.toolName}" class="absolute inset-0 w-full bg-transparent text-primary-fixed-dim py-0.5 px-0 text-sm font-mono leading-relaxed whitespace-pre-wrap overflow-hidden pointer-events-none border border-transparent custom-scrollbar select-none">${cell.toolName === 'sql' ? highlightSQL(cell.inputContent) : highlightPython(cell.inputContent)}</div>
+                          <div id="cell-highlight-${cell.index}" data-tool="${cell.toolName}" class="absolute inset-0 w-full max-w-full bg-transparent text-primary-fixed-dim py-0.5 px-0 text-sm font-mono leading-relaxed whitespace-pre overflow-hidden pointer-events-none border border-transparent custom-scrollbar select-none">${cell.toolName === 'sql' ? highlightSQL(cell.inputContent) : highlightPython(cell.inputContent)}</div>
                           ` : ''}
-                          <textarea id="cell-input-${cell.index}" class="w-full bg-transparent border border-transparent ${(cell.toolName === 'sql' || cell.toolName === 'python') ? 'text-transparent caret-white' : 'text-primary-fixed-dim'} focus:ring-0 resize-none py-0.5 px-0 text-sm font-mono leading-relaxed max-h-48 custom-scrollbar relative z-10" rows="2">${cell.inputContent}</textarea>
+                          <textarea id="cell-input-${cell.index}" class="w-full max-w-full bg-transparent border border-transparent ${(cell.toolName === 'sql' || cell.toolName === 'python') ? 'text-transparent caret-white whitespace-pre overflow-x-auto' : 'text-primary-fixed-dim whitespace-pre-wrap break-words'} focus:ring-0 resize-none py-0.5 px-0 text-sm font-mono leading-relaxed max-h-48 custom-scrollbar relative z-10" rows="2">${cell.inputContent}</textarea>
                         </div>
                         <div class="flex items-start gap-1.5 shrink-0 pt-0.5">
                           <button class="w-7 h-7 rounded-full bg-surface-container-highest text-outline flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors btn-cancel-edit" data-cell-index="${cell.index}" title="Cancel">
@@ -1052,9 +1052,9 @@ function bindInteractions(container: HTMLElement) {
                     <div class="flex-1 min-w-0 py-0.5 relative">
                       ${type === 'sql' || type === 'python' ? `
                       <!-- Highlight Backdrop -->
-                      <div id="cell-highlight-${tempId}" data-tool="${type}" class="absolute inset-0 w-full bg-transparent text-on-surface py-0.5 px-0 text-sm font-mono leading-relaxed whitespace-pre-wrap overflow-hidden pointer-events-none border border-transparent custom-scrollbar select-none"></div>
+                      <div id="cell-highlight-${tempId}" data-tool="${type}" class="absolute inset-0 w-full max-w-full bg-transparent text-on-surface py-0.5 px-0 text-sm font-mono leading-relaxed whitespace-pre overflow-hidden pointer-events-none border border-transparent custom-scrollbar select-none"></div>
                       ` : ''}
-                      <textarea id="cell-input-${tempId}" class="w-full bg-transparent border border-transparent ${(type === 'sql' || type === 'python') ? 'text-transparent caret-white' : 'text-on-surface'} focus:ring-0 resize-none py-0.5 px-0 text-sm font-mono leading-relaxed custom-scrollbar placeholder-outline-variant relative z-10" rows="${isMarkdown ? 3 : 2}" placeholder="${placeholder}"></textarea>
+                      <textarea id="cell-input-${tempId}" class="w-full max-w-full bg-transparent border border-transparent ${(type === 'sql' || type === 'python') ? 'text-transparent caret-white whitespace-pre overflow-x-auto' : 'text-on-surface whitespace-pre-wrap break-words'} focus:ring-0 resize-none py-0.5 px-0 text-sm font-mono leading-relaxed custom-scrollbar placeholder-outline-variant relative z-10" rows="${isMarkdown ? 3 : 2}" placeholder="${placeholder}"></textarea>
                     </div>
                     <div class="flex items-start gap-1.5 shrink-0 pt-0.5">
                       <button class="w-7 h-7 rounded-full bg-surface-container-highest text-outline flex items-center justify-center hover:bg-error/20 hover:text-error transition-colors btn-cancel-insert" title="Cancel">
