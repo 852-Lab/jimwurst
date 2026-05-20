@@ -3,6 +3,7 @@ import uuid
 from typing import Dict, List
 from queue import Empty
 import logging
+from ravioli.backend.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +44,82 @@ class JupyterManager:
             self.kernels[aid_str] = km
             self.clients[aid_str] = kc
             
-            # Setup environment for pandas html rendering
-            kc.execute("import pandas as pd; pd.set_option('display.notebook_repr_html', True)")
+            # Setup environment with pre-imports, inline plotting, and a lazy DuckDB wrapper.
+            # IMPORTANT: We do NOT hold a persistent duckdb connection in the kernel process.
+            # A persistent connection (even read_only=True) would conflict with the main backend's
+            # read-write DuckDBManager connection via OS-level file locking.
+            # Instead, _LazyDuckDB opens a fresh connection per execute() call and closes it
+            # immediately after fetching — same con.execute(sql).df() API, zero lock contention.
+            db_path = str(settings.duckdb_path.absolute()).replace("\\", "\\\\")
+            startup_code = f"""
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import duckdb as _duckdb_module
+%matplotlib inline
+pd.set_option('display.notebook_repr_html', True)
+
+class _LazyDuckDBResult:
+    \"\"\"Holds eagerly-fetched results so .df() / .fetchall() / .fetchone() all work after the connection closes.\"\"\"
+    def __init__(self, df):
+        self._df = df
+    def df(self):
+        return self._df
+    def fetchdf(self):
+        return self._df
+    def fetchall(self):
+        return [tuple(r) for r in self._df.itertuples(index=False)]
+    def fetchone(self):
+        rows = self.fetchall()
+        return rows[0] if rows else None
+    def __repr__(self):
+        return repr(self._df)
+
+class _LazyDuckDB:
+    \"\"\"Opens a fresh read-only connection per query and closes it immediately — no persistent file lock.\"\"\"
+    def __init__(self, path):
+        self._path = path
+    def execute(self, sql, *args):
+        _c = _duckdb_module.connect(self._path, read_only=True)
+        try:
+            _rel = _c.execute(sql, *args)
+            _df = _rel.fetchdf()
+        finally:
+            _c.close()
+        return _LazyDuckDBResult(_df)
+        
+    def table(self, table_name):
+        \"\"\"Convenience method to load an entire table directly into a DataFrame.\"\"\"
+        return self.execute(f"SELECT * FROM {{table_name}}").df()
+
+try:
+    con = _LazyDuckDB('{db_path}')
+    
+    _original_read_sql = pd.read_sql
+    def _patched_read_sql(sql, con=None, **kwargs):
+        \"\"\"Patched pd.read_sql that automatically uses the DuckDB wrapper if no con is provided.\"\"\"
+        if con is None:
+            return globals()['con'].execute(sql).df()
+        return _original_read_sql(sql, con=con, **kwargs)
+    pd.read_sql = _patched_read_sql
+        
+    # Pre-load available tables so users can inspect them with `tables`
+    tables = con.execute("SHOW ALL TABLES").df()[['schema', 'name']].copy()
+    tables.columns = ['schema', 'table']
+    print("\\n🟢 Ravioli kernel ready — DuckDB connected.")
+    print("Available tables (use `tables` to see full list):")
+    for _, row in tables.iterrows():
+        print("  → " + str(row['schema']) + "." + str(row['table']))
+    print("\\nExample: df = con.table('{{}}.{{}}')".format(
+        tables.iloc[0]['schema'] if len(tables) > 0 else 'schema',
+        tables.iloc[0]['table'] if len(tables) > 0 else 'table'
+    ))
+except Exception as _e:
+    import logging as _logging
+    _logging.getLogger('IPython').warning("DuckDB lazy wrapper init failed: " + str(_e))
+"""
+            kc.execute(startup_code)
+
             
         return self.clients[aid_str]
 

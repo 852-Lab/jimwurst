@@ -269,3 +269,61 @@ def test_execute_sql_cell_failure(client, session, mocker):
     assert data["status"] == "success"
     assert data["outputs"] == [{"type": "error", "ename": "Exception", "evalue": "Table 'my_table' not found", "traceback": []}]
 
+
+def test_execute_python_cell_success(client, session, mocker):
+    analysis_id = uuid.uuid4()
+    
+    class MockAnalysis:
+        def __init__(self):
+            self.id = analysis_id
+            self.title = "Test Analysis"
+            self.analysis_metadata = {}
+            self.notebook = {}
+            
+    mock_analysis = MockAnalysis()
+    
+    mock_execute = mocker.patch("ravioli.backend.core.jupyter_manager.jupyter_manager.execute_code")
+    mock_execute.return_value = [{"type": "stream", "name": "stdout", "text": "hello"}]
+    
+    session.query().filter().first.return_value = mock_analysis
+    
+    payload = {
+        "code": "print('hello')",
+        "replace_log_id": None,
+        "insert_after_log_id": None
+    }
+    
+    def mock_refresh_log(obj):
+        obj.id = uuid.uuid4()
+        obj.timestamp = datetime.now(UTC)
+        
+    session.refresh.side_effect = mock_refresh_log
+
+    response = client.post(f"/api/v1/analyses/{analysis_id}/execute-python", json=payload)
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert "log_id" in data
+    assert data["outputs"] == [{"type": "stream", "name": "stdout", "text": "hello"}]
+    assert mock_execute.called
+    assert session.add.called
+    assert session.commit.called
+
+def test_execute_python_cell_failure(client, session, mocker):
+    analysis_id = uuid.uuid4()
+    
+    # Mock database to return 404 for analysis not found
+    session.query().filter().first.return_value = None
+    
+    payload = {
+        "code": "print('hello')",
+        "replace_log_id": None,
+        "insert_after_log_id": None
+    }
+    
+    response = client.post(f"/api/v1/analyses/{analysis_id}/execute-python", json=payload)
+    
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Analysis not found"
+
