@@ -12,6 +12,8 @@ def manager_fixture():
         try:
             km.shutdown_kernel(now=True)
         except Exception:
+            # Best-effort teardown: ignore shutdown errors to avoid masking test outcomes.
+            # Kernels may already be stopped or in an invalid state during fixture cleanup.
             pass
 
 def test_jupyter_manager_lifecycle(manager):
