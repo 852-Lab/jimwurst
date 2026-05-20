@@ -1023,7 +1023,7 @@ function bindInteractions(container: HTMLElement) {
     } else if (type === "python") {
        icon = "code";
        color = "text-emerald-400";
-       placeholder = "# e.g. df = con.execute('SELECT * FROM my_table').df()  →  df.head()";
+       placeholder = "# e.g. df = con.table('my_schema.my_table')  →  df.head()";
     } else if (type === "markdown") {
        icon = "article";
        color = "text-indigo-400";

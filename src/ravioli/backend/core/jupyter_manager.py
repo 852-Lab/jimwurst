@@ -87,9 +87,18 @@ class _LazyDuckDB:
         finally:
             _c.close()
         return _LazyDuckDBResult(_df)
+        
+    def table(self, table_name):
+        \"\"\"Convenience method to load an entire table directly into a DataFrame.\"\"\"
+        return self.execute(f"SELECT * FROM {table_name}").df()
 
 try:
     con = _LazyDuckDB('{db_path}')
+    
+    def read_sql(sql: str, *args):
+        \"\"\"Pandas-style convenience function to execute SQL and return a DataFrame.\"\"\"
+        return con.execute(sql, *args).df()
+        
     # Pre-load available tables so users can inspect them with `tables`
     tables = con.execute("SHOW ALL TABLES").df()[['schema', 'name']].copy()
     tables.columns = ['schema', 'table']
@@ -97,7 +106,7 @@ try:
     print("Available tables (use `tables` to see full list):")
     for _, row in tables.iterrows():
         print("  → " + str(row['schema']) + "." + str(row['table']))
-    print("\\nExample: df = con.execute('SELECT * FROM {{}}.{{}}').df()".format(
+    print("\\nExample: df = con.table('{{}}.{{}}')".format(
         tables.iloc[0]['schema'] if len(tables) > 0 else 'schema',
         tables.iloc[0]['table'] if len(tables) > 0 else 'table'
     ))
