@@ -55,6 +55,12 @@ print("Pre-imports checked!")
     assert "Pre-imports checked!" in streams[0]["text"]
 
 def test_jupyter_manager_duckdb_con(manager):
+    import duckdb
+    from ravioli.backend.core.config import settings
+    # Ensure duckdb file exists so read-only connection works in clean CI environments
+    settings.duckdb_path.parent.mkdir(parents=True, exist_ok=True)
+    duckdb.connect(str(settings.duckdb_path)).close()
+
     analysis_id = uuid.uuid4()
     
     # Verify that read-only duckdb connection 'con' is pre-configured and queryable
