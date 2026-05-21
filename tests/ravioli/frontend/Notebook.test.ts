@@ -250,7 +250,7 @@ describe('Notebook Component - Stability & Granular Updates', () => {
     // Verify stream processing
     expect(api.streamQuestion).toHaveBeenCalled();
     // After stream chunks are pushed, the text content should be updated (via DOM manipulation in Notebook)
-    const streamContentContainer = notebook.querySelector('#streaming-content');
+    const streamContentContainer = notebook.querySelector('#streaming-content-1');
     expect(streamContentContainer).not.toBeNull();
     // In our Notebook.ts implementation, streaming output is placed dynamically into `#streaming-content`
   });
