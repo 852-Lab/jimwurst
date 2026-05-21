@@ -1,5 +1,6 @@
 import { api } from '../../services/api';
 import { store } from '../../store';
+import { withButtonLoading } from '../utils/dom';
 
 export interface CreateAnalysisContext {
   mode: string;
@@ -145,45 +146,41 @@ export function attachEventListeners(container: HTMLElement, ctx: CreateAnalysis
       }
 
       const btn = container.querySelector('#confirm-create') as HTMLButtonElement;
-      if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<span>Initializing Deep Dive...</span>';
-      }
+      
+      await withButtonLoading(
+        btn,
+        '<span>Initializing Deep Dive...</span>',
+        async () => {
+          console.log('Dispatching api.createAnalysis request with:', {
+            title,
+            description: descInput?.value.trim() || '',
+            analysis_metadata: {
+              type: 'deep_dive',
+              data_sources: ctx.selectedDataSourceIds,
+              knowledge_pages: ctx.selectedKnowledgePageIds
+            }
+          });
 
-      try {
-        console.log('Dispatching api.createAnalysis request with:', {
-          title,
-          description: descInput?.value.trim() || '',
-          analysis_metadata: {
-            type: 'deep_dive',
-            data_sources: ctx.selectedDataSourceIds,
-            knowledge_pages: ctx.selectedKnowledgePageIds
-          }
-        });
-
-        const newAnalysis = await api.createAnalysis({
-          title,
-          description: descInput?.value.trim() || '',
-          analysis_metadata: {
-            type: 'deep_dive',
-            data_sources: ctx.selectedDataSourceIds,
-            knowledge_pages: ctx.selectedKnowledgePageIds
-          }
-        });
-        
-        console.log('Deep Dive Analysis created successfully:', newAnalysis);
-        
-        const currentAnalyses = store.getAnalyses();
-        store.setAnalyses([newAnalysis, ...currentAnalyses]);
-        store.setActiveAnalysisId(newAnalysis.id);
-      } catch (err: any) {
+          const newAnalysis = await api.createAnalysis({
+            title,
+            description: descInput?.value.trim() || '',
+            analysis_metadata: {
+              type: 'deep_dive',
+              data_sources: ctx.selectedDataSourceIds,
+              knowledge_pages: ctx.selectedKnowledgePageIds
+            }
+          });
+          
+          console.log('Deep Dive Analysis created successfully:', newAnalysis);
+          
+          const currentAnalyses = store.getAnalyses();
+          store.setAnalyses([newAnalysis, ...currentAnalyses]);
+          store.setActiveAnalysisId(newAnalysis.id);
+        }
+      ).catch(err => {
         console.error('Failed to create analysis', err);
         alert(`Failed to initialize Deep Dive analysis: ${err.message || err}`);
-        if (btn) {
-          btn.disabled = false;
-          btn.innerHTML = '<span>Initialize Deep Dive</span>';
-        }
-      }
+      });
     });
   }
 

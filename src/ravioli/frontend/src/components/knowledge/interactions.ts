@@ -1,7 +1,7 @@
 import { api } from '../../services/api';
 import { store } from '../../store';
 import { getCoverUrl, getIconDisplay, getBlocksPreview, textToBlocks } from './utils';
-import { createModal, closeModal } from '../utils/dom';
+import { createModal, closeModal, withButtonLoading } from '../utils/dom';
 import { escapeHTML, sanitizeImageUrl } from '../utils/security';
 
 export function renderKnowledgeEditor(id?: string) {
@@ -155,42 +155,44 @@ export function renderKnowledgeEditor(id?: string) {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const submitBtn = form.querySelector('button[type="submit"]') as HTMLButtonElement;
-    submitBtn.disabled = true;
 
-    const formData = new FormData(form);
-    const title = formData.get('title') as string;
-    const rawContent = formData.get('raw_content') as string;
-    const coverUrl = formData.get('cover_url') as string;
-    const iconEmoji = formData.get('icon_emoji') as string;
-    const ownership = formData.get('ownership_type') as 'individual' | 'team';
-    const parentId = (formData.get('parent_id') as string) || undefined;
+    await withButtonLoading(
+      submitBtn,
+      '<span class="animate-spin material-symbols-outlined">sync</span> Syncing...',
+      async () => {
+        const formData = new FormData(form);
+        const title = formData.get('title') as string;
+        const rawContent = formData.get('raw_content') as string;
+        const coverUrl = formData.get('cover_url') as string;
+        const iconEmoji = formData.get('icon_emoji') as string;
+        const ownership = formData.get('ownership_type') as 'individual' | 'team';
+        const parentId = (formData.get('parent_id') as string) || undefined;
 
-    const data: any = {
-      title,
-      ownership_type: ownership,
-      parent_id: parentId,
-      properties: {
-        title: [{ type: 'text', text: { content: title } }],
-        ownership: { select: { name: ownership } }
-      },
-      content: textToBlocks(rawContent),
-      icon: { type: 'emoji', emoji: iconEmoji || '📄' },
-      cover: coverUrl ? { type: 'external', external: { url: coverUrl } } : null
-    };
+        const data: any = {
+          title,
+          ownership_type: ownership,
+          parent_id: parentId,
+          properties: {
+            title: [{ type: 'text', text: { content: title } }],
+            ownership: { select: { name: ownership } }
+          },
+          content: textToBlocks(rawContent),
+          icon: { type: 'emoji', emoji: iconEmoji || '📄' },
+          cover: coverUrl ? { type: 'external', external: { url: coverUrl } } : null
+        };
 
-    try {
-      if (id) {
-        await api.updateKnowledgePage(id, data);
-      } else {
-        await api.createKnowledgePage(data);
+        if (id) {
+          await api.updateKnowledgePage(id, data);
+        } else {
+          await api.createKnowledgePage(data);
+        }
+        const pages = await api.listKnowledgePages();
+        store.setKnowledgePages(pages);
+        closeModalFn();
       }
-      const pages = await api.listKnowledgePages();
-      store.setKnowledgePages(pages);
-      closeModalFn();
-    } catch (err) {
+    ).catch(err => {
       console.error('Failed to save', err);
-      submitBtn.disabled = false;
       alert('Sync failed.');
-    }
+    });
   });
 }
