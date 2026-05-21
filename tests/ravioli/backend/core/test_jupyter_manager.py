@@ -59,7 +59,10 @@ def test_jupyter_manager_duckdb_con(manager):
     from ravioli.backend.core.config import settings
     # Ensure duckdb file exists so read-only connection works in clean CI environments
     settings.duckdb_path.parent.mkdir(parents=True, exist_ok=True)
-    duckdb.connect(str(settings.duckdb_path)).close()
+    try:
+        duckdb.connect(str(settings.duckdb_path)).close()
+    except duckdb.IOException:
+        pass
 
     analysis_id = uuid.uuid4()
     
