@@ -173,11 +173,13 @@ class NotionSyncService:
 
     def push_all_pages(self) -> int:
         """
-        Pushes all KnowledgePages back to Notion that originated from Notion.
+        Pushes all KnowledgePages back to Notion. 
+        Updates existing ones and creates new ones for locally authored pages.
         """
+        # Exclude pages from other integrations if they exist (e.g. confluence, motherduck)
+        # We only push 'manual' pages or 'notion' pages
         pages = self.db.query(models.KnowledgePage).filter(
-            models.KnowledgePage.source == "notion",
-            models.KnowledgePage.source_id.isnot(None)
+            models.KnowledgePage.source.in_(["notion", "manual"])
         ).all()
         
         count = 0
@@ -192,8 +194,7 @@ class NotionSyncService:
         """
         pages = self.db.query(models.KnowledgePage).filter(
             models.KnowledgePage.id.in_(page_ids),
-            models.KnowledgePage.source == "notion",
-            models.KnowledgePage.source_id.isnot(None)
+            models.KnowledgePage.source.in_(["notion", "manual"])
         ).all()
         
         count = 0
@@ -220,10 +221,33 @@ class NotionSyncService:
 
     def _push_page(self, db_page: models.KnowledgePage) -> bool:
         """
-        Overwrites a Notion page with the contents of a local KnowledgePage.
+        Overwrites a Notion page with the contents of a local KnowledgePage, or creates it if new.
         """
         try:
             page_id = db_page.source_id
+            
+            # Create the page if it doesn't exist in Notion yet
+            if not page_id:
+                # Find an accessible parent page
+                search_res = self.client.search(filter={"property": "object", "value": "page"})
+                if not search_res.get("results"):
+                    logger.error("Cannot push new page: Notion integration has no access to any parent pages.")
+                    return False
+                    
+                parent_id = search_res["results"][0]["id"]
+                
+                new_page = self.client.pages.create(
+                    parent={"type": "page_id", "page_id": parent_id},
+                    properties={
+                        "title": {
+                            "title": [{"text": {"content": db_page.title or "Untitled Knowledge Page"}}]
+                        }
+                    }
+                )
+                page_id = new_page["id"]
+                db_page.source = "notion"
+                db_page.source_id = page_id
+                self.db.commit()
             
             # 1. Update Title and Properties
             update_kwargs = {}

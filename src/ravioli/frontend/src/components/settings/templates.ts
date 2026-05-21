@@ -218,6 +218,10 @@ export const renderIntegrationsHtml = () => {
                       <span class="material-symbols-outlined text-sm group-hover:scale-110 transition-transform">download</span> Pull All
                     </button>
                   </div>
+                  <div class="flex items-center gap-1.5 mt-2 px-1 opacity-80">
+                    <span class="material-symbols-outlined text-[12px] text-primary-fixed-dim">info</span>
+                    <span class="text-[9px] text-on-surface-variant font-medium">Push will update existing pages in Notion with local changes. It will never delete pages from Notion.</span>
+                  </div>
                   <div id="sync-notion-status" class="mt-3 text-[10px] hidden p-3 rounded-lg bg-black/20 border border-outline-variant/10 font-mono text-on-surface-variant"></div>
                 </div>
               ` : ''}
