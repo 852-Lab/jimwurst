@@ -519,21 +519,78 @@ async def stream_question(
                 async for update in sql_agent.process_question(question, table_name, schema_name):
                     if isinstance(update, str):
                         # Yield status update to user
-                        yield f"data: {update}\n\n"
+                        lines = update.split('\n')
+                        sse_data = '\n'.join(f"data: {line}" for line in lines)
+                        yield f"{sse_data}\n\n"
                     elif isinstance(update, dict):
-                        if update.get("answer_type") == "viz":
+                        if update.get("answer_type") == "sql_generated":
+                            sql = update.get("sql")
+                            
+                            # Stream SQL query block to frontend
+                            sql_md = f"\n```sql\n{sql}\n```\n"
+                            full_response += sql_md
+                            lines = sql_md.split('\n')
+                            sse_data = '\n'.join(f"data: {line}" for line in lines)
+                            yield f"{sse_data}\n\n"
+                            
+                            yield f"data: _[Executing Query...]_ \n\n"
+                            
+                            from ravioli.backend.data.olap.duckdb_manager import duckdb_manager
+                            import pandas as pd
+                            try:
+                                # Execute the SQL
+                                df = duckdb_manager.connection.execute(sql).fetchdf()
+                                
+                                # Stream Tabular Result
+                                if df.empty:
+                                    res_md = "\n*Query returned no results.*\n"
+                                else:
+                                    res_md = "\n" + df.head(15).to_markdown(index=False) + "\n\n"
+                                    if len(df) > 15:
+                                        res_md += f"*(Showing first 15 of {len(df)} rows)*\n\n"
+                                
+                                full_response += res_md
+                                lines = res_md.split('\n')
+                                sse_data = '\n'.join(f"data: {line}" for line in lines)
+                                yield f"{sse_data}\n\n"
+                                
+                                # Append to context for the LLM to analyze
+                                context_str += f"\n\nExecuted SQL:\n```sql\n{sql}\n```\n\nQuery Results (first 15 rows):\n{df.head(15).to_markdown(index=False)}\n"
+                            
+                            except Exception as e:
+                                error_msg = str(e)
+                                err_md = f"\n```bash\n[!ERROR] Execution Failed: {error_msg}\n```\n\n"
+                                full_response += err_md
+                                lines = err_md.split('\n')
+                                sse_data = '\n'.join(f"data: {line}" for line in lines)
+                                yield f"{sse_data}\n\n"
+                                context_str += f"\n\nExecuted SQL:\n```sql\n{sql}\n```\n\nExecution Failed with Error:\n{error_msg}\nPlease explain what might have gone wrong.\n"
+
+                        elif update.get("answer_type") == "viz":
                             viz_payload = update.get("viz")
                             if viz_payload and viz_payload.get("type") == "error":
-                                context_str += f"\nSystem: Data visualization failed due to error: {viz_payload.get('message')}. Please inform the user that their request cannot be done due to this error.\n"
+                                error_msg = viz_payload.get('message')
+                                err_md = f"\n```bash\n[!ERROR] Visualization Failed: {error_msg}\n```\n\n"
+                                full_response += err_md
+                                lines = err_md.split('\n')
+                                sse_data = '\n'.join(f"data: {line}" for line in lines)
+                                yield f"{sse_data}\n\n"
+                                context_str += f"\nSystem: Data visualization failed due to error: {error_msg}. Please inform the user that their request cannot be done due to this error.\n"
                         elif update.get("answer_type") == "error":
                             error_msg = update.get("message")
-                            context_str += f"\nSystem: Data visualization failed due to error: {error_msg}. Please inform the user that their request cannot be done due to this error.\n"
-                        break
+                            err_md = f"\n```bash\n[!ERROR] Agent Error: {error_msg}\n```\n\n"
+                            full_response += err_md
+                            lines = err_md.split('\n')
+                            sse_data = '\n'.join(f"data: {line}" for line in lines)
+                            yield f"{sse_data}\n\n"
+                            context_str += f"\nSystem: Data processing failed due to error: {error_msg}. Please inform the user that their request cannot be done due to this error.\n"
 
             # 2. Stream the textual answer from Gemma (persona)
             async for token in skill_comm.stream_answer(filename, summary, context_str, question, sql_agent.persona, sql_agent.ollama_client.stream):
                 full_response += token
-                yield f"data: {token}\n\n"
+                lines = token.split('\n')
+                sse_data = '\n'.join(f"data: {line}" for line in lines)
+                yield f"{sse_data}\n\n"
             
             # 3. If visualization was generated, send it at the end
             if viz_payload:

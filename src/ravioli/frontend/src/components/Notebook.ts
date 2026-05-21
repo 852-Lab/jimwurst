@@ -4,10 +4,24 @@ import MarkdownIt from 'markdown-it';
 import Chart from 'chart.js/auto';
 import { format } from 'date-fns';
 
+import hljs from 'highlight.js';
+import 'highlight.js/styles/github-dark.css';
+
 const md = new MarkdownIt({
   html: false,
   linkify: true,
-  typographer: true
+  typographer: true,
+  highlight: function (str: string, lang: string) {
+    if (lang && hljs.getLanguage(lang)) {
+      try {
+        return '<pre class="hljs"><code>' +
+               hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
+               '</code></pre>';
+      } catch (__) {}
+    }
+
+    return ''; // use external default escaping
+  }
 });
 
 type CellType = 'python' | 'sql' | 'chat' | 'markdown';
@@ -1280,7 +1294,7 @@ function bindInteractions(container: HTMLElement) {
             }
             
             const newLogs = await api.listLogs(activeId!);
-            lastLogsJson = JSON.stringify(newLogs);
+            lastLogsJson = '';
             store.setLogs(newLogs);
           },
           (err) => {
@@ -1365,7 +1379,7 @@ function bindInteractions(container: HTMLElement) {
       if (logId && confirm('Are you sure you want to delete this cell?')) {
         try {
           await api.deleteLog(logId);
-          const newLogs = await api.listLogs(activeId);
+          const newLogs = await api.listLogs(activeId!);
           lastLogsJson = '';
           store.setLogs(newLogs);
         } catch (e) {
@@ -1517,11 +1531,21 @@ function bindInteractions(container: HTMLElement) {
                 const newCellBlock = runNewBtn.closest('.new-cell-block');
                 newCellBlock?.remove();
 
-                const newLogs = await api.listLogs(activeId);
+                const newLogs = await api.listLogs(activeId!);
                 lastLogsJson = '';
                 store.setLogs(newLogs);
              },
-             (err) => console.error(err)
+             (err) => {
+                console.error(err);
+                if (outGutter) {
+                   outGutter.textContent = 'Error';
+                   outGutter.classList.remove('flex', 'items-center', 'justify-end', 'gap-1');
+                }
+                if (streamingContent) {
+                   streamingContent.innerHTML += '<br><span class="text-error">Execution Failed.</span>';
+                   streamingContent.classList.remove('animate-pulse');
+                }
+             }
           );
        } else if (type === 'sql' || type === 'python') {
           try {

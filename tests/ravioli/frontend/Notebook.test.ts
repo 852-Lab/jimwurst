@@ -218,4 +218,40 @@ describe('Notebook Component - Stability & Granular Updates', () => {
     rerunBtn.click();
     expect(api.executeSql).toHaveBeenCalled();
   });
+
+  it('renders AI chat cells correctly and handles streaming', async () => {
+    const mockAnalysis = { id: 'a1', title: 'AI Testing', status: 'completed' };
+    store.setAnalyses([mockAnalysis] as any);
+    store.setActiveAnalysisId('a1');
+    store.setLogs([
+      { id: 'l1', content: 'Tell me a joke', log_type: 'user_query', tool_name: 'chat', index: 1 }
+    ] as any);
+
+    const notebook = renderNotebook();
+
+    // Verify AI chat cell displays properly with user prompt
+    expect(notebook.textContent).toContain('Tell me a joke');
+    expect(notebook.innerHTML).toContain('auto_awesome'); // AI icon check
+
+    // Trigger run cell
+    const { api } = await import('../../../src/ravioli/frontend/src/services/api');
+    const playBtn = notebook.querySelector('.btn-rerun-cell') as HTMLElement;
+    expect(playBtn).not.toBeNull();
+
+    // Mock streamQuestion to simulate SSE chunks
+    (api.streamQuestion as any) = vi.fn().mockImplementation((analysisId, question, replaceLogId, insertAfterLogId, onMessage, onComplete) => {
+      onMessage('Why did the chicken...');
+      onMessage(' cross the road?');
+      onComplete();
+    });
+
+    playBtn.click();
+
+    // Verify stream processing
+    expect(api.streamQuestion).toHaveBeenCalled();
+    // After stream chunks are pushed, the text content should be updated (via DOM manipulation in Notebook)
+    const streamContentContainer = notebook.querySelector('#streaming-content-1');
+    expect(streamContentContainer).not.toBeNull();
+    // In our Notebook.ts implementation, streaming output is placed dynamically into `#streaming-content`
+  });
 });

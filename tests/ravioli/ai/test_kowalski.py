@@ -60,8 +60,8 @@ async def test_process_question_viz(agent):
     updates = []
     async for update in agent.process_question("query?", "test_table"):
         updates.append(update)
-    assert len(updates) == 3
-    assert updates[2]["answer_type"] == "viz"
+    assert len(updates) == 4
+    assert updates[3]["answer_type"] == "viz"
 
 def test_chat(agent):
     agent.agent.invoke.return_value = {"output": "Response"}
