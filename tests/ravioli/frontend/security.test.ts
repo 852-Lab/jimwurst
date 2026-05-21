@@ -19,8 +19,9 @@ describe('Security Utils', () => {
       expect(sanitizeImageUrl('http://example.com/image.png')).toBe('http://example.com/image.png');
     });
 
-    it('should allow absolute paths', () => {
-      expect(sanitizeImageUrl('/images/test.png')).toBe('/images/test.png');
+    it('should allow absolute paths and resolve them', () => {
+      // JSDOM default origin is http://localhost:3000
+      expect(sanitizeImageUrl('/images/test.png')).toBe('http://localhost:3000/images/test.png');
     });
 
     it('should reject javascript protocols', () => {
