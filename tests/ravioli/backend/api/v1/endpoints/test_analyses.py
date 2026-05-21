@@ -382,6 +382,12 @@ def test_stream_question_ai_cell(client, session, mocker):
         
     session.refresh.side_effect = mock_refresh_log
 
+    # Mock SessionLocal to avoid hitting real database
+    mock_session_local = mocker.MagicMock()
+    mock_session_instance = mocker.MagicMock()
+    mock_session_local.return_value = mock_session_instance
+    mocker.patch("ravioli.backend.api.v1.endpoints.analyses.SessionLocal", mock_session_local)
+
     # Execute request
     response = client.get(f"/api/v1/analyses/{analysis_id}/stream?question=How many rows?")
     

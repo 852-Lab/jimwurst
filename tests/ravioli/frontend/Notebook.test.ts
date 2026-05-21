@@ -239,9 +239,9 @@ describe('Notebook Component - Stability & Granular Updates', () => {
     expect(playBtn).not.toBeNull();
 
     // Mock streamQuestion to simulate SSE chunks
-    (api.streamQuestion as any) = vi.fn().mockImplementation((analysisId, question, replaceLogId, onChunk, onComplete) => {
-      onChunk('Why did the chicken...');
-      onChunk(' cross the road?');
+    (api.streamQuestion as any) = vi.fn().mockImplementation((analysisId, question, replaceLogId, insertAfterLogId, onMessage, onComplete) => {
+      onMessage('Why did the chicken...');
+      onMessage(' cross the road?');
       onComplete();
     });
 
