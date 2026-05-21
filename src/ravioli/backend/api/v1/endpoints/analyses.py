@@ -519,7 +519,9 @@ async def stream_question(
                 async for update in sql_agent.process_question(question, table_name, schema_name):
                     if isinstance(update, str):
                         # Yield status update to user
-                        yield f"data: {update}\n\n"
+                        lines = update.split('\n')
+                        sse_data = '\n'.join(f"data: {line}" for line in lines)
+                        yield f"{sse_data}\n\n"
                     elif isinstance(update, dict):
                         if update.get("answer_type") == "viz":
                             viz_payload = update.get("viz")
@@ -533,7 +535,9 @@ async def stream_question(
             # 2. Stream the textual answer from Gemma (persona)
             async for token in skill_comm.stream_answer(filename, summary, context_str, question, sql_agent.persona, sql_agent.ollama_client.stream):
                 full_response += token
-                yield f"data: {token}\n\n"
+                lines = token.split('\n')
+                sse_data = '\n'.join(f"data: {line}" for line in lines)
+                yield f"{sse_data}\n\n"
             
             # 3. If visualization was generated, send it at the end
             if viz_payload:

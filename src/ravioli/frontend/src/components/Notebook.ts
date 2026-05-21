@@ -1365,7 +1365,7 @@ function bindInteractions(container: HTMLElement) {
       if (logId && confirm('Are you sure you want to delete this cell?')) {
         try {
           await api.deleteLog(logId);
-          const newLogs = await api.listLogs(activeId);
+          const newLogs = await api.listLogs(activeId!);
           lastLogsJson = '';
           store.setLogs(newLogs);
         } catch (e) {
@@ -1517,11 +1517,21 @@ function bindInteractions(container: HTMLElement) {
                 const newCellBlock = runNewBtn.closest('.new-cell-block');
                 newCellBlock?.remove();
 
-                const newLogs = await api.listLogs(activeId);
+                const newLogs = await api.listLogs(activeId!);
                 lastLogsJson = '';
                 store.setLogs(newLogs);
              },
-             (err) => console.error(err)
+             (err) => {
+                console.error(err);
+                if (outGutter) {
+                   outGutter.textContent = 'Error';
+                   outGutter.classList.remove('flex', 'items-center', 'justify-end', 'gap-1');
+                }
+                if (streamingContent) {
+                   streamingContent.innerHTML += '<br><span class="text-error">Execution Failed.</span>';
+                   streamingContent.classList.remove('animate-pulse');
+                }
+             }
           );
        } else if (type === 'sql' || type === 'python') {
           try {
