@@ -100,7 +100,7 @@ class KowalskiAgent:
 
     async def process_question(self, question: str, table_name: str, schema_name: str = "main") -> AsyncGenerator[Any, None]:
         parser = JsonOutputParser(pydantic_object=AnalysisDecision)
-        prompt = PromptTemplate.from_template("Does this require a SQL query? Does this require a chart? Only require a chart if the user explicitly asks for a visualization, or if the question involves time-series trends, distributions, or comparisons across categories. Simple scalar queries (like total counts or basic overviews) do NOT require a chart.\nQuestion: \"{question}\"\n{format_instructions}")
+        prompt = PromptTemplate.from_template("Does this require a SQL query? You MUST require a SQL query if the user asks for any data retrieval, counting, or analysis. Does this require a chart? Only require a chart if the user explicitly asks for a visualization, or if the question involves time-series trends, distributions, or comparisons across categories. Simple scalar queries (like total counts or basic overviews) do NOT require a chart.\nQuestion: \"{question}\"\n{format_instructions}")
         try:
             result = await self.generate(prompt.format(question=question, format_instructions=parser.get_format_instructions()), "Decision", parser=parser)
             if result.get("requires_sql") or result.get("requires_viz"):
