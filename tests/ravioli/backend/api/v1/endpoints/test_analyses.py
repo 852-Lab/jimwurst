@@ -353,7 +353,7 @@ def test_stream_question_ai_cell(client, session, mocker):
         yield {"answer_type": "sql_generated", "sql": "SELECT COUNT(*) FROM test"}
     
     mock_sql_agent = mocker.MagicMock()
-    mock_sql_agent.process_question = mock_process_question
+    mock_sql_agent.process_question.side_effect = mock_process_question
     mock_sql_agent.persona = "I am Kowalski"
     mock_sql_agent.ollama_client = mocker.MagicMock()
     mock_sql_agent.ollama_client.stream = mocker.MagicMock()
