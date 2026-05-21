@@ -13,6 +13,7 @@ def mock_notion_service():
 
 @pytest.fixture
 def setup_notion_token(session):
+<<<<<<< HEAD
     # Mocking an encrypted token for test
     from ravioli.backend.core.security import encrypt_value
     token_data = {"token": encrypt_value("secret_test_token")}
@@ -24,6 +25,18 @@ def setup_notion_token(session):
     # Configure the mock session chain
     session.query.return_value.filter.return_value.first.return_value = mock_setting
     return mock_setting
+=======
+    # Ensure there is a Notion token in SystemSettings
+    setting = session.query(models.SystemSetting).filter_by(key="notion").first()
+    if not setting:
+        # Mocking an encrypted token for test
+        from ravioli.backend.core.security import encrypt_value
+        token_data = {"token": encrypt_value("secret_test_token")}
+        setting = models.SystemSetting(key="notion", value=token_data)
+        session.add(setting)
+        session.commit()
+    return setting
+>>>>>>> 0ef201e (refactor: relocate frontend Notion API tests and remove admin authentication headers from backend API tests)
 
 
 def test_sync_notion_pages_success(client: TestClient, setup_notion_token, mock_notion_service):
@@ -60,8 +73,14 @@ def test_sync_notion_pages_by_ids(client: TestClient, setup_notion_token, mock_n
 
 
 def test_sync_notion_pages_missing_token(client: TestClient, session):
+<<<<<<< HEAD
     # Configure session mock to return None
     session.query.return_value.filter.return_value.first.return_value = None
+=======
+    # Ensure token is missing
+    session.query(models.SystemSetting).filter_by(key="notion").delete()
+    session.commit()
+>>>>>>> 0ef201e (refactor: relocate frontend Notion API tests and remove admin authentication headers from backend API tests)
     
     response = client.post(
         "/api/v1/knowledge/notion/sync",
@@ -103,3 +122,4 @@ def test_push_notion_pages_by_ids(client: TestClient, setup_notion_token, mock_n
     assert response.status_code == 200
     assert response.json()["pushed_count"] == 1
     mock_notion_service.push_pages_by_ids.assert_called_once_with(["some_id"])
+
