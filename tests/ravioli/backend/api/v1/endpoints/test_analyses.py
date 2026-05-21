@@ -1,6 +1,7 @@
 import uuid
 from unittest.mock import AsyncMock
 from datetime import datetime, UTC
+import pytest
 
 def test_create_analysis(client, session, current_user):
     # Prepare mock data
@@ -327,3 +328,73 @@ def test_execute_python_cell_failure(client, session, mocker):
     assert response.status_code == 404
     assert response.json()["detail"] == "Analysis not found"
 
+
+@pytest.mark.asyncio
+def test_stream_question_ai_cell(client, session, mocker):
+    analysis_id = uuid.uuid4()
+    
+    class MockAnalysis:
+        def __init__(self):
+            self.id = analysis_id
+            self.title = "Test Analysis"
+            self.analysis_metadata = {"filename": "test.csv"}
+            self.result = "Summary"
+            self.notebook = {}
+            
+    mock_analysis = MockAnalysis()
+    
+    # Mock database
+    session.query().filter().first.return_value = mock_analysis
+    session.query().filter().order_by().limit().all.return_value = []
+    
+    # Mock KowalskiAgent process_question generator
+    async def mock_process_question(question, table_name, schema_name):
+        yield "_[Executing Query...]_"
+        yield {"answer_type": "sql_generated", "sql": "SELECT COUNT(*) FROM test"}
+    
+    mock_sql_agent = mocker.MagicMock()
+    mock_sql_agent.process_question = mock_process_question
+    mock_sql_agent.persona = "I am Kowalski"
+    mock_sql_agent.ollama_client = mocker.MagicMock()
+    mock_sql_agent.ollama_client.stream = mocker.MagicMock()
+
+    mocker.patch("ravioli.backend.api.v1.endpoints.analyses.KowalskiAgent", return_value=mock_sql_agent)
+
+    # Mock DuckDB execution
+    mock_connection = mocker.MagicMock()
+    # Return a dummy dataframe with mock tabulate markdown output
+    mock_df = mocker.MagicMock()
+    mock_df.empty = False
+    mock_df.head().to_markdown.return_value = "| count |\n|-------|\n|     1 |"
+    mock_connection.execute.return_value.fetchdf.return_value = mock_df
+    mocker.patch("ravioli.backend.api.v1.endpoints.analyses.duckdb_manager.connection", new=mock_connection)
+
+    # Mock skill_comm stream_answer
+    async def mock_stream_answer(filename, summary, context_str, question, persona, stream_func):
+        yield "This is the answer."
+
+    mocker.patch("ravioli.backend.api.v1.endpoints.analyses.skill_comm.stream_answer", side_effect=mock_stream_answer)
+
+    # Setup session.refresh to assign a dummy UUID to the created log
+    def mock_refresh_log(obj):
+        obj.id = uuid.uuid4()
+        obj.timestamp = datetime.now(UTC)
+        
+    session.refresh.side_effect = mock_refresh_log
+
+    # Execute request
+    response = client.get(f"/api/v1/analyses/{analysis_id}/stream?question=How many rows?")
+    
+    # Assertions
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+    
+    # Check that stream content is correctly formatted
+    content = response.content.decode("utf-8")
+    assert "data: _[Executing Query...]_" in content
+    assert "data: ```sql" in content
+    assert "data: SELECT COUNT(*) FROM test" in content
+    assert "data: | count |" in content
+    assert "data: This is the answer." in content
+    assert session.add.called
+    assert session.commit.called
