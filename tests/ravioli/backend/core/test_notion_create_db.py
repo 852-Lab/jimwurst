@@ -8,7 +8,6 @@ with engine.connect() as conn:
     token = val.get("token")
     
 import os
-import base64
 from cryptography.fernet import Fernet
 fernet = Fernet(os.environ.get("ENCRYPTION_KEY", "b4pQvE_39Y4sQZ2FpL8vXG_rB0tK9M1xNqU2zP5iO3c="))
 decrypted = fernet.decrypt(token.encode()).decode()
