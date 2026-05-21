@@ -55,7 +55,7 @@ class NotionSyncService:
                     page_size=100
                 )
                 for page in response.get("results", []):
-                    if self._fetch_and_store_page(page.get("id")):
+                    if self._fetch_and_store_page(page.get("id"), page):
                         count += 1
                 
                 has_more = response.get("has_more", False)
@@ -101,29 +101,39 @@ class NotionSyncService:
                 break
         return blocks
 
-    def _fetch_and_store_page(self, page_id: str) -> bool:
+    def _fetch_and_store_page(self, page_id: str, page_metadata: dict = None) -> bool:
         """
         Fetches a Notion page and stores it as a KnowledgePage in the database.
+        Skips fetching blocks if the page hasn't been edited since the last sync.
         """
         try:
-            # 1. Fetch Page Metadata
-            page = self.client.pages.retrieve(page_id=page_id)
+            # 1. Fetch Page Metadata if not provided
+            page = page_metadata or self.client.pages.retrieve(page_id=page_id)
+            
+            notion_edited_time = page.get("last_edited_time")
+            
+            # Check if it exists and is up to date
+            db_page = self.db.query(models.KnowledgePage).filter(
+                models.KnowledgePage.source == "notion",
+                models.KnowledgePage.source_id == page_id
+            ).first()
+            
+            if db_page and db_page.properties.get("_notion_last_edited_time") == notion_edited_time:
+                # Already up to date, skip ingestion
+                return False
             
             title = self._extract_title(page.get("properties", {}))
             icon = page.get("icon")
             cover = page.get("cover")
             properties = page.get("properties", {})
             
+            # Store the Notion timestamp so we know next time
+            properties["_notion_last_edited_time"] = notion_edited_time
+            
             # 2. Fetch Page Content (Blocks)
             blocks = self._fetch_all_blocks(page_id)
             
             # 3. Create or Update KnowledgePage
-            # We use source='notion' and source_id=page_id to track synced pages
-            db_page = self.db.query(models.KnowledgePage).filter(
-                models.KnowledgePage.source == "notion",
-                models.KnowledgePage.source_id == page_id
-            ).first()
-            
             if db_page:
                 db_page.title = title
                 db_page.icon = icon
