@@ -134,14 +134,12 @@ def push_notion_pages(
     current_user: models.User = Depends(get_current_user)
 ):
     """Push local KnowledgePages back to Notion."""
-    # 1. Fetch token from user_settings (or mock for now)
-    try:
-        # In real app, fetch from db using current_user.id
-        token = decrypt_value(db.query(models.User).filter(models.User.id == current_user.id).first().settings.get("notion_token"))
-    except Exception:
-        # Fallback to test token if not configured properly in DB (for dev purposes)
-        import os
-        token = os.environ.get("NOTION_API_KEY")
+    # 1. Fetch token from SystemSettings
+    setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "notion").first()
+    if not setting or "token" not in setting.value or not setting.value["token"]:
+        raise HTTPException(status_code=400, detail="Notion token not configured in system settings.")
+        
+    token = decrypt_value(setting.value["token"])
         
     if not token:
         raise HTTPException(status_code=401, detail="Notion token not configured.")
