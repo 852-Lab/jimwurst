@@ -204,19 +204,34 @@ class NotionSyncService:
         return count
 
     def _sanitize_blocks_for_push(self, blocks: list) -> list:
-        """Removes read-only attributes from Notion blocks recursively"""
+        """Removes read-only attributes and null values from Notion blocks recursively"""
         sanitized = []
         read_only_fields = {"id", "parent", "created_time", "last_edited_time", "created_by", "last_edited_by", "has_children"}
+        
+        def clean_dict(d: dict) -> dict:
+            cleaned = {}
+            for k, v in d.items():
+                if k in read_only_fields or v is None:
+                    continue
+                if isinstance(v, dict):
+                    cleaned[k] = clean_dict(v)
+                elif isinstance(v, list):
+                    new_list = []
+                    for item in v:
+                        if isinstance(item, dict):
+                            new_list.append(clean_dict(item))
+                        else:
+                            new_list.append(item)
+                    cleaned[k] = new_list
+                else:
+                    cleaned[k] = v
+            return cleaned
+
         for b in blocks:
             if not isinstance(b, dict):
                 continue
-            new_block = {k: v for k, v in b.items() if k not in read_only_fields}
-            block_type = new_block.get("type")
-            if block_type and block_type in new_block and isinstance(new_block[block_type], dict):
-                # Sanitize nested children if they exist
-                if "children" in new_block[block_type]:
-                    new_block[block_type]["children"] = self._sanitize_blocks_for_push(new_block[block_type]["children"])
-            sanitized.append(new_block)
+            sanitized.append(clean_dict(b))
+            
         return sanitized
 
     def _push_page(self, db_page: models.KnowledgePage) -> bool:
