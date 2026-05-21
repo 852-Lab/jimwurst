@@ -1294,7 +1294,7 @@ function bindInteractions(container: HTMLElement) {
             }
             
             const newLogs = await api.listLogs(activeId!);
-            lastLogsJson = JSON.stringify(newLogs);
+            lastLogsJson = '';
             store.setLogs(newLogs);
           },
           (err) => {
