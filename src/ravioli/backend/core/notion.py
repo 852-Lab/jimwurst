@@ -177,9 +177,9 @@ class NotionSyncService:
         Updates existing ones and creates new ones for locally authored pages.
         """
         # Exclude pages from other integrations if they exist (e.g. confluence, motherduck)
-        # We only push 'manual' pages or 'notion' pages
+        # We only push 'Ravioli' or 'manual' pages
         pages = self.db.query(models.KnowledgePage).filter(
-            models.KnowledgePage.source.in_(["notion", "manual"])
+            models.KnowledgePage.source.in_(["Ravioli", "manual", None])
         ).all()
         
         count = 0
@@ -194,7 +194,7 @@ class NotionSyncService:
         """
         pages = self.db.query(models.KnowledgePage).filter(
             models.KnowledgePage.id.in_(page_ids),
-            models.KnowledgePage.source.in_(["notion", "manual"])
+            models.KnowledgePage.source.in_(["Ravioli", "manual", None])
         ).all()
         
         count = 0
@@ -260,7 +260,9 @@ class NotionSyncService:
                     }
                 )
                 page_id = new_page["id"]
-                db_page.source = "notion"
+                
+                # Update source to explicitly be Ravioli
+                db_page.source = "Ravioli"
                 db_page.source_id = page_id
                 self.db.commit()
             
