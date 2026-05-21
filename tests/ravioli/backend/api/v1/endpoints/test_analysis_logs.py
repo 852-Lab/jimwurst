@@ -54,3 +54,66 @@ def test_list_logs_for_analysis(client, session):
     data = response.json()
     assert len(data) == 1
     assert data[0]["content"] == "Thinking..."
+
+def test_delete_log(client, session):
+    log_id = uuid.uuid4()
+    
+    class MockLog:
+        def __init__(self):
+            self.id = log_id
+            self.analysis_id = uuid.uuid4()
+            self.log_type = "user_query"
+            self.timestamp = datetime.now(UTC)
+            
+    mock_log = MockLog()
+    
+    # Mock database queries
+    session.query().filter().first.return_value = mock_log
+    session.query().filter().order_by().all.return_value = []
+    
+    # Execute request
+    response = client.delete(f"/api/v1/analysis-logs/{log_id}")
+    
+    # Assertions
+    assert response.status_code == 204
+
+def test_delete_log_cascade(client, session):
+    analysis_id = uuid.uuid4()
+    log1_id = uuid.uuid4()
+    log2_id = uuid.uuid4()
+    log3_id = uuid.uuid4()
+    
+    class MockLog:
+        def __init__(self, id, log_type):
+            self.id = id
+            self.analysis_id = analysis_id
+            self.log_type = log_type
+            self.timestamp = datetime.now(UTC)
+            
+    log1 = MockLog(log1_id, "user_query")
+    log2 = MockLog(log2_id, "agent_response")
+    log3 = MockLog(log3_id, "user_query")
+    
+    class MockQuery:
+        def filter(self, *args, **kwargs):
+            return self
+        def order_by(self, *args, **kwargs):
+            return self
+        def first(self):
+            return log1
+        def all(self):
+            return [log1, log2, log3]
+            
+    session.query.return_value = MockQuery()
+    
+    # Execute request
+    response = client.delete(f"/api/v1/analysis-logs/{log1_id}")
+    
+    # Assertions
+    assert response.status_code == 204
+    
+    # Verify both log1 and log2 were deleted
+    deleted_objects = [call.args[0] for call in session.delete.call_args_list]
+    assert log1 in deleted_objects
+    assert log2 in deleted_objects
+    assert log3 not in deleted_objects

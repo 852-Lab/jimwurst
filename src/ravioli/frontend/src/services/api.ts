@@ -37,6 +37,14 @@ export const api = {
     if (!response.ok) throw new Error('Failed to delete analysis');
   },
 
+  async deleteLog(logId: string): Promise<void> {
+    const response = await fetch(`${API_BASE}/analysis-logs/${logId}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Failed to delete log');
+  },
+
   async listLogs(analysisId: string): Promise<AnalysisLog[]> {
     const response = await fetch(`${API_BASE}/analysis-logs/analysis/${analysisId}`, { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch logs');
@@ -53,8 +61,14 @@ export const api = {
     if (!response.ok) throw new Error('Failed to ask question');
   },
   
-  streamQuestion(analysisId: string, question: string, onMessage: (token: string) => void, onComplete: () => void, onError: (err: any) => void) {
-    const url = `${API_BASE}/analyses/${analysisId}/stream?question=${encodeURIComponent(question)}`;
+  streamQuestion(analysisId: string, question: string, replaceLogId: string | null, insertAfterLogId: string | null, onMessage: (token: string) => void, onComplete: () => void, onError: (err: any) => void) {
+    let url = `${API_BASE}/analyses/${analysisId}/stream?question=${encodeURIComponent(question)}`;
+    if (replaceLogId) {
+      url += `&replace_log_id=${encodeURIComponent(replaceLogId)}`;
+    }
+    if (insertAfterLogId) {
+      url += `&insert_after_log_id=${encodeURIComponent(insertAfterLogId)}`;
+    }
     const eventSource = new EventSource(url);
     
     eventSource.onmessage = (event) => {
@@ -73,13 +87,57 @@ export const api = {
 
     return () => eventSource.close();
   },
-  
-  async getSuggestedPrompts(analysisId: string): Promise<string[]> {
-    const response = await fetch(`${API_BASE}/analyses/${analysisId}/suggested-prompts`, { credentials: 'include' });
-    if (!response.ok) throw new Error('Failed to fetch suggested prompts');
+
+  async executeSql(analysisId: string, code: string, replaceLogId: string | null, insertAfterLogId: string | null): Promise<any> {
+    const response = await fetch(`${API_BASE}/analyses/${analysisId}/execute-sql`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, replace_log_id: replaceLogId, insert_after_log_id: insertAfterLogId }),
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Failed to execute SQL cell');
     return response.json();
   },
 
+  async executePython(analysisId: string, code: string, replaceLogId: string | null, insertAfterLogId: string | null): Promise<any> {
+    const response = await fetch(`${API_BASE}/analyses/${analysisId}/execute-python`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, replace_log_id: replaceLogId, insert_after_log_id: insertAfterLogId }),
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Failed to execute Python cell');
+    return response.json();
+  },
+  
+  async executeMarkdown(analysisId: string, code: string, replaceLogId: string | null, insertAfterLogId: string | null): Promise<any> {
+    const response = await fetch(`${API_BASE}/analyses/${analysisId}/execute-markdown`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, replace_log_id: replaceLogId, insert_after_log_id: insertAfterLogId }),
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Failed to save Markdown cell');
+    return response.json();
+  },
+  
+  async getSuggestedPrompts(analysisId: string): Promise<string[]> {
+    const response = await fetch(`${API_BASE}/analyses/${analysisId}/suggested-prompts`, { credentials: 'include' });
+    if (!response.ok) return [];
+    return response.json();
+  },
+
+  async getTablePreview(fullTableName: string): Promise<any[]> {
+    const response = await fetch(`${API_BASE}/data/preview/${encodeURIComponent(fullTableName)}`, { credentials: 'include' });
+    if (!response.ok) throw new Error('Failed to fetch table preview');
+    return response.json();
+  },
+
+  async getJupyterStatus(analysisId: string): Promise<{ status: string }> {
+    const response = await fetch(`${API_BASE}/analyses/${analysisId}/jupyter-status`, { credentials: 'include' });
+    if (!response.ok) return { status: 'not_started' };
+    return response.json();
+  },
 
   async generateQuickInsight(file: File): Promise<QuickInsightResponse> {
     const formData = new FormData();

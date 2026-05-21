@@ -214,3 +214,23 @@
   to { transform: rotate(360deg); }
 }
 
+
+/* Markdown Tables */
+.prose table {
+  @apply w-full text-left border-collapse my-6 overflow-hidden rounded-xl border border-outline-variant/10 block overflow-x-auto whitespace-nowrap;
+}
+.prose thead {
+  @apply bg-surface-container-low text-on-surface-variant tracking-wide;
+}
+.prose th {
+  @apply px-4 py-3 font-medium border-b border-outline-variant/10 text-xs;
+}
+.prose tbody {
+  @apply bg-surface-container-lowest/30 divide-y divide-outline-variant/5;
+}
+.prose td {
+  @apply px-4 py-3 text-on-surface text-sm font-mono;
+}
+.prose tr:hover td {
+  @apply bg-surface-container-low/50 transition-colors;
+}

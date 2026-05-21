@@ -58,7 +58,10 @@ Sample Data: {sample_data}
         datasets = []
         colors = ["rgba(0, 245, 212, 0.6)", "rgba(18, 113, 255, 0.6)", "rgba(157, 78, 221, 0.6)", "rgba(255, 0, 110, 0.6)"]
         border_colors = ["rgba(0, 245, 212, 1)", "rgba(18, 113, 255, 1)", "rgba(157, 78, 221, 1)", "rgba(255, 0, 110, 1)"]
-        for i, col in enumerate(config["values_columns"]):
+        
+        valid_values_cols = [c for c in config.get("values_columns", []) if isinstance(c, str) and c in df.columns]
+        
+        for i, col in enumerate(valid_values_cols):
             datasets.append({
                 "label": col, 
                 "data": df[col].tolist(), 
@@ -68,13 +71,18 @@ Sample Data: {sample_data}
                 "borderRadius": 8, 
                 "tension": 0.4
             })
+            
+        labels_col = config.get("labels_column")
+        if not isinstance(labels_col, str) or labels_col not in df.columns:
+            # Fallback to the first column or just an index if the LLM hallucinated
+            labels_col = df.columns[0]
         
-        logger.info(f"Ollama: [VOICE] Visualization strategy locked: {config['chart_type']}")
+        logger.info(f"Ollama: [VOICE] Visualization strategy locked: {config.get('chart_type')}")
         return {
             "type": "chart",
-            "chart_type": config["chart_type"],
-            "title": config["title"],
-            "data": {"labels": df[config["labels_column"]].tolist(), "datasets": datasets}
+            "chart_type": config.get("chart_type", "bar"),
+            "title": config.get("title", "Data Visualization"),
+            "data": {"labels": df[labels_col].tolist(), "datasets": datasets}
         }
     except Exception as e:
         logger.error(f"Visualization failed: {e}")

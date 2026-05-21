@@ -37,3 +37,30 @@ def list_logs_for_analysis(analysis_id: UUID, db: Session = Depends(get_db)):
     """
     logs = db.query(models.AnalysisLog).filter(models.AnalysisLog.analysis_id == analysis_id).order_by(models.AnalysisLog.timestamp.asc()).all()
     return logs
+
+@router.delete("/{log_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_log(log_id: UUID, db: Session = Depends(get_db)):
+    """
+    Delete an analysis log entry and its subsequent output logs (cascade).
+    """
+    log = db.query(models.AnalysisLog).filter(models.AnalysisLog.id == log_id).first()
+    if not log:
+        raise HTTPException(status_code=404, detail="Log not found")
+        
+    # If this is a user query, also delete subsequent outputs up to the next user query
+    if log.log_type == 'user_query':
+        subsequent_logs = db.query(models.AnalysisLog).filter(
+            models.AnalysisLog.analysis_id == log.analysis_id,
+            models.AnalysisLog.timestamp >= log.timestamp
+        ).order_by(models.AnalysisLog.timestamp.asc()).all()
+        
+        for sub_log in subsequent_logs:
+            if sub_log.id == log.id:
+                continue
+            if sub_log.log_type == 'user_query':
+                break
+            db.delete(sub_log)
+            
+    db.delete(log)
+    db.commit()
+    return status.HTTP_204_NO_CONTENT

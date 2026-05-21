@@ -10,10 +10,14 @@ export interface Analysis {
     row_count?: number;
     followup_questions?: string[];
     is_approved?: boolean;
+    data_sources?: string[];
+    knowledge_pages?: string[];
     [key: string]: any;
   };
   created_at: string;
   updated_at: string;
+  owner_user?: User;
+  creator_user?: User;
 }
 
 export type AnalysisStatus = 'pending' | 'running' | 'completed' | 'failed';

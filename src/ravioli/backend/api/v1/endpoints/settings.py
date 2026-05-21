@@ -163,9 +163,9 @@ async def debug_motherduck(db: Session = Depends(get_db)):
         try:
             schemas = conn.execute("SELECT schema_name FROM duckdb_schemas() WHERE database_name = 'ravioli'").fetchall()
             tables = conn.execute("SELECT schema_name, table_name FROM duckdb_tables() WHERE database_name = 'ravioli'").fetchall()
-        except Exception as query_err:
-            logger.error(f"Error querying ravioli schemas/tables: {query_err}", exc_info=True)
-            schemas = [(f"Error: {str(query_err)}",)]
+        except Exception:
+            logger.error("Error querying ravioli schemas/tables", exc_info=True)
+            schemas = [("Query failed",)]
             tables = []
 
         return {
@@ -179,8 +179,8 @@ async def debug_motherduck(db: Session = Depends(get_db)):
             "ravioli_tables": [{"schema": t[0], "table": t[1]} for t in tables]
         }
     except Exception:
-        logger.exception("Error while debugging Motherduck connection/state")
-        return {"status": "error", "error": "An internal error occurred"}
+        logger.error("Unexpected error during Motherduck debug", exc_info=True)
+        return {"status": "error", "message": "An internal error occurred"}
 
 @router.get("/{key}", response_model=SystemSettingSchema)
 def get_setting(key: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):

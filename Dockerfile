@@ -1,7 +1,7 @@
 FROM python:3.11-slim
 
-# Install uv for fast dependency management
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+# Install uv for fast dependency management via pip
+RUN pip install uv
 
 # Set working directory
 # Set working directory
