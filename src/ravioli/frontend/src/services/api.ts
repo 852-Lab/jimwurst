@@ -465,6 +465,20 @@ export const api = {
     return response.json();
   },
 
+  async pushNotionPages(syncAll: boolean, pageIds: string[] = []): Promise<{status: string, pushed_count: number}> {
+    const response = await fetch(`${API_BASE}/knowledge/notion/push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sync_all: syncAll, page_ids: pageIds }),
+      credentials: 'include'
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.detail || 'Failed to push Notion pages');
+    }
+    return response.json();
+  },
+
   // --- Auth & User Management ---
 
   async login(credentials: { email: string, password: string }): Promise<User> {

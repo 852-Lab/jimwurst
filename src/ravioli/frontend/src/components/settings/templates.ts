@@ -211,8 +211,11 @@ export const renderIntegrationsHtml = () => {
                     </span>
                   </div>
                   <div class="flex items-center gap-3">
-                    <button id="btn-sync-notion" class="flex-1 bg-surface-container-highest border border-outline-variant/50 text-neutral-100 font-bold py-2.5 px-4 rounded-xl text-xs hover:bg-primary-fixed-dim hover:text-on-primary-fixed transition-all flex items-center justify-center gap-2 shadow-sm group">
-                      <span class="material-symbols-outlined text-sm group-hover:scale-110 transition-transform">sync</span> Sync Now
+                    <button id="btn-push-notion" class="flex-1 bg-surface-container-highest border border-outline-variant/50 text-neutral-100 font-bold py-2.5 px-4 rounded-xl text-xs hover:bg-primary-fixed-dim hover:text-on-primary-fixed transition-all flex items-center justify-center gap-2 shadow-sm group">
+                      <span class="material-symbols-outlined text-sm group-hover:scale-110 transition-transform">upload</span> Push All
+                    </button>
+                    <button id="btn-pull-notion" class="flex-1 bg-surface-container-highest border border-outline-variant/50 text-neutral-100 font-bold py-2.5 px-4 rounded-xl text-xs hover:bg-surface-container transition-all flex items-center justify-center gap-2 shadow-sm group">
+                      <span class="material-symbols-outlined text-sm group-hover:scale-110 transition-transform">download</span> Pull All
                     </button>
                   </div>
                   <div id="sync-notion-status" class="mt-3 text-[10px] hidden p-3 rounded-lg bg-black/20 border border-outline-variant/10 font-mono text-on-surface-variant"></div>

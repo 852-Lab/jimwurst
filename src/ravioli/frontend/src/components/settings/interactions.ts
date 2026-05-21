@@ -406,16 +406,17 @@ export const attachIntegrationsListeners = (container: HTMLElement, renderConten
       });
     }
 
-    const syncNotionBtn = container.querySelector('#btn-sync-notion');
+    const pullNotionBtn = container.querySelector('#btn-pull-notion');
+    const pushNotionBtn = container.querySelector('#btn-push-notion');
     const syncNotionStatus = container.querySelector('#sync-notion-status');
 
-    if (syncNotionBtn && syncNotionStatus) {
-      syncNotionBtn.addEventListener('click', async () => {
-        const btn = syncNotionBtn as HTMLButtonElement;
+    if (pullNotionBtn && syncNotionStatus) {
+      pullNotionBtn.addEventListener('click', async () => {
+        const btn = pullNotionBtn as HTMLButtonElement;
         const originalText = btn.innerHTML;
         
         btn.disabled = true;
-        btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">sync</span> Syncing...';
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">sync</span> Pulling...';
         
         syncNotionStatus.classList.remove('hidden', 'text-red-400', 'text-green-400');
         syncNotionStatus.classList.add('text-on-surface-variant');
@@ -425,7 +426,7 @@ export const attachIntegrationsListeners = (container: HTMLElement, renderConten
           const result = await api.syncNotionPages(true);
           syncNotionStatus.classList.remove('text-on-surface-variant');
           syncNotionStatus.classList.add('text-green-400');
-          syncNotionStatus.innerHTML = `<span class="material-symbols-outlined text-sm inline-block align-middle mr-1">check_circle</span> Successfully synced ${result.synced_count} pages!`;
+          syncNotionStatus.innerHTML = `<span class="material-symbols-outlined text-sm inline-block align-middle mr-1">check_circle</span> Successfully pulled ${result.synced_count} pages!`;
           
           // Update global state so the Knowledge page reflects the new data
           const updatedPages = await api.listKnowledgePages();
@@ -433,7 +434,39 @@ export const attachIntegrationsListeners = (container: HTMLElement, renderConten
         } catch (err: any) {
           syncNotionStatus.classList.remove('text-on-surface-variant');
           syncNotionStatus.classList.add('text-red-400');
-          syncNotionStatus.innerHTML = `<div class="font-bold">Sync Error: ${err.message}</div>`;
+          syncNotionStatus.innerHTML = `<div class="font-bold">Pull Error: ${err.message}</div>`;
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        }
+      });
+    }
+
+    if (pushNotionBtn && syncNotionStatus) {
+      pushNotionBtn.addEventListener('click', async () => {
+        const btn = pushNotionBtn as HTMLButtonElement;
+        const originalText = btn.innerHTML;
+        
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">sync</span> Pushing...';
+        
+        syncNotionStatus.classList.remove('hidden', 'text-red-400', 'text-green-400');
+        syncNotionStatus.classList.add('text-on-surface-variant');
+        syncNotionStatus.innerHTML = '<div class="animate-pulse">Pushing local changes to Notion...</div>';
+        
+        try {
+          const result = await api.pushNotionPages(true);
+          syncNotionStatus.classList.remove('text-on-surface-variant');
+          syncNotionStatus.classList.add('text-green-400');
+          syncNotionStatus.innerHTML = `<span class="material-symbols-outlined text-sm inline-block align-middle mr-1">check_circle</span> Successfully pushed ${result.pushed_count} pages!`;
+          
+          // Update global state so the Knowledge page reflects the new data
+          const updatedPages = await api.listKnowledgePages();
+          store.setKnowledgePages(updatedPages);
+        } catch (err: any) {
+          syncNotionStatus.classList.remove('text-on-surface-variant');
+          syncNotionStatus.classList.add('text-red-400');
+          syncNotionStatus.innerHTML = `<div class="font-bold">Push Error: ${err.message}</div>`;
         } finally {
           btn.disabled = false;
           btn.innerHTML = originalText;

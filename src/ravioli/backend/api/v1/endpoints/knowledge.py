@@ -126,3 +126,36 @@ def sync_notion_pages(
         raise HTTPException(status_code=400, detail="Must specify sync_all or provide page_ids.")
         
     return {"status": "success", "synced_count": synced_count}
+
+@router.post("/notion/push")
+def push_notion_pages(
+    request: schemas.NotionSyncRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Push local KnowledgePages back to Notion."""
+    # 1. Fetch token from user_settings (or mock for now)
+    try:
+        # In real app, fetch from db using current_user.id
+        token = decrypt_value(db.query(models.User).filter(models.User.id == current_user.id).first().settings.get("notion_token"))
+    except Exception:
+        # Fallback to test token if not configured properly in DB (for dev purposes)
+        import os
+        token = os.environ.get("NOTION_API_KEY")
+        
+    if not token:
+        raise HTTPException(status_code=401, detail="Notion token not configured.")
+        
+    # 2. Initialize Notion service
+    notion_service = NotionSyncService(token=token, db=db, user_id=current_user.id)
+    
+    # 3. Perform push
+    pushed_count = 0
+    if request.sync_all:
+        pushed_count = notion_service.push_all_pages()
+    elif request.page_ids:
+        pushed_count = notion_service.push_pages_by_ids(request.page_ids)
+    else:
+        raise HTTPException(status_code=400, detail="Must specify sync_all or provide page_ids.")
+        
+    return {"status": "success", "pushed_count": pushed_count}
