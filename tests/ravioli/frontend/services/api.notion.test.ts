@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { syncNotionPages, pushNotionPages } from '../../../../src/ravioli/frontend/src/services/api';
+import { api } from '../../../../src/ravioli/frontend/src/services/api';
 
 // Mock the global fetch function
 global.fetch = vi.fn();
@@ -19,15 +19,16 @@ describe('Notion API Services', () => {
       });
 
       // Act
-      const result = await syncNotionPages(true);
+      const result = await api.syncNotionPages(true);
 
       // Assert
       expect(global.fetch).toHaveBeenCalledTimes(1);
-      expect(global.fetch).toHaveBeenCalledWith('/api/v1/knowledge/notion/sync', {
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/knowledge/notion/sync', expect.objectContaining({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sync_all: true }),
-      });
+        credentials: 'include',
+        body: JSON.stringify({ sync_all: true, page_ids: [] }),
+      }));
       expect(result).toEqual(mockResponse);
     });
 
@@ -36,9 +37,10 @@ describe('Notion API Services', () => {
         ok: false,
         status: 400,
         statusText: 'Bad Request',
+        json: async () => ({ detail: 'Failed to sync with Notion' }),
       });
 
-      await expect(syncNotionPages(true)).rejects.toThrow('Failed to sync with Notion');
+      await expect(api.syncNotionPages(true)).rejects.toThrow('Failed to sync with Notion');
     });
   });
 
@@ -52,15 +54,16 @@ describe('Notion API Services', () => {
       });
 
       // Act
-      const result = await pushNotionPages(true);
+      const result = await api.pushNotionPages(true);
 
       // Assert
       expect(global.fetch).toHaveBeenCalledTimes(1);
-      expect(global.fetch).toHaveBeenCalledWith('/api/v1/knowledge/notion/push', {
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/knowledge/notion/push', expect.objectContaining({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sync_all: true }),
-      });
+        credentials: 'include',
+        body: JSON.stringify({ sync_all: true, page_ids: [] }),
+      }));
       expect(result).toEqual(mockResponse);
     });
 
@@ -73,14 +76,15 @@ describe('Notion API Services', () => {
       });
 
       // Act
-      const result = await pushNotionPages(false, ['id-1']);
+      const result = await api.pushNotionPages(false, ['id-1']);
 
       // Assert
-      expect(global.fetch).toHaveBeenCalledWith('/api/v1/knowledge/notion/push', {
+      expect(global.fetch).toHaveBeenCalledWith('/api/v1/knowledge/notion/push', expect.objectContaining({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ sync_all: false, page_ids: ['id-1'] }),
-      });
+      }));
       expect(result).toEqual(mockResponse);
     });
   });
