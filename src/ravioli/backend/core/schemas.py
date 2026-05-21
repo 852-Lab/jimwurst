@@ -57,6 +57,9 @@ class Analysis(AnalysisBase):
     
     # Optionally include logs in the response
     logs: List[AnalysisLog] = []
+    
+    owner_user: Optional['User'] = None
+    creator_user: Optional['User'] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -93,6 +96,12 @@ class Insight(InsightBase):
     updated_at: datetime
     created_by: Optional[UUID] = None
     updated_by: Optional[UUID] = None
+    reviewed_by: Optional[UUID] = None
+    
+    owner_user: Optional['User'] = None
+    owner_group: Optional['UserGroup'] = None
+    creator_user: Optional['User'] = None
+    reviewer_user: Optional['User'] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -100,6 +109,23 @@ class InsightStats(BaseModel):
     verified_count: int
     analyses_count: int
     contributors_count: int
+
+# --- Lineage Schemas ---
+
+class LineageNode(BaseModel):
+    id: str
+    type: str  # "datasource", "analysis", "insight", "knowledge"
+    label: str
+    metadata: Optional[dict] = None
+
+class LineageEdge(BaseModel):
+    source: str
+    target: str
+    type: Optional[str] = None
+
+class LineageResponse(BaseModel):
+    nodes: List[LineageNode]
+    edges: List[LineageEdge]
 
 # --- User Schemas ---
 
@@ -160,6 +186,11 @@ class UserGroup(UserGroupBase):
     
     model_config = ConfigDict(from_attributes=True)
 
+
+class UserGroupDetail(UserGroup):
+    owner_user: Optional[User] = None
+    members: List[User] = []
+
 # --- Data Source Schemas ---
 
 class DataSourceBase(BaseModel):
@@ -189,8 +220,9 @@ class DataSource(DataSourceBase):
     updated_by: Optional[UUID] = None
     is_duplicate: bool = False
     
-    # Optional nested owner for detail views
-    # owner: Optional[User] = None
+    owner_user: Optional['User'] = None
+    owner_group: Optional['UserGroup'] = None
+    creator_user: Optional['User'] = None
     
     model_config = ConfigDict(from_attributes=True)
 
@@ -199,6 +231,17 @@ class DataSourceUpdate(BaseModel):
 
 class DataSourcePIIUpdate(BaseModel):
     has_pii: bool
+
+class DataDiff(BaseModel):
+    total_local: int
+    total_remote: int
+    added: int
+    removed: int
+    status: str
+    error: Optional[str] = None
+
+class DataSyncRequest(BaseModel):
+    direction: str # "push" or "pull"
 
 # --- WFS Schemas ---
 
@@ -278,5 +321,11 @@ class KnowledgePage(KnowledgePageBase):
     updated_at: datetime
     created_by: Optional[UUID] = None
     updated_by: Optional[UUID] = None
+    reviewed_by: Optional[UUID] = None
+    
+    owner_user: Optional['User'] = None
+    owner_group: Optional['UserGroup'] = None
+    creator_user: Optional['User'] = None
+    reviewer_user: Optional['User'] = None
 
     model_config = ConfigDict(from_attributes=True)

@@ -1,4 +1,4 @@
-import type { User, UserRole, UserGroup, Analysis, AnalysisCreate, AnalysisLog, DataSource, QuickInsightResponse, WFSLayer, Insight, InsightStats, InsightsSummary, KnowledgePage, KnowledgePageCreate, KnowledgePageUpdate } from '../types';
+import type { User, UserRole, UserGroup, Analysis, AnalysisCreate, AnalysisLog, DataSource, QuickInsightResponse, WFSLayer, Insight, InsightStats, InsightsSummary, KnowledgePage, KnowledgePageCreate, KnowledgePageUpdate, LineageResponse } from '../types';
 
 const API_BASE = '/api/v1';
 
@@ -37,6 +37,14 @@ export const api = {
     if (!response.ok) throw new Error('Failed to delete analysis');
   },
 
+  async deleteLog(logId: string): Promise<void> {
+    const response = await fetch(`${API_BASE}/analysis-logs/${logId}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Failed to delete log');
+  },
+
   async listLogs(analysisId: string): Promise<AnalysisLog[]> {
     const response = await fetch(`${API_BASE}/analysis-logs/analysis/${analysisId}`, { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch logs');
@@ -53,8 +61,14 @@ export const api = {
     if (!response.ok) throw new Error('Failed to ask question');
   },
   
-  streamQuestion(analysisId: string, question: string, onMessage: (token: string) => void, onComplete: () => void, onError: (err: any) => void) {
-    const url = `${API_BASE}/analyses/${analysisId}/stream?question=${encodeURIComponent(question)}`;
+  streamQuestion(analysisId: string, question: string, replaceLogId: string | null, insertAfterLogId: string | null, onMessage: (token: string) => void, onComplete: () => void, onError: (err: any) => void) {
+    let url = `${API_BASE}/analyses/${analysisId}/stream?question=${encodeURIComponent(question)}`;
+    if (replaceLogId) {
+      url += `&replace_log_id=${encodeURIComponent(replaceLogId)}`;
+    }
+    if (insertAfterLogId) {
+      url += `&insert_after_log_id=${encodeURIComponent(insertAfterLogId)}`;
+    }
     const eventSource = new EventSource(url);
     
     eventSource.onmessage = (event) => {
@@ -73,13 +87,57 @@ export const api = {
 
     return () => eventSource.close();
   },
-  
-  async getSuggestedPrompts(analysisId: string): Promise<string[]> {
-    const response = await fetch(`${API_BASE}/analyses/${analysisId}/suggested-prompts`, { credentials: 'include' });
-    if (!response.ok) throw new Error('Failed to fetch suggested prompts');
+
+  async executeSql(analysisId: string, code: string, replaceLogId: string | null, insertAfterLogId: string | null): Promise<any> {
+    const response = await fetch(`${API_BASE}/analyses/${analysisId}/execute-sql`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, replace_log_id: replaceLogId, insert_after_log_id: insertAfterLogId }),
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Failed to execute SQL cell');
     return response.json();
   },
 
+  async executePython(analysisId: string, code: string, replaceLogId: string | null, insertAfterLogId: string | null): Promise<any> {
+    const response = await fetch(`${API_BASE}/analyses/${analysisId}/execute-python`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, replace_log_id: replaceLogId, insert_after_log_id: insertAfterLogId }),
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Failed to execute Python cell');
+    return response.json();
+  },
+  
+  async executeMarkdown(analysisId: string, code: string, replaceLogId: string | null, insertAfterLogId: string | null): Promise<any> {
+    const response = await fetch(`${API_BASE}/analyses/${analysisId}/execute-markdown`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, replace_log_id: replaceLogId, insert_after_log_id: insertAfterLogId }),
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Failed to save Markdown cell');
+    return response.json();
+  },
+  
+  async getSuggestedPrompts(analysisId: string): Promise<string[]> {
+    const response = await fetch(`${API_BASE}/analyses/${analysisId}/suggested-prompts`, { credentials: 'include' });
+    if (!response.ok) return [];
+    return response.json();
+  },
+
+  async getTablePreview(fullTableName: string): Promise<any[]> {
+    const response = await fetch(`${API_BASE}/data/preview/${encodeURIComponent(fullTableName)}`, { credentials: 'include' });
+    if (!response.ok) throw new Error('Failed to fetch table preview');
+    return response.json();
+  },
+
+  async getJupyterStatus(analysisId: string): Promise<{ status: string }> {
+    const response = await fetch(`${API_BASE}/analyses/${analysisId}/jupyter-status`, { credentials: 'include' });
+    if (!response.ok) return { status: 'not_started' };
+    return response.json();
+  },
 
   async generateQuickInsight(file: File): Promise<QuickInsightResponse> {
     const formData = new FormData();
@@ -228,6 +286,23 @@ export const api = {
     return response.json();
   },
 
+  async getFileDiff(fileId: string): Promise<{total_local: number, total_remote: number, added: number, removed: number, status: string, error?: string}> {
+    const response = await fetch(`${API_BASE}/data/files/${fileId}/diff`, { credentials: 'include' });
+    if (!response.ok) throw new Error('Failed to fetch file diff');
+    return response.json();
+  },
+
+  async syncFile(fileId: string, direction: 'push' | 'pull'): Promise<{total_local: number, total_remote: number, added: number, removed: number, status: string, error?: string}> {
+    const response = await fetch(`${API_BASE}/data/files/${fileId}/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ direction }),
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Sync failed');
+    return response.json();
+  },
+
   async getSetting(key: string): Promise<any> {
     const response = await fetch(`${API_BASE}/settings/${key}`, { credentials: 'include' });
     if (response.status === 404) return { key, value: {} };
@@ -252,6 +327,33 @@ export const api = {
       const errorData = await response.json();
       throw new Error(errorData.detail || 'Connection test failed');
     }
+    return response.json();
+  },
+
+  async testMotherduckConnection(): Promise<{status: string, message: string}> {
+    const response = await fetch(`${API_BASE}/settings/motherduck/test`, { credentials: 'include' });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || 'Motherduck connection test failed');
+    }
+    return response.json();
+  },
+
+  async pushAllToMotherduck(): Promise<any> {
+    const response = await fetch(`${API_BASE}/settings/motherduck/push`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Push all failed');
+    return response.json();
+  },
+
+  async pullAllFromMotherduck(): Promise<any> {
+    const response = await fetch(`${API_BASE}/settings/motherduck/pull`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+    if (!response.ok) throw new Error('Pull all failed');
     return response.json();
   },
 
@@ -507,6 +609,24 @@ export const api = {
       credentials: 'include'
     });
     if (!response.ok) throw new Error('Failed to remove member from group');
+  },
+
+  async deleteUser(id: string): Promise<void> {
+    const response = await fetch(`${API_BASE}/users/${id}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.detail || 'Failed to delete user');
+    }
+  },
+
+  async getInsightsLineage(): Promise<LineageResponse> {
+    const response = await fetch(`${API_BASE}/insights/lineage`, { credentials: 'include' });
+    if (!response.ok) throw new Error('Failed to fetch insights lineage');
+    return response.json();
   }
 };
+
 

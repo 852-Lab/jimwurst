@@ -40,6 +40,10 @@ class Analysis(Base):
     owner_type: Mapped[Optional[str]] = mapped_column(String(50)) # 'user' or 'group'
 
     # Relationships
+    owner_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[owner_id], primaryjoin="and_(foreign(Analysis.owner_id)==User.id, Analysis.owner_type=='user')", viewonly=True)
+    creator_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by], viewonly=True)
+    owner_group: Mapped[Optional["UserGroup"]] = relationship("UserGroup", foreign_keys=[owner], viewonly=True)
+
     logs: Mapped[List["AnalysisLog"]] = relationship("AnalysisLog", back_populates="analysis", cascade="all, delete-orphan")
     insights: Mapped[List["Insight"]] = relationship("Insight", back_populates="analysis", cascade="all, delete-orphan")
 
@@ -112,6 +116,8 @@ class User(Base):
     groups: Mapped[List["UserGroup"]] = relationship(
         "UserGroup",
         secondary="app.user_group_members",
+        primaryjoin="User.id==UserGroupMember.user_id",
+        secondaryjoin="UserGroup.id==UserGroupMember.group_id",
         back_populates="members"
     )
 
@@ -161,6 +167,8 @@ class DataSource(Base):
     owner_type: Mapped[Optional[str]] = mapped_column(String(50), default="user") # 'user' or 'group'
     
     owner_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[owner_id], primaryjoin="and_(foreign(DataSource.owner_id)==User.id, DataSource.owner_type=='user')", viewonly=True)
+    creator_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by], viewonly=True)
+    owner_group: Mapped[Optional["UserGroup"]] = relationship("UserGroup", foreign_keys=[owner], viewonly=True)
 
 class Insight(Base):
     """
@@ -186,12 +194,46 @@ class Insight(Base):
     owner: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.user_groups.id"))
     created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
     updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
+    reviewed_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
 
     # Legacy Polymorphic Ownership
     owner_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True))
     owner_type: Mapped[Optional[str]] = mapped_column(String(50)) # 'user' or 'group'
 
     analysis: Mapped["Analysis"] = relationship("Analysis", back_populates="insights")
+    
+    creator_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by], viewonly=True)
+    owner_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[owner_id], primaryjoin="and_(foreign(Insight.owner_id)==User.id, Insight.owner_type=='user')", viewonly=True)
+    owner_group: Mapped[Optional["UserGroup"]] = relationship("UserGroup", foreign_keys=[owner], viewonly=True)
+    reviewer_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[reviewed_by], viewonly=True)
+
+    # Self-referential many-to-many lineage relationships
+    parents: Mapped[List["Insight"]] = relationship(
+        "Insight",
+        secondary="app.insight_links",
+        primaryjoin="Insight.id==InsightLink.child_id",
+        secondaryjoin="Insight.id==InsightLink.parent_id",
+        back_populates="children"
+    )
+    children: Mapped[List["Insight"]] = relationship(
+        "Insight",
+        secondary="app.insight_links",
+        primaryjoin="Insight.id==InsightLink.parent_id",
+        secondaryjoin="Insight.id==InsightLink.child_id",
+        back_populates="parents"
+    )
+
+
+class InsightLink(Base):
+    """
+    Many-to-many relationship between insights representing derived lineage paths.
+    An insight can have multiple parent insights, and a parent insight can have multiple children.
+    """
+    __tablename__ = "insight_links"
+    __table_args__ = {"schema": "app"}
+
+    parent_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("app.insights.id", ondelete="CASCADE"), primary_key=True)
+    child_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("app.insights.id", ondelete="CASCADE"), primary_key=True)
 
 
 class SystemSetting(Base):
@@ -242,6 +284,7 @@ class KnowledgePage(Base):
     owner: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.user_groups.id"))
     created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
     updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
+    reviewed_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))
 
     # Legacy Polymorphic Ownership
     owner_type: Mapped[str] = mapped_column(String(50), default="user") # 'user' or 'group'
@@ -250,6 +293,11 @@ class KnowledgePage(Base):
     
     # Hierarchy support
     parent_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.knowledge_pages.id"))
+    
+    creator_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[created_by], viewonly=True)
+    owner_user: Mapped[Optional["User"]] = relationship("User", primaryjoin="and_(foreign(KnowledgePage.owner_id)==cast(User.id, String), KnowledgePage.owner_type=='user')", viewonly=True)
+    owner_group: Mapped[Optional["UserGroup"]] = relationship("UserGroup", primaryjoin="and_(foreign(KnowledgePage.owner_id)==cast(UserGroup.id, String), KnowledgePage.owner_type=='group')", viewonly=True)
+    reviewer_user: Mapped[Optional["User"]] = relationship("User", foreign_keys=[reviewed_by], viewonly=True)
     
     # source tracking
     source: Mapped[str] = mapped_column(String(50), default="manual")
@@ -284,6 +332,8 @@ class UserGroup(Base):
     members: Mapped[List["User"]] = relationship(
         "User",
         secondary="app.user_group_members",
+        primaryjoin="UserGroup.id==UserGroupMember.group_id",
+        secondaryjoin="User.id==UserGroupMember.user_id",
         back_populates="groups"
     )
     data_sources: Mapped[List["DataSource"]] = relationship(
@@ -314,3 +364,5 @@ class UserGroupMember(Base):
     group_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("app.user_groups.id"), primary_key=True)
     role_in_group: Mapped[Optional[str]] = mapped_column(String(50)) # e.g., 'Lead', 'Member'
     joined_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC))
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC))
+    updated_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))

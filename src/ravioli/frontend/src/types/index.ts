@@ -10,10 +10,14 @@ export interface Analysis {
     row_count?: number;
     followup_questions?: string[];
     is_approved?: boolean;
+    data_sources?: string[];
+    knowledge_pages?: string[];
     [key: string]: any;
   };
   created_at: string;
   updated_at: string;
+  owner_user?: User;
+  creator_user?: User;
 }
 
 export type AnalysisStatus = 'pending' | 'running' | 'completed' | 'failed';
@@ -34,6 +38,7 @@ export interface UserGroup {
   name: string;
   description?: string;
   created_at: string;
+  members?: User[];
 }
 
 export interface AnalysisLog {
@@ -73,6 +78,9 @@ export interface DataSource {
   updated_at: string;
   owner_id?: string;
   owner?: User;
+  owner_user?: User;
+  owner_group?: UserGroup;
+  creator_user?: User;
 }
 
 
@@ -104,6 +112,11 @@ export interface Insight {
   is_published: boolean;
   created_at: string;
   updated_at: string;
+  reviewed_by?: string;
+  owner_user?: User;
+  owner_group?: UserGroup;
+  creator_user?: User;
+  reviewer_user?: User;
 }
 
 export interface InsightStats {
@@ -115,6 +128,7 @@ export interface InsightStats {
 export interface InsightsSummary {
   summary: string;
   insight_count: number;
+  total_verified_count: number;
   days: number;
 }
 
@@ -149,6 +163,11 @@ export interface KnowledgePage {
   source_id?: string;
   created_at: string;
   updated_at: string;
+  reviewed_by?: string;
+  owner_user?: User;
+  owner_group?: UserGroup;
+  creator_user?: User;
+  reviewer_user?: User;
 }
 
 export interface KnowledgePageCreate {
@@ -171,4 +190,22 @@ export interface KnowledgePageUpdate {
   ownership_type?: 'individual' | 'team';
   owner_id?: string;
   parent_id?: string;
+}
+
+export interface LineageNode {
+  id: string;
+  type: 'datasource' | 'analysis' | 'insight' | 'knowledge';
+  label: string;
+  metadata?: Record<string, any>;
+}
+
+export interface LineageEdge {
+  source: string;
+  target: string;
+  type?: string;
+}
+
+export interface LineageResponse {
+  nodes: LineageNode[];
+  edges: LineageEdge[];
 }

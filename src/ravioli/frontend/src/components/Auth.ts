@@ -1,5 +1,6 @@
 import { store } from '../store';
 import { api } from '../services/api';
+import { withButtonLoading } from './utils/dom';
 
 export function renderAuth() {
   const container = document.createElement('div');
@@ -82,27 +83,28 @@ export function renderAuth() {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       errorEl.classList.add('hidden');
-      submitBtn.disabled = true;
 
       const email = (card.querySelector('#email') as HTMLInputElement).value;
       const password = (card.querySelector('#password') as HTMLInputElement).value;
       
-      try {
-        let user;
-        if (mode === 'login') {
-          user = await api.login({ email, password });
-        } else {
-          const name = (card.querySelector('#name') as HTMLInputElement).value;
-          user = await api.signup({ name, email, password });
+      await withButtonLoading(
+        submitBtn,
+        mode === 'login' ? 'Authenticating...' : 'Creating...',
+        async () => {
+          let user;
+          if (mode === 'login') {
+            user = await api.login({ email, password });
+          } else {
+            const name = (card.querySelector('#name') as HTMLInputElement).value;
+            user = await api.signup({ name, email, password });
+          }
+          store.setCurrentUser(user);
+          store.setCurrentView('insights');
         }
-        store.setCurrentUser(user);
-        store.setCurrentView('insights');
-      } catch (err: any) {
+      ).catch(err => {
         errorEl.textContent = err.message;
         errorEl.classList.remove('hidden');
-      } finally {
-        submitBtn.disabled = false;
-      }
+      });
     });
   };
 

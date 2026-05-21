@@ -40,7 +40,9 @@ describe('Data component', () => {
         source_type: 'file',
         has_pii: false,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        owner_user: { id: 'u1', name: 'John Doe', email: 'john@example.com', role: 'Operator', status: 'active' },
+        creator_user: { id: 'u2', name: 'Jane Smith', email: 'jane@example.com', role: 'Operator', status: 'active' }
       }
     ]);
     
@@ -48,6 +50,8 @@ describe('Data component', () => {
     expect(el.innerHTML).toContain('My Data');
     expect(el.innerHTML).toContain('my_data');
     expect(el.innerHTML).toContain('100');
+    expect(el.innerHTML).toContain('John Doe');
+    expect(el.innerHTML).toContain('Jane Smith');
     // Should have a file icon
     expect(el.innerHTML).toContain('description');
   });

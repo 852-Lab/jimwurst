@@ -1,6 +1,6 @@
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from uuid import UUID
 
 from ravioli.backend.core import models, schemas
@@ -12,7 +12,12 @@ router = APIRouter()
 @router.get("/", response_model=List[schemas.KnowledgePage])
 def list_knowledge_pages(db: Session = Depends(get_db)):
     """List all knowledge pages."""
-    return db.query(models.KnowledgePage).order_by(models.KnowledgePage.updated_at.desc()).all()
+    return db.query(models.KnowledgePage).options(
+        joinedload(models.KnowledgePage.owner_user),
+        joinedload(models.KnowledgePage.owner_group),
+        joinedload(models.KnowledgePage.creator_user),
+        joinedload(models.KnowledgePage.reviewer_user)
+    ).order_by(models.KnowledgePage.updated_at.desc()).all()
 
 @router.post("/", response_model=schemas.KnowledgePage, status_code=status.HTTP_201_CREATED)
 def create_knowledge_page(
@@ -25,17 +30,29 @@ def create_knowledge_page(
         **page.model_dump(exclude={"owner"}),
         owner=page.owner or current_user.id,
         created_by=current_user.id,
-        updated_by=current_user.id
+        updated_by=current_user.id,
+        reviewed_by=current_user.id if current_user.role == "Admin" else None
     )
     db.add(db_page)
     db.commit()
     db.refresh(db_page)
-    return db_page
+    
+    return db.query(models.KnowledgePage).options(
+        joinedload(models.KnowledgePage.owner_user),
+        joinedload(models.KnowledgePage.owner_group),
+        joinedload(models.KnowledgePage.creator_user),
+        joinedload(models.KnowledgePage.reviewer_user)
+    ).filter(models.KnowledgePage.id == db_page.id).first()
 
 @router.get("/{page_id}", response_model=schemas.KnowledgePage)
 def get_knowledge_page(page_id: UUID, db: Session = Depends(get_db)):
     """Get a knowledge page by ID."""
-    page = db.query(models.KnowledgePage).filter(models.KnowledgePage.id == page_id).first()
+    page = db.query(models.KnowledgePage).options(
+        joinedload(models.KnowledgePage.owner_user),
+        joinedload(models.KnowledgePage.owner_group),
+        joinedload(models.KnowledgePage.creator_user),
+        joinedload(models.KnowledgePage.reviewer_user)
+    ).filter(models.KnowledgePage.id == page_id).first()
     if not page:
         raise HTTPException(status_code=404, detail="Knowledge page not found")
     return page
@@ -57,9 +74,17 @@ def update_knowledge_page(
         setattr(db_page, key, value)
     
     db_page.updated_by = current_user.id
+    if current_user.role == "Admin":
+        db_page.reviewed_by = current_user.id
     db.commit()
     db.refresh(db_page)
-    return db_page
+    
+    return db.query(models.KnowledgePage).options(
+        joinedload(models.KnowledgePage.owner_user),
+        joinedload(models.KnowledgePage.owner_group),
+        joinedload(models.KnowledgePage.creator_user),
+        joinedload(models.KnowledgePage.reviewer_user)
+    ).filter(models.KnowledgePage.id == page_id).first()
 
 @router.delete("/{page_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_knowledge_page(page_id: UUID, db: Session = Depends(get_db)):

@@ -25,8 +25,9 @@ from ravioli.ai.tools import create_viz_payload as tool_create_viz_payload
 logger = logging.getLogger(__name__)
 
 class AnalysisDecision(BaseModel):
-    """Decision on whether visualization is needed."""
-    requires_viz: bool = Field(description="Whether the question requires a data visualization")
+    """Decision on whether SQL query or visualization is needed."""
+    requires_sql: bool = Field(description="Whether the question requires querying data from the database using SQL")
+    requires_viz: bool = Field(description="Whether the question requires a data visualization chart")
 
 class KowalskiAgent:
     """
@@ -69,7 +70,15 @@ class KowalskiAgent:
                 num_predict=1000,
                 model=model
             )
-            if parser: return parser.parse(response_text)
+            if parser:
+                try:
+                    return parser.parse(response_text)
+                except Exception:
+                    import re
+                    match = re.search(r'\{.*\}', response_text, re.DOTALL)
+                    if match:
+                        return parser.parse(match.group(0))
+                    raise
             return response_text
         except Exception as e:
             logger.error(f"KowalskiAgent: LLM Generation failed ({task_name}): {e}")
@@ -91,16 +100,18 @@ class KowalskiAgent:
 
     async def process_question(self, question: str, table_name: str, schema_name: str = "main") -> AsyncGenerator[Any, None]:
         parser = JsonOutputParser(pydantic_object=AnalysisDecision)
-        prompt = PromptTemplate.from_template("Does this require a chart?\nQuestion: \"{question}\"\n{format_instructions}")
+        prompt = PromptTemplate.from_template("Does this require a SQL query? You MUST require a SQL query if the user asks for any data retrieval, counting, or analysis. Does this require a chart? Only require a chart if the user explicitly asks for a visualization, or if the question involves time-series trends, distributions, or comparisons across categories. Simple scalar queries (like total counts or basic overviews) do NOT require a chart.\nQuestion: \"{question}\"\n{format_instructions}")
         try:
             result = await self.generate(prompt.format(question=question, format_instructions=parser.get_format_instructions()), "Decision", parser=parser)
-            if result.get("requires_viz"):
+            if result.get("requires_sql") or result.get("requires_viz"):
                 yield "_[Engaging Statistical Brain...]_"
                 sql = await self.generate_sql(question, table_name, schema_name)
                 if sql:
-                    yield f"_[Assembling vision strategy...]_"
-                    viz = await self.create_viz_payload(sql, question)
-                    yield {"answer_type": "viz", "sql": sql, "viz": viz}
+                    yield {"answer_type": "sql_generated", "sql": sql}
+                    if result.get("requires_viz"):
+                        yield f"_[Assembling vision strategy...]_"
+                        viz = await self.create_viz_payload(sql, question)
+                        yield {"answer_type": "viz", "sql": sql, "viz": viz}
                     return
             yield {"answer_type": "text"}
         except Exception as e:
@@ -111,11 +122,21 @@ class KowalskiAgent:
     def _setup_agent(self):
         schemas = "public,marts,s_spotify,s_linkedin,s_substack,s_telegram,s_bolt,s_apple_health,s_google_sheet"
         db_uri = f"{settings.database_url}?options=-csearch_path%3D{schemas}"
-        db = SQLDatabase.from_uri(db_uri)
-        sql_executor = create_sql_agent_executor(db=db, llm=self.llm, persona=self.persona)
-        query_tool = get_query_database_tool(sql_executor)
-        tools = [ingest_data_tool, run_transformations_tool, query_tool]
-        return initialize_agent(tools, self.llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True, max_iterations=10)
+        
+        # Mask credentials in logs
+        masked_uri = db_uri.replace(settings.postgres_password, "****") if settings.postgres_password else db_uri
+        logger.info(f"KowalskiAgent: Initializing SQL connection to {masked_uri}")
+        
+        try:
+            db = SQLDatabase.from_uri(db_uri)
+            sql_executor = create_sql_agent_executor(db=db, llm=self.llm, persona=self.persona)
+            query_tool = get_query_database_tool(sql_executor)
+            tools = [ingest_data_tool, run_transformations_tool, query_tool]
+            return initialize_agent(tools, self.llm, agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION, verbose=True, max_iterations=10)
+        except Exception as e:
+            logger.error(f"KowalskiAgent: Failed to initialize SQL agent: {e}")
+            # Fallback to no-tool agent or raise depending on criticality
+            return None
 
     def chat(self, prompt: str):
         try:

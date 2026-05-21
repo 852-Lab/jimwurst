@@ -37,7 +37,17 @@ async def test_get_insights_summary(client, session, mocker):
     
     # Mock DB query for insights
     mock_insight = create_mock_insight(is_verified=True)
-    session.query.return_value.filter.return_value.order_by.return_value.all.return_value = [mock_insight]
+    # Mock for the first query (insights list)
+    mock_all = MagicMock()
+    mock_all.all.return_value = [mock_insight]
+    # Mock for the second query (total count)
+    mock_scalar = MagicMock()
+    mock_scalar.scalar.return_value = 1
+    
+    session.query.side_effect = [
+        MagicMock(filter=MagicMock(return_value=MagicMock(order_by=MagicMock(return_value=mock_all)))),
+        MagicMock(filter=MagicMock(return_value=mock_scalar))
+    ]
     
     response = client.get("/api/v1/insights/summary?days=7")
     
@@ -71,7 +81,7 @@ def test_get_insights_feed(client, session):
     assert data[0]["content"] == "Verified"
     assert data[0]["is_verified"] is True
 
-def test_verify_insight(client, session):
+def test_verify_insight(client, session, current_user):
     insight_id = uuid.uuid4()
     mock_insight = create_mock_insight(id=insight_id, is_verified=False)
     session.query.return_value.filter.return_value.first.return_value = mock_insight
@@ -80,6 +90,7 @@ def test_verify_insight(client, session):
     
     assert response.status_code == 200
     assert mock_insight.is_verified is True
+    assert mock_insight.updated_by == current_user.id
     assert session.commit.called
 
 def test_reject_insight(client, session):

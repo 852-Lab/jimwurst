@@ -35,16 +35,21 @@ def test_list_users(client, session):
     assert len(response.json()) == 2
     assert response.json()[0]["email"] == "user1@example.com"
 
-def test_create_user_admin(client, session):
+def test_create_user_admin(client, session, current_user):
     """Test admin creating a new user (invitation)."""
     session.query.return_value.filter.return_value.first.return_value = None
     
+    created_by_val = None
+    updated_by_val = None
     def mock_add(obj):
+        nonlocal created_by_val, updated_by_val
         obj.id = uuid.uuid4()
         obj.created_at = datetime.now(UTC)
         obj.updated_at = datetime.now(UTC)
-        obj.created_by = None
-        obj.updated_by = None
+        obj.created_by = current_user.id
+        obj.updated_by = current_user.id
+        created_by_val = obj.created_by
+        updated_by_val = obj.updated_by
         return obj
     session.add.side_effect = mock_add
 
@@ -56,6 +61,8 @@ def test_create_user_admin(client, session):
     assert response.status_code == 200
     assert response.json()["email"] == "invited@example.com"
     assert response.json()["status"] == "invited"
+    assert response.json()["created_by"] == str(created_by_val)
+    assert response.json()["updated_by"] == str(updated_by_val)
     assert "created_at" in response.json()
     session.add.assert_called_once()
     session.commit.assert_called_once()
@@ -83,6 +90,8 @@ def test_list_groups(client, session):
     mock_group.created_by = None
     mock_group.updated_by = None
     mock_group.owner_id = None
+    mock_group.owner_user = None
+    mock_group.members = []
 
     session.query.return_value.all.return_value = [mock_group]
 
@@ -92,14 +101,19 @@ def test_list_groups(client, session):
     assert len(response.json()) == 1
     assert response.json()[0]["name"] == "Data Scientists"
 
-def test_create_group(client, session):
+def test_create_group(client, session, current_user):
     """Test creating a new user group."""
+    created_by_val = None
+    updated_by_val = None
     def mock_add(obj):
+        nonlocal created_by_val, updated_by_val
         obj.id = uuid.uuid4()
         obj.created_at = datetime.now(UTC)
         obj.updated_at = datetime.now(UTC)
-        obj.created_by = None
-        obj.updated_by = None
+        obj.created_by = current_user.id
+        obj.updated_by = current_user.id
+        created_by_val = obj.created_by
+        updated_by_val = obj.updated_by
         obj.owner_id = None
         return obj
     session.add.side_effect = mock_add
@@ -111,11 +125,13 @@ def test_create_group(client, session):
 
     assert response.status_code == 200
     assert response.json()["name"] == "New Group"
+    assert response.json()["created_by"] == str(created_by_val)
+    assert response.json()["updated_by"] == str(updated_by_val)
     assert "created_at" in response.json()
     session.add.assert_called_once()
     session.commit.assert_called_once()
 
-def test_update_user(client, session):
+def test_update_user(client, session, current_user):
     """Test updating a user's role or status."""
     user_id = uuid.uuid4()
     mock_user = MagicMock(spec=models.User)
@@ -139,6 +155,7 @@ def test_update_user(client, session):
     assert response.status_code == 200
     assert mock_user.role == "Admin"
     assert mock_user.status == "active"
+    assert mock_user.updated_by == current_user.id
     session.commit.assert_called_once()
 
 def test_update_user_not_found(client, session):
@@ -153,3 +170,46 @@ def test_update_user_not_found(client, session):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "User not found"
+
+def test_delete_user_success(client, session):
+    """Test successfully deleting a user."""
+    user_id = uuid.uuid4()
+    mock_user = MagicMock(spec=models.User)
+    mock_user.id = user_id
+
+    # Mock the database query returning the target user
+    session.query.return_value.filter.return_value.first.return_value = mock_user
+
+    response = client.delete(f"/api/v1/users/{user_id}")
+
+    assert response.status_code == 200
+    assert response.json()["message"] == "User deleted successfully"
+    session.delete.assert_called_once_with(mock_user)
+    session.commit.assert_called_once()
+
+def test_delete_user_self_failure(client, session, current_user):
+    """Test that a user cannot delete themselves."""
+    mock_user = MagicMock(spec=models.User)
+    mock_user.id = current_user.id
+
+    session.query.return_value.filter.return_value.first.return_value = mock_user
+
+    response = client.delete(f"/api/v1/users/{current_user.id}")
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Cannot delete currently logged-in user"
+    session.delete.assert_not_called()
+    session.commit.assert_not_called()
+
+def test_delete_user_not_found(client, session):
+    """Test deleting a non-existent user."""
+    user_id = uuid.uuid4()
+    session.query.return_value.filter.return_value.first.return_value = None
+
+    response = client.delete(f"/api/v1/users/{user_id}")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "User not found"
+    session.delete.assert_not_called()
+    session.commit.assert_not_called()
+

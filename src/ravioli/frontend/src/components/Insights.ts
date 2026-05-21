@@ -1,291 +1,172 @@
-import { api } from '../services/api';
-import { formatDistanceToNow, format } from 'date-fns';
-import type { Insight, InsightStats, InsightsSummary } from '../types';
+import { state, DAY_OPTIONS, clearInsightsCache } from './insights/state';
+import { hydrate } from './insights/interactions';
 
-const DAY_OPTIONS = [1, 3, 7, 14, 28, 30];
-
-// Module-level state so re-renders within the same session preserve selections
-let activeDays = 7;
-let summaryCache: Map<number, InsightsSummary> = new Map();
-export const clearInsightsCache = () => summaryCache.clear();
-
-function banCard(value: number | string, label: string, icon: string, accent = 'text-primary') {
-  return `
-    <div class="glass-card px-6 py-5 rounded-2xl flex items-center gap-5 group cursor-default">
-      <div class="w-12 h-12 rounded-xl bg-surface-container-high flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
-        <span class="material-symbols-outlined ${accent} text-2xl shrink-0" data-icon="${icon}">${icon}</span>
-      </div>
-      <div class="flex flex-col gap-0.5 min-w-0">
-        <span class="text-[10px] uppercase tracking-[0.3em] text-outline font-label-sm opacity-50 truncate">${label}</span>
-        <span class="font-display-lg text-3xl text-on-surface tracking-tighter tabular-nums leading-none">${value}</span>
-      </div>
-    </div>`;
-}
-
-function insightPill(insight: Insight) {
-  const ago = formatDistanceToNow(new Date(insight.created_at), { addSuffix: true });
-  const dateStr = format(new Date(insight.created_at), 'MMM d');
-  const source = insight.source_label ?? 'Unknown analysis';
-
-  return `
-    <div class="flex items-start gap-5 py-6 border-b border-white/5 last:border-0 group insight-card-hover rounded-xl px-4 -mx-4 transition-all duration-500">
-      <div class="flex flex-col items-center gap-1 shrink-0 w-12 text-center">
-        <span class="text-xl font-display-lg text-primary tabular-nums group-hover:scale-110 transition-transform duration-500">${dateStr.split(' ')[1]}</span>
-        <span class="text-[9px] uppercase tracking-[0.2em] text-outline opacity-40 font-bold">${dateStr.split(' ')[0]}</span>
-      </div>
-      <div class="flex-1 min-w-0 space-y-2">
-        <p class="text-sm font-body-md text-on-surface-variant leading-relaxed group-hover:text-white transition-colors duration-500">${insight.content}</p>
-        <div class="flex items-center gap-2">
-          <span class="material-symbols-outlined text-primary text-xs opacity-50 group-hover:opacity-100 transition-opacity" data-icon="verified">verified</span>
-          <span class="text-[10px] uppercase tracking-[0.2em] text-outline font-label-sm opacity-30 group-hover:opacity-60 transition-opacity">${source}</span>
-          <span class="text-[10px] text-outline opacity-20">·</span>
-          <span class="text-[10px] uppercase tracking-[0.2em] text-outline font-label-sm opacity-30 group-hover:opacity-60 transition-opacity">${ago}</span>
-        </div>
-      </div>
-    </div>`;
-}
+export { clearInsightsCache };
 
 export function renderInsights() {
   const container = document.createElement('main');
   container.className = 'flex-1 ml-64 overflow-y-auto bg-background h-screen flex flex-col custom-scrollbar';
 
-  // Render with loading skeletons, then hydrate async
   container.innerHTML = `
     <!-- Page Header -->
-    <header class="px-12 pt-12 pb-8 shrink-0 animate-reveal">
-      <div class="space-y-2">
-        <p class="text-[10px] uppercase tracking-[0.3em] text-primary-fixed-dim opacity-60 font-label-sm">Studio Noir</p>
-        <h1 class="font-display-lg text-4xl text-on-surface tracking-tight">Insights</h1>
-        <p class="text-sm text-on-surface-variant font-body-md opacity-60">Distilled intelligence from your verified analyses.</p>
+    <header class="px-12 pt-12 pb-4 shrink-0 animate-reveal flex flex-col gap-6">
+      <div class="flex items-start justify-between">
+        <div class="space-y-2">
+          <p class="text-[10px] uppercase tracking-[0.3em] text-primary-fixed-dim opacity-60 font-label-sm">Studio Noir</p>
+          <h1 class="font-display-lg text-4xl text-on-surface tracking-tight">Insights</h1>
+          <p class="text-sm text-on-surface-variant font-body-md opacity-60">Distilled intelligence and lineage tracking from your warehouse.</p>
+        </div>
+        
+        <!-- View Toggle Switcher -->
+        <div class="inline-flex p-1 bg-surface-container-low/50 backdrop-blur-md rounded-full border border-white/5" id="view-selector">
+          <button class="view-btn px-6 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-[0.15em] transition-all duration-500 ${state.activeView === 'feed' ? 'bg-primary text-on-primary shadow-lg shadow-primary/20' : 'text-outline hover:text-white hover:bg-white/5'}" data-view="feed">
+            Feed & Summary
+          </button>
+          <button class="view-btn px-6 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-[0.15em] transition-all duration-500 ${state.activeView === 'lineage' ? 'bg-primary text-on-primary shadow-lg shadow-primary/20' : 'text-outline hover:text-white hover:bg-white/5'}" data-view="lineage">
+            Lineage Map
+          </button>
+        </div>
       </div>
-      <div class="mt-8 h-px bg-gradient-to-r from-primary/20 via-outline-variant/20 to-transparent"></div>
+      <div class="h-px bg-gradient-to-r from-primary/20 via-outline-variant/20 to-transparent"></div>
     </header>
 
-    <div class="flex-1 px-12 pb-16 space-y-16">
+    <div class="flex-1 px-12 pb-16 relative">
+      
+      <!-- VIEW 1: Chronological Feed & AI Summary -->
+      <div id="feed-view" class="${state.activeView === 'feed' ? 'space-y-16' : 'hidden'} animate-reveal">
+        <!-- BANs -->
+        <section id="bans-section">
+          <div class="grid grid-cols-3 gap-4">
+            <div class="rounded-2xl animate-pulse bg-surface-container-low h-16"></div>
+            <div class="rounded-2xl animate-pulse bg-surface-container-low h-16"></div>
+            <div class="rounded-2xl animate-pulse bg-surface-container-low h-16"></div>
+          </div>
+        </section>
 
-      <!-- BANs -->
-      <section id="bans-section">
-        <div class="grid grid-cols-3 gap-4">
-          <div class="rounded-2xl animate-pulse bg-surface-container-low h-16"></div>
-          <div class="rounded-2xl animate-pulse bg-surface-container-low h-16"></div>
-          <div class="rounded-2xl animate-pulse bg-surface-container-low h-16"></div>
-        </div>
-      </section>
-
-      <!-- Hero: AI Summary (dominant) -->
-      <section id="hero-section" class="relative">
-        <div class="flex items-center justify-between mb-8">
-          <div class="flex items-center gap-5">
-            <div class="w-14 h-14 rounded-[1.25rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/5 animate-float">
-              <span class="material-symbols-outlined text-primary text-3xl glow-primary" data-icon="auto_awesome">auto_awesome</span>
+        <!-- Hero: AI Summary -->
+        <section id="hero-section" class="relative">
+          <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center gap-5">
+              <div class="w-14 h-14 rounded-[1.25rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/5 animate-float">
+                <span class="material-symbols-outlined text-primary text-3xl glow-primary" data-icon="auto_awesome">auto_awesome</span>
+              </div>
+              <div>
+                <h2 class="text-2xl font-headline-sm text-on-surface uppercase tracking-[0.2em] font-medium">Intelligence Brief</h2>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                  <p class="text-[10px] uppercase tracking-[0.3em] text-primary-fixed-dim opacity-40 font-bold">Synthesized Analytics</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <h2 class="text-2xl font-headline-sm text-on-surface uppercase tracking-[0.2em] font-medium">Intelligence Brief</h2>
-              <div class="flex items-center gap-2 mt-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-                <p class="text-[10px] uppercase tracking-[0.3em] text-primary-fixed-dim opacity-40 font-bold">Synthesized Analytics</p>
+            <!-- Day selector -->
+            <div class="flex items-center gap-1 p-1.5 bg-surface-container-low/50 backdrop-blur-md rounded-full border border-white/5" id="day-selector">
+              ${DAY_OPTIONS.map(d => `
+                <button class="day-btn px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-[0.15em] transition-all duration-500 ${d === state.activeDays ? 'bg-primary text-on-primary shadow-lg shadow-primary/20' : 'text-outline hover:text-white hover:bg-white/5'}" data-days="${d}">${d}d</button>
+              `).join('')}
+            </div>
+          </div>
+          
+          <div id="hero-content" class="glass-card p-12 rounded-[2.5rem] relative overflow-hidden group">
+            <div class="absolute -top-24 -right-24 w-96 h-96 bg-primary/5 rounded-full blur-[120px] pointer-events-none group-hover:bg-primary/10 transition-colors duration-1000"></div>
+            <div class="absolute -bottom-16 -left-16 w-64 h-64 bg-tertiary/5 rounded-full blur-[100px] pointer-events-none group-hover:bg-tertiary/10 transition-colors duration-1000"></div>
+            <div class="absolute inset-0 bg-noise opacity-[0.02] pointer-events-none"></div>
+            
+            <div id="hero-text" class="relative z-10 min-h-[160px] flex flex-col justify-center">
+              <div class="flex flex-col items-center gap-4 py-8 opacity-40">
+                <span class="material-symbols-outlined text-4xl animate-spin" data-icon="progress_activity">progress_activity</span>
+                <span class="text-xs uppercase tracking-[0.3em] font-bold">Initializing intelligence core…</span>
               </div>
             </div>
           </div>
-          <!-- Day selector -->
-          <div class="flex items-center gap-1 p-1.5 bg-surface-container-low/50 backdrop-blur-md rounded-full border border-white/5" id="day-selector">
-            ${DAY_OPTIONS.map(d => `
-              <button class="day-btn px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-[0.15em] transition-all duration-500 ${d === activeDays ? 'bg-primary text-on-primary shadow-lg shadow-primary/20' : 'text-outline hover:text-white hover:bg-white/5'}" data-days="${d}">${d}d</button>
-            `).join('')}
-          </div>
-        </div>
-        
-        <div id="hero-content" class="glass-card p-12 rounded-[2.5rem] relative overflow-hidden group">
-          <!-- Animated Background Elements -->
-          <div class="absolute -top-24 -right-24 w-96 h-96 bg-primary/5 rounded-full blur-[120px] pointer-events-none group-hover:bg-primary/10 transition-colors duration-1000"></div>
-          <div class="absolute -bottom-16 -left-16 w-64 h-64 bg-tertiary/5 rounded-full blur-[100px] pointer-events-none group-hover:bg-tertiary/10 transition-colors duration-1000"></div>
-          <div class="absolute inset-0 bg-noise opacity-[0.02] pointer-events-none"></div>
-          
-          <div id="hero-text" class="relative z-10 min-h-[160px] flex flex-col justify-center">
-            <div class="flex flex-col items-center gap-4 py-8 opacity-40">
-              <span class="material-symbols-outlined text-4xl animate-spin" data-icon="progress_activity">progress_activity</span>
-              <span class="text-xs uppercase tracking-[0.3em] font-bold">Initializing intelligence core…</span>
+        </section>
+
+        <!-- News Feed -->
+        <section class="max-w-4xl mx-auto">
+          <div class="flex items-center gap-3 mb-8">
+            <div class="w-10 h-10 rounded-[1rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/5">
+              <span class="material-symbols-outlined text-primary text-2xl" data-icon="newspaper">newspaper</span>
+            </div>
+            <div>
+              <h2 class="text-xl font-headline-sm text-on-surface uppercase tracking-[0.2em] font-medium">Intelligence Feed</h2>
+              <p class="text-[10px] uppercase tracking-[0.3em] text-outline opacity-30 font-bold mt-0.5">Chronicle of verified signals</p>
             </div>
           </div>
-        </div>
-      </section>
+          <div id="news-feed" class="space-y-0 min-h-[200px]">
+            <div class="h-20 border-b border-white/5 animate-pulse bg-surface-container-low/20 rounded mb-2"></div>
+            <div class="h-20 border-b border-white/5 animate-pulse bg-surface-container-low/20 rounded mb-2"></div>
+            <div class="h-20 border-b border-white/5 animate-pulse bg-surface-container-low/20 rounded"></div>
+          </div>
+        </section>
+      </div>
 
-      <!-- News Feed -->
-      <section class="max-w-4xl mx-auto">
-        <div class="flex items-center gap-3 mb-8">
-          <div class="w-10 h-10 rounded-[1rem] bg-primary/10 flex items-center justify-center border border-primary/20 shadow-lg shadow-primary/5">
-            <span class="material-symbols-outlined text-primary text-2xl" data-icon="newspaper">newspaper</span>
+      <!-- VIEW 2: Pedigree Lineage DAG Graph (Airflow Style) -->
+      <div id="lineage-view" class="${state.activeView === 'lineage' ? 'flex flex-col' : 'hidden'} h-full min-h-[600px] relative animate-reveal">
+        <div class="flex items-center justify-between mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-[1rem] bg-secondary/10 flex items-center justify-center border border-secondary/20 shadow-lg shadow-secondary/5">
+              <span class="material-symbols-outlined text-secondary text-2xl" data-icon="schema">schema</span>
+            </div>
+            <div>
+              <h2 class="text-xl font-headline-sm text-on-surface uppercase tracking-[0.2em] font-medium">Lineage Map</h2>
+              <p class="text-[10px] uppercase tracking-[0.3em] text-outline opacity-30 font-bold mt-0.5">GENEALOGY AND PROPAGATION OF INSIGHT SIGNALS (DAG)</p>
+            </div>
           </div>
-          <div>
-            <h2 class="text-xl font-headline-sm text-on-surface uppercase tracking-[0.2em] font-medium">Intelligence Feed</h2>
-            <p class="text-[10px] uppercase tracking-[0.3em] text-outline opacity-30 font-bold mt-0.5">Chronicle of verified signals</p>
+          <div class="flex items-center gap-3" id="lineage-header-controls">
+            <!-- Dynamic button will be placed here -->
+            <button class="px-5 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-[10px] font-bold uppercase tracking-[0.15em] rounded-full transition-all duration-300 flex items-center gap-2" id="refresh-lineage">
+              <span class="material-symbols-outlined text-xs animate-spin-hover" data-icon="refresh">refresh</span> Refresh Map
+            </button>
           </div>
         </div>
-        <div id="news-feed" class="space-y-0 min-h-[200px]">
-          <div class="h-20 border-b border-white/5 animate-pulse bg-surface-container-low/20 rounded mb-2"></div>
-          <div class="h-20 border-b border-white/5 animate-pulse bg-surface-container-low/20 rounded mb-2"></div>
-          <div class="h-20 border-b border-white/5 animate-pulse bg-surface-container-low/20 rounded"></div>
+
+        <!-- Scrollable and Pannable Unified DAG Canvas -->
+        <div class="relative w-full h-[650px] overflow-auto glass-card rounded-[2.5rem] border border-white/5 bg-[#080809] dag-canvas custom-scrollbar" id="lineage-graph-container" style="scrollbar-color: rgba(255,255,255,0.1) transparent;">
+          
+          <!-- Floating Category Header Labels at the top of the canvas -->
+          <div class="absolute top-6 left-0 w-full h-8 pointer-events-none flex z-20" id="dag-headers" style="width: 1240px;">
+            <div style="position: absolute; left: 60px; width: 220px;" class="text-center">
+              <span class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold px-3 py-1.5 bg-[#101012] border border-white/5 rounded-full">Data Sources</span>
+            </div>
+            <div style="position: absolute; left: 360px; width: 220px;" class="text-center">
+              <span class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold px-3 py-1.5 bg-[#101012] border border-white/5 rounded-full">Analyses</span>
+            </div>
+            <div style="position: absolute; left: 660px; width: 220px;" class="text-center">
+              <span class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold px-3 py-1.5 bg-[#101012] border border-white/5 rounded-full">Insights</span>
+            </div>
+            <div style="position: absolute; left: 960px; width: 220px;" class="text-center">
+              <span class="text-[9px] uppercase tracking-[0.3em] text-outline opacity-40 font-bold px-3 py-1.5 bg-[#101012] border border-white/5 rounded-full">Knowledge Pages</span>
+            </div>
+          </div>
+
+          <!-- SVG connectors overlay (stretching across complete scroll dimensions) -->
+          <svg class="absolute inset-0 pointer-events-none" id="lineage-connectors" style="z-index: 1; min-width: 1240px; min-height: 650px;"></svg>
+
+          <!-- Absolutely positioned nodes container -->
+          <div class="absolute inset-0" id="dag-nodes-container" style="z-index: 10; min-width: 1240px; min-height: 650px;"></div>
         </div>
-      </section>
+
+        <!-- Node Details Drawer overlay card (floating fixed above scroll viewport bottom-right) -->
+        <div id="node-details-panel" class="absolute bottom-6 right-6 w-[26rem] p-8 rounded-[2rem] glass-card border-white/10 shadow-2xl translate-y-12 opacity-0 pointer-events-none transition-all duration-500 z-30 flex flex-col gap-4">
+          <div class="flex items-start justify-between">
+            <span class="node-tag text-[9px] uppercase tracking-[0.25em] font-bold px-3.5 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary">Node</span>
+            <button class="text-outline hover:text-white p-1 hover:bg-white/5 rounded-full transition-all" id="close-details-btn">
+              <span class="material-symbols-outlined text-base">close</span>
+            </button>
+          </div>
+          <h4 class="node-title text-lg font-semibold text-white tracking-tight leading-snug">Node Title</h4>
+          <div class="node-meta-grid grid grid-cols-2 gap-4 border-y border-white/5 py-4 my-1">
+            <!-- Grid items injected -->
+          </div>
+          <p class="node-desc text-xs text-on-surface-variant font-body-md leading-relaxed">Select any node in the pedigree lanes to reveal structural dependencies and propagation logs.</p>
+          <div class="node-actions flex items-center justify-end gap-3 mt-1">
+            <!-- Action buttons -->
+          </div>
+        </div>
+      </div>
 
     </div>
   `;
 
-  // Hydrate all sections in parallel
   hydrate(container);
-
   return container;
-}
-
-async function hydrate(container: HTMLElement) {
-  await Promise.all([
-    hydrateBans(container),
-    hydrateSummary(container, activeDays),
-    hydrateFeed(container),
-  ]);
-
-  // Day selector interaction
-  container.querySelectorAll('.day-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const days = parseInt(btn.getAttribute('data-days') || '7');
-      activeDays = days;
-      container.querySelectorAll('.day-btn').forEach(b => {
-        b.classList.toggle('bg-primary', b === btn);
-        b.classList.toggle('text-on-primary', b === btn);
-        b.classList.toggle('text-outline', b !== btn);
-      });
-      await hydrateSummary(container, days);
-    });
-  });
-}
-
-async function hydrateBans(container: HTMLElement) {
-  const section = container.querySelector('#bans-section');
-  if (!section) return;
-  try {
-    const stats = await api.getInsightStats();
-    section.innerHTML = `
-      <div class="grid grid-cols-3 gap-6">
-        <div class="opacity-0 animate-reveal stagger-1">${banCard(stats.verified_count, 'Verified Insights', 'verified', 'text-primary')}</div>
-        <div class="opacity-0 animate-reveal stagger-2">${banCard(stats.analyses_count, 'Total Analyses', 'analytics', 'text-secondary')}</div>
-        <div class="opacity-0 animate-reveal stagger-3">${banCard(stats.contributors_count, 'Insight Contributors', 'group', 'text-tertiary')}</div>
-      </div>`;
-  } catch {
-    section.innerHTML = `<p class="text-sm text-outline opacity-50">Failed to load stats.</p>`;
-  }
-}
-
-async function hydrateSummary(container: HTMLElement, days: number) {
-  const heroText = container.querySelector('#hero-text');
-  if (!heroText) return;
-
-  heroText.innerHTML = `
-    <div class="flex items-center gap-3 opacity-40">
-      <span class="material-symbols-outlined animate-spin" data-icon="progress_activity">progress_activity</span>
-      <span class="text-sm uppercase tracking-widest font-label-sm">Synthesizing ${days}d intelligence…</span>
-    </div>`;
-
-  try {
-    // Use cache to avoid re-fetching same window
-    let data = summaryCache.get(days);
-    if (!data) {
-      data = await api.getInsightsSummary(days);
-      summaryCache.set(days, data);
-    }
-    // Parse bullet lines from the summary; fall back to treating full text as one bullet
-    const allBullets = data.summary
-      .split('\n')
-      .map(l => l.replace(/^[\s\-*•]+/, '').trim())
-      .filter(l => l.length > 10);
-
-    const isExpandable = allBullets.length > 4;
-    const bullets = isExpandable ? allBullets.slice(0, 4) : allBullets;
-    const hiddenBullets = isExpandable ? allBullets.slice(4) : [];
-
-    const renderBullet = (b: string, index: number) => `
-      <li class="flex items-start gap-5 group/item opacity-0 animate-reveal" style="animation-delay: ${index * 0.1}s">
-        <div class="mt-[0.65em] shrink-0 w-2 h-2 rounded-full bg-primary/40 group-hover/item:bg-primary group-hover/item:scale-125 transition-all duration-300 shadow-[0_0_8px_rgba(var(--primary-rgb),0.3)]"></div>
-        <span class="text-lg font-body-lg text-on-surface-variant leading-relaxed group-hover/item:text-on-surface transition-colors duration-300">${b}</span>
-      </li>`;
-
-    const bulletHtml = bullets.length > 0
-      ? bullets.map((b, i) => renderBullet(b, i)).join('')
-      : `<li class="text-on-surface-variant opacity-60 font-body-md text-sm">${data.summary}</li>`;
-
-    const countNote = data.insight_count > 0
-      ? `<div class="pt-8 border-t border-white/5 flex items-center justify-between mt-10">
-          <div class="flex items-center gap-3 opacity-30">
-            <span class="material-symbols-outlined text-base" data-icon="data_exploration">data_exploration</span>
-            <span class="text-[10px] uppercase tracking-[0.3em] font-bold">${data.insight_count} verified signal${data.insight_count !== 1 ? 's' : ''} ingested</span>
-          </div>
-          <button id="btn-copy-brief" class="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/5 text-[10px] uppercase tracking-[0.2em] text-outline hover:text-primary transition-all font-bold group/copy">
-            <span class="material-symbols-outlined text-sm group-hover/copy:scale-110 transition-transform" data-icon="content_copy">content_copy</span>
-            <span>Copy Brief</span>
-          </button>
-        </div>`
-      : '';
-
-    heroText.innerHTML = `
-      <ul id="hero-bullets" class="space-y-6 list-none">${bulletHtml}</ul>
-      ${isExpandable ? `
-        <div id="hidden-bullets" class="hidden space-y-6 mt-6 animate-in fade-in slide-in-from-top-4 duration-500">
-          ${hiddenBullets.map(renderBullet).join('')}
-        </div>
-        <button id="btn-toggle-hero" class="mt-10 flex items-center gap-2.5 text-[10px] uppercase tracking-[0.25em] text-primary hover:text-primary-fixed transition-all font-bold group">
-          <div class="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-            <span class="material-symbols-outlined text-xs group-hover:translate-y-0.5 transition-transform" data-icon="expand_more">expand_more</span>
-          </div>
-          <span>Explore Full Intelligence</span>
-        </button>
-      ` : ''}
-      ${countNote}`;
-
-    // Handle Copy
-    heroText.querySelector('#btn-copy-brief')?.addEventListener('click', () => {
-      navigator.clipboard.writeText(allBullets.join('\n'));
-      const btn = heroText.querySelector('#btn-copy-brief');
-      if (btn) {
-        const originalHtml = btn.innerHTML;
-        btn.innerHTML = `<span class="material-symbols-outlined text-sm text-primary" data-icon="done">done</span><span class="text-primary">Copied!</span>`;
-        setTimeout(() => { btn.innerHTML = originalHtml; }, 2000);
-      }
-    });
-
-    if (isExpandable) {
-      const toggleBtn = heroText.querySelector('#btn-toggle-hero');
-      const hiddenEl = heroText.querySelector('#hidden-bullets');
-      toggleBtn?.addEventListener('click', () => {
-        const isHidden = hiddenEl?.classList.contains('hidden');
-        hiddenEl?.classList.toggle('hidden');
-        if (toggleBtn) {
-          toggleBtn.innerHTML = isHidden 
-            ? `<span class="material-symbols-outlined text-sm group-hover:-translate-y-0.5 transition-transform" data-icon="expand_less">expand_less</span><span>Collapse Brief</span>`
-            : `<span class="material-symbols-outlined text-sm group-hover:translate-y-0.5 transition-transform" data-icon="expand_more">expand_more</span><span>Expand Brief</span>`;
-        }
-      });
-    }
-  } catch {
-    heroText.innerHTML = `<p class="text-sm text-outline opacity-50">Summary unavailable.</p>`;
-  }
-}
-
-async function hydrateFeed(container: HTMLElement) {
-  const feedEl = container.querySelector('#news-feed');
-  if (!feedEl) return;
-  try {
-    const feed = await api.getInsightsFeed(activeDays <= 7 ? 30 : activeDays);
-    feedEl.innerHTML = feed.length === 0
-      ? `<div class="glass-card flex flex-col items-center gap-4 py-16 text-center rounded-[2rem] border-dashed border-white/5 group animate-reveal">
-          <div class="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center group-hover:scale-110 transition-transform duration-700">
-            <span class="material-symbols-outlined text-4xl text-outline opacity-20" data-icon="newspaper">newspaper</span>
-          </div>
-          <div class="space-y-1">
-            <p class="text-xs uppercase tracking-[0.3em] font-bold text-on-surface opacity-40">No Activity</p>
-            <p class="text-[10px] uppercase tracking-[0.1em] text-outline opacity-20 font-medium">Verified signals will appear here</p>
-          </div>
-        </div>`
-      : feed.map((i, index) => `<div class="opacity-0 animate-reveal" style="animation-delay: ${index * 0.05}s">${insightPill(i)}</div>`).join('');
-  } catch {
-    feedEl.innerHTML = `<p class="text-sm text-outline opacity-50">Failed to load feed.</p>`;
-  }
 }

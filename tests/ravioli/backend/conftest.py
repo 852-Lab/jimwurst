@@ -12,6 +12,11 @@ from ravioli.backend.core.models import User
 def session_fixture(mocker):
     """Provides a mocked SQLAlchemy session."""
     mock_session = mocker.Mock()
+    
+    # Support SQLAlchemy's eager loading options chaining
+    query_mock = mock_session.query.return_value
+    query_mock.options.return_value = query_mock
+    
     return mock_session
 
 @pytest.fixture(name="current_user")

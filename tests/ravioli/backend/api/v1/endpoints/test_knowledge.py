@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, UTC
 from ravioli.backend.core.models import KnowledgePage
 
-def create_mock_page(id=None, title="Test Page", properties=None, content=None, ownership_type="individual"):
+def create_mock_page(id=None, title="Test Page", properties=None, content=None, ownership_type="individual", owner_type="individual"):
     return KnowledgePage(
         id=id or uuid.uuid4(),
         title=title,
@@ -10,7 +10,7 @@ def create_mock_page(id=None, title="Test Page", properties=None, content=None, 
         content=content or [{"type": "paragraph", "paragraph": {"rich_text": [{"text": {"content": "Hello"}}]}}],
         icon={"type": "emoji", "emoji": "📄"},
         cover={"type": "external", "external": {"url": "https://example.com/cover.jpg"}},
-        owner_type="individual",
+        owner_type=owner_type,
         ownership_type=ownership_type,
         source="manual",
         created_at=datetime.now(UTC),
@@ -43,7 +43,7 @@ def test_list_knowledge_pages_with_null_properties(client, session):
     # The schema should default it to {}
     assert data[0]["properties"] == {}
 
-def test_create_knowledge_page(client, session):
+def test_create_knowledge_page(client, session, current_user):
     payload = {
         "title": "New Intelligence",
         "properties": {"tags": ["AI", "Notion"]},
@@ -52,9 +52,19 @@ def test_create_knowledge_page(client, session):
         "owner_type": "team"
     }
     
-    # Mock the return value of create to have timestamps
-    mock_page = create_mock_page(title="New Intelligence")
-    session.add.side_effect = lambda x: setattr(x, 'id', mock_page.id) or setattr(x, 'created_at', mock_page.created_at) or setattr(x, 'updated_at', mock_page.updated_at)
+    # Mock the return value of create to have timestamps and audit fields
+    mock_page = create_mock_page(title="New Intelligence", owner_type="team")
+    mock_page.created_by = current_user.id
+    mock_page.updated_by = current_user.id
+    def mock_add(x):
+        x.id = mock_page.id
+        x.created_at = mock_page.created_at
+        x.updated_at = mock_page.updated_at
+        x.created_by = current_user.id
+        x.updated_by = current_user.id
+        return None
+    session.add.side_effect = mock_add
+    session.query.return_value.filter.return_value.first.return_value = mock_page
     
     response = client.post("/api/v1/knowledge/", json=payload)
     
@@ -62,6 +72,8 @@ def test_create_knowledge_page(client, session):
     data = response.json()
     assert data["title"] == "New Intelligence"
     assert data["owner_type"] == "team"
+    assert data["created_by"] == str(current_user.id)
+    assert data["updated_by"] == str(current_user.id)
     assert session.add.called
     assert session.commit.called
 
@@ -74,7 +86,7 @@ def test_get_knowledge_page(client, session):
     assert response.status_code == 200
     assert response.json()["id"] == str(page_id)
 
-def test_update_knowledge_page(client, session):
+def test_update_knowledge_page(client, session, current_user):
     page_id = uuid.uuid4()
     mock_page = create_mock_page(id=page_id)
     session.query.return_value.filter.return_value.first.return_value = mock_page
@@ -84,6 +96,7 @@ def test_update_knowledge_page(client, session):
     
     assert response.status_code == 200
     assert mock_page.title == "Updated Title"
+    assert mock_page.updated_by == current_user.id
     assert session.commit.called
 
 def test_delete_knowledge_page(client, session):

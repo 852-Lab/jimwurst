@@ -330,7 +330,11 @@ async def upload_file(
 
 @router.get("/files", response_model=List[schemas.DataSource])
 async def list_files(db: Session = Depends(get_db)):
-    query = select(DataSource).order_by(DataSource.created_at.desc())
+    query = select(DataSource).options(
+        joinedload(DataSource.owner_user),
+        joinedload(DataSource.owner_group),
+        joinedload(DataSource.creator_user)
+    ).order_by(DataSource.created_at.desc())
     result = db.execute(query)
     return result.scalars().all()
 
@@ -398,7 +402,8 @@ async def delete_file(file_id: uuid.UUID, db: Session = Depends(get_db)):
 async def update_file(
     file_id: uuid.UUID,
     file_update: schemas.DataSourceUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
 ):
     db_source = db.execute(select(DataSource).where(DataSource.id == file_id)).scalar_one_or_none()
     if not db_source:
@@ -408,6 +413,7 @@ async def update_file(
         db_source.description = file_update.description
         
     try:
+        db_source.updated_by = current_user.id
         db.commit()
         db.refresh(db_source)
         return db_source
@@ -419,7 +425,8 @@ async def update_file(
 async def update_file_pii(
     file_id: uuid.UUID,
     pii_update: schemas.DataSourcePIIUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
 ):
     db_source = db.execute(select(DataSource).where(DataSource.id == file_id)).scalar_one_or_none()
     if not db_source:
@@ -427,6 +434,7 @@ async def update_file_pii(
         
     db_source.has_pii = pii_update.has_pii
     try:
+        db_source.updated_by = current_user.id
         db.commit()
         db.refresh(db_source)
         return db_source
@@ -437,7 +445,8 @@ async def update_file_pii(
 @router.post("/files/{file_id}/generate-description", response_model=schemas.DataSource)
 async def generate_file_description(
     file_id: uuid.UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
 ):
     db_source = db.execute(select(DataSource).where(DataSource.id == file_id)).scalar_one_or_none()
     if not db_source:
@@ -459,6 +468,7 @@ async def generate_file_description(
 
         # Update the database
         db_source.description = description
+        db_source.updated_by = current_user.id
         db.commit()
         db.refresh(db_source)
         
@@ -466,6 +476,57 @@ async def generate_file_description(
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to generate description: {str(e)}")
+@router.get("/files/{file_id}/diff", response_model=schemas.DataDiff)
+async def get_file_diff(file_id: uuid.UUID, db: Session = Depends(get_db)):
+    db_source = db.execute(select(DataSource).where(DataSource.id == file_id)).scalar_one_or_none()
+    if not db_source:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    if not db_source.table_name:
+        raise HTTPException(status_code=400, detail="File has no associated table")
+
+    try:
+        diff = duckdb_manager.get_table_diff(db_source.schema_name, db_source.table_name)
+        if "error" in diff:
+             # We return it with 200 but status="error" or similar if it's a "known" error like not connected
+             return schemas.DataDiff(
+                 total_local=0, total_remote=0, added=0, removed=0, 
+                 status="error", error=diff["error"]
+             )
+        return schemas.DataDiff(**diff)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to calculate diff: {str(e)}")
+
+@router.post("/files/{file_id}/sync", response_model=schemas.DataDiff)
+async def sync_file_data(
+    file_id: uuid.UUID,
+    sync_req: schemas.DataSyncRequest,
+    db: Session = Depends(get_db)
+):
+    db_source = db.execute(select(DataSource).where(DataSource.id == file_id)).scalar_one_or_none()
+    if not db_source:
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    if not db_source.table_name:
+        raise HTTPException(status_code=400, detail="File has no associated table")
+
+    if sync_req.direction == "push" and db_source.has_pii:
+        raise HTTPException(
+            status_code=403, 
+            detail="Privacy Protection: This asset is tagged with PII and is restricted to Local storage only."
+        )
+
+    try:
+        result = duckdb_manager.sync_table(db_source.schema_name, db_source.table_name, sync_req.direction)
+        
+        # If it was a pull, we should update the row count in the record
+        if sync_req.direction == "pull" and "total_local" in result:
+            db_source.row_count = result["total_local"]
+            db.commit()
+            
+        return schemas.DataDiff(**result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Sync failed: {str(e)}")
 
 # --- WFS Endpoints ---
 
@@ -703,7 +764,7 @@ async def upload_file_stream(
                 yield f"data: DONE:{json.dumps(result_dict)}\n\n"
             except Exception as e:
                 logger.exception(f"Error during upload_file_stream ingestion task for {file.filename}")
-                yield f"data: ERROR:An internal error occurred: {str(e)}\n\n"
+                yield "data: ERROR:An internal error occurred.\n\n"
                 
         finally:
             root_logger = logging.getLogger()

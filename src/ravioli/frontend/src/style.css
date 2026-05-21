@@ -157,3 +157,80 @@
 .stagger-3 { animation-delay: 0.3s; }
 .stagger-4 { animation-delay: 0.4s; }
 
+/* Lineage Graph Custom Styles */
+.dag-canvas {
+  background-color: #0b0b0c !important;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px) !important;
+  background-size: 24px 24px !important;
+}
+
+.lineage-node {
+  transition: all 0.30s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.lineage-node.lineage-active {
+  border-color: rgba(255, 120, 150, 0.5) !important;
+  box-shadow: 0 0 25px rgba(255, 120, 150, 0.2) !important;
+  opacity: 1 !important;
+  transform: scale(1.03);
+}
+
+.lineage-node.lineage-dimmed {
+  opacity: 0.12 !important;
+  filter: grayscale(80%) blur(0.5px);
+}
+
+.lineage-path {
+  stroke: rgba(255, 255, 255, 0.24) !important;
+  stroke-width: 2px !important;
+  transition: stroke 0.3s ease, stroke-width 0.3s ease, opacity 0.3s ease;
+}
+
+@keyframes lineage-dash {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+.lineage-path.lineage-active {
+  stroke: rgba(255, 120, 150, 0.95) !important;
+  stroke-width: 2.5px !important;
+  stroke-dasharray: 6 3;
+  animation: lineage-dash 1s linear infinite;
+  filter: drop-shadow(0 0 5px rgba(255, 120, 150, 0.5));
+  opacity: 1 !important;
+}
+
+.lineage-path.lineage-dimmed {
+  opacity: 0.03 !important;
+}
+
+.animate-spin-hover:hover {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+
+/* Markdown Tables */
+.prose table {
+  @apply w-full text-left border-collapse my-6 overflow-hidden rounded-xl border border-outline-variant/10 block overflow-x-auto whitespace-nowrap;
+}
+.prose thead {
+  @apply bg-surface-container-low text-on-surface-variant tracking-wide;
+}
+.prose th {
+  @apply px-4 py-3 font-medium border-b border-outline-variant/10 text-xs;
+}
+.prose tbody {
+  @apply bg-surface-container-lowest/30 divide-y divide-outline-variant/5;
+}
+.prose td {
+  @apply px-4 py-3 text-on-surface text-sm font-mono;
+}
+.prose tr:hover td {
+  @apply bg-surface-container-low/50 transition-colors;
+}
