@@ -1,21 +1,19 @@
 import { api } from '../../services/api';
 import { store } from '../../store';
 import { escapeHTML, sanitizeImageUrl, getCoverUrl, getIconDisplay, getBlocksPreview, textToBlocks } from './utils';
+import { createModal, closeModal } from '../utils/dom';
 
 export function renderKnowledgeEditor(id?: string) {
   const existing = id ? store.getKnowledgePages().find(p => p.id === id) : null;
   const allPages = store.getKnowledgePages().filter(p => p.id !== id);
 
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl animate-in fade-in duration-500';
-
   const coverUrl = getCoverUrl(existing?.cover);
   const safeCoverUrl = sanitizeImageUrl(coverUrl);
-  const coverHtml = safeCoverUrl 
-      ? `<img src="${escapeHTML(safeCoverUrl)}" class="w-full h-full object-cover">` 
-      : '<div class="w-full h-full bg-gradient-to-br from-primary/10 to-tertiary/5"></div>';
+  const coverHtml = safeCoverUrl
+    ? `<img src="${escapeHTML(safeCoverUrl)}" class="w-full h-full object-cover">`
+    : '<div class="w-full h-full bg-gradient-to-br from-primary/10 to-tertiary/5"></div>';
 
-  modal.innerHTML = `
+  const modal = createModal(`
         <div class="glass-panel w-full max-w-4xl rounded-[3.5rem] border-primary/20 overflow-hidden relative animate-in zoom-in slide-in-from-bottom-12 duration-700 ease-out shadow-[0_0_100px_rgba(var(--primary-rgb),0.1)] flex flex-col max-h-[90vh]">
              <!-- Page Aesthetics Section -->
              <div class="h-48 w-full relative bg-surface-container-high overflow-hidden" id="editor-cover-preview">
@@ -94,9 +92,7 @@ export function renderKnowledgeEditor(id?: string) {
                 </form>
              </div>
         </div>
-    `;
-
-  document.body.appendChild(modal);
+    `);
 
   const form = modal.querySelector('#knowledge-form') as HTMLFormElement;
   const closeBtn = modal.querySelector('#close-modal');
@@ -139,15 +135,11 @@ export function renderKnowledgeEditor(id?: string) {
     });
   });
 
-  const closeModal = () => {
-    modal.classList.add('animate-out', 'fade-out');
-    modal.firstElementChild?.classList.add('animate-out', 'zoom-out', 'slide-out-to-bottom-12');
-    setTimeout(() => modal.remove(), 500);
-  };
+  const closeModalFn = () => closeModal(modal);
 
-  closeBtn?.addEventListener('click', closeModal);
+  closeBtn?.addEventListener('click', closeModalFn);
   modal.addEventListener('click', (e) => {
-    if (e.target === modal) closeModal();
+    if (e.target === modal) closeModalFn();
   });
 
   deleteBtn?.addEventListener('click', async () => {
@@ -155,7 +147,7 @@ export function renderKnowledgeEditor(id?: string) {
       await api.deleteKnowledgePage(id);
       const pages = await api.listKnowledgePages();
       store.setKnowledgePages(pages);
-      closeModal();
+      closeModalFn();
     }
   });
 
@@ -193,7 +185,7 @@ export function renderKnowledgeEditor(id?: string) {
       }
       const pages = await api.listKnowledgePages();
       store.setKnowledgePages(pages);
-      closeModal();
+      closeModalFn();
     } catch (err) {
       console.error('Failed to save', err);
       submitBtn.disabled = false;

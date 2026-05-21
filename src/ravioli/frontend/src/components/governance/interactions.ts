@@ -3,6 +3,7 @@ import { store } from '../../store';
 import { clearInsightsCache } from '../Insights';
 import type { User, UserRole, UserGroup, Insight } from '../../types';
 import { insightReviewCard } from './templates';
+import { createModal, closeModal } from '../utils/dom';
 
 export async function renderReviewSection(container: HTMLElement) {
   container.innerHTML = `
@@ -303,10 +304,8 @@ export async function hydrateGroups(container: HTMLElement) {
 }
 
 export function showCreateUserModal(userToEdit?: User) {
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-xl animate-reveal';
   const currentUser = store.getCurrentUser();
-  modal.innerHTML = `
+  const modal = createModal(`
     <div class="w-full max-w-md p-10 glass-card rounded-[3rem] border-white/10 shadow-2xl space-y-8">
       <div class="flex items-center justify-between">
         <div class="space-y-2">
@@ -363,18 +362,16 @@ export function showCreateUserModal(userToEdit?: User) {
         </div>
       </form>
     </div>
-  `;
+  `);
 
-  document.body.appendChild(modal);
-
-  modal.querySelector('#btn-cancel')?.addEventListener('click', () => modal.remove());
+  modal.querySelector('#btn-cancel')?.addEventListener('click', () => closeModal(modal, false));
 
   if (userToEdit && currentUser?.id !== userToEdit.id) {
     modal.querySelector('#btn-delete-user')?.addEventListener('click', async () => {
       if (confirm(`Are you sure you want to remove user "${userToEdit.name}"? This action cannot be undone.`)) {
         try {
           await api.deleteUser(userToEdit.id);
-          modal.remove();
+          closeModal(modal, false);
           store.setGovernanceTab('users');
           hydrateUsers(document.body);
         } catch (err: any) {
@@ -408,9 +405,7 @@ export function showCreateUserModal(userToEdit?: User) {
 }
 
 export function showCreateGroupModal(groupToEdit?: UserGroup) {
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-xl animate-reveal';
-  modal.innerHTML = `
+  const modal = createModal(`
     <div class="w-full max-w-md p-10 glass-card rounded-[3rem] border-white/10 shadow-2xl space-y-8">
       <div class="flex items-center justify-between">
         <div class="space-y-2">
@@ -447,18 +442,16 @@ export function showCreateGroupModal(groupToEdit?: UserGroup) {
         </div>
       </form>
     </div>
-  `;
+  `);
 
-  document.body.appendChild(modal);
-
-  modal.querySelector('#btn-cancel-group')?.addEventListener('click', () => modal.remove());
+  modal.querySelector('#btn-cancel-group')?.addEventListener('click', () => closeModal(modal, false));
   
   if (groupToEdit) {
     modal.querySelector('#btn-delete-group')?.addEventListener('click', async () => {
       if (confirm('Are you sure you want to delete this group? This action cannot be undone.')) {
         try {
           await api.deleteGroup(groupToEdit.id);
-          modal.remove();
+          closeModal(modal, false);
           store.setGovernanceTab('groups');
           hydrateGroups(document.body);
         } catch (err: any) {
@@ -479,7 +472,7 @@ export function showCreateGroupModal(groupToEdit?: UserGroup) {
       } else {
         await api.createGroup({ name, description });
       }
-      modal.remove();
+      closeModal(modal, false);
       store.setGovernanceTab('groups');
       hydrateGroups(document.body);
     } catch (err: any) {
@@ -489,16 +482,11 @@ export function showCreateGroupModal(groupToEdit?: UserGroup) {
 }
 
 export async function showManageGroupMembersModal(group: UserGroup) {
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-xl animate-reveal';
-  
-  // Show loading state initially
-  modal.innerHTML = `
+  const modal = createModal(`
     <div class="w-full max-w-lg p-10 glass-card rounded-[3rem] border-white/10 shadow-2xl space-y-8 flex items-center justify-center h-64">
       <div class="w-8 h-8 rounded-full border-2 border-secondary border-t-transparent animate-spin"></div>
     </div>
-  `;
-  document.body.appendChild(modal);
+  `);
 
   try {
     const [allUsers, members] = await Promise.all([
@@ -562,7 +550,7 @@ export async function showManageGroupMembersModal(group: UserGroup) {
 
     const bindEvents = () => {
       modal.querySelector('#btn-close-members')?.addEventListener('click', () => {
-        modal.remove();
+        closeModal(modal, false);
         hydrateGroups(document.body);
       });
       

@@ -1,5 +1,6 @@
 import { store } from '../../store';
 import { api } from '../../services/api';
+import { withButtonLoading, showInlineModal, hideInlineModal, bindInlineEdit } from '../utils/dom';
 
 export function bindDataInteractions(container: HTMLElement) {
   let isIngesting = false;
@@ -26,19 +27,11 @@ export function bindDataInteractions(container: HTMLElement) {
   };
 
   btnAddSource?.addEventListener('click', () => {
-    addModal.classList.remove('hidden');
-    setTimeout(() => {
-      addModal.classList.remove('opacity-0');
-      addModal.querySelector('div')?.classList.remove('translate-y-4');
-    }, 10);
+    showInlineModal(addModal);
     showStep('selection');
   });
 
-  const hideAddModal = () => {
-    addModal.classList.add('opacity-0');
-    addModal.querySelector('div')?.classList.add('translate-y-4');
-    setTimeout(() => addModal.classList.add('hidden'), 300);
-  };
+  const hideAddModal = () => hideInlineModal(addModal);
 
   closeAddModal?.addEventListener('click', () => {
     if (isIngesting) return;
@@ -64,30 +57,19 @@ export function bindDataInteractions(container: HTMLElement) {
   const wfsUrlInput = container.querySelector('#wfs-url') as HTMLInputElement;
   const ingestBtn = container.querySelector('#btn-ingest-wfs') as HTMLButtonElement;
 
-  ingestBtn?.addEventListener('click', async () => {
+  ingestBtn?.addEventListener('click', () => {
     const url = wfsUrlInput.value.trim();
     if (!url) return;
-
-    ingestBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-sm">sync</span> Starting...';
-    ingestBtn.disabled = true;
-
-    try {
-      // Fire ingestion — backend returns the pending record immediately and
-      // auto-detects the layer in the background if not specified.
-      const result = await api.ingestWFSLayer(url);
-
-      // Close modal and optimistically inject the pending record into the
-      // store right now — no round-trip re-fetch needed. The global poller
-      // in main.ts will keep it updated every 3s from here on.
-      hideAddModal();
-      const existingSources = store.getDataSources();
-      store.setDataSources([result, ...existingSources]);
-    } catch (err: any) {
-      alert(`Failed to start ingestion: ${err.message || err}`);
-    } finally {
-      ingestBtn.innerHTML = 'Start Ingestion <span class="material-symbols-outlined">arrow_forward</span>';
-      ingestBtn.disabled = false;
-    }
+    withButtonLoading(
+      ingestBtn,
+      '<span class="material-symbols-outlined animate-spin text-sm">sync</span> Starting...',
+      async () => {
+        const result = await api.ingestWFSLayer(url);
+        hideAddModal();
+        const existingSources = store.getDataSources();
+        store.setDataSources([result, ...existingSources]);
+      }
+    ).catch((err: any) => alert(`Failed to start ingestion: ${err.message || err}`));
   });
 
   // --- CSV Upload Logic ---
@@ -333,11 +315,7 @@ export function bindDataInteractions(container: HTMLElement) {
 
   async function showPreview(tableName: string, filename: string) {
     modalTitle.textContent = filename;
-    previewModal.classList.remove('hidden');
-    setTimeout(() => {
-      previewModal.classList.remove('opacity-0');
-      previewModal.querySelector('div')?.classList.remove('translate-y-4');
-    }, 10);
+    showInlineModal(previewModal);
 
     try {
       const data = await api.getPreview(tableName);
@@ -369,61 +347,39 @@ export function bindDataInteractions(container: HTMLElement) {
     }
   }
 
-  const hidePreviewModal = () => {
-    previewModal.classList.add('opacity-0');
-    previewModal.querySelector('div')?.classList.add('translate-y-4');
-    setTimeout(() => previewModal.classList.add('hidden'), 300);
-  };
+  const hidePreviewModal = () => hideInlineModal(previewModal);
   closePreviewModal?.addEventListener('click', hidePreviewModal);
 
   // Description Editing
   container.querySelectorAll('.desc-container').forEach(descContainer => {
-    const textSpan = descContainer.querySelector('.desc-text') as HTMLSpanElement;
-    const inputEl = descContainer.querySelector('.desc-input') as HTMLInputElement;
-    const editBtn = descContainer.querySelector('.btn-edit-desc') as HTMLButtonElement;
-    const generateBtn = descContainer.querySelector('.btn-generate-desc') as HTMLButtonElement;
     const fileId = descContainer.getAttribute('data-id');
+    const generateBtn = descContainer.querySelector('.btn-generate-desc') as HTMLButtonElement;
 
-    const startEditing = () => {
-      textSpan.classList.add('hidden');
-      editBtn.closest('div')?.classList.add('hidden');
-      inputEl.classList.remove('hidden');
-      inputEl.focus();
-    };
-
-    const stopEditing = async (save: boolean) => {
-      if (inputEl.classList.contains('hidden')) return;
-      inputEl.classList.add('hidden');
-      textSpan.classList.remove('hidden');
-      editBtn.closest('div')?.classList.remove('hidden');
-      if (save && fileId) {
-        const newDesc = inputEl.value.trim();
-        if (newDesc !== textSpan.getAttribute('data-desc')) {
-          await api.updateFileDescription(fileId, newDesc);
+    bindInlineEdit({
+      container: descContainer,
+      textSelector: '.desc-text',
+      inputSelector: '.desc-input',
+      editBtnSelector: '.btn-edit-desc',
+      onSave: async (newValue) => {
+        const textSpan = descContainer.querySelector('.desc-text') as HTMLSpanElement;
+        if (fileId && newValue !== textSpan.getAttribute('data-desc')) {
+          await api.updateFileDescription(fileId, newValue);
           refreshFiles();
         }
-      }
-    };
-
-    generateBtn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      if (!fileId) return;
-      generateBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] animate-spin">sync</span>';
-      try {
-        await api.generateFileDescription(fileId);
-        refreshFiles();
-      } catch (err) {
-        alert('Generation failed.');
-        generateBtn.innerHTML = 'auto_awesome';
-      }
+      },
     });
 
-    textSpan.addEventListener('click', startEditing);
-    editBtn.addEventListener('click', startEditing);
-    inputEl.addEventListener('blur', () => stopEditing(true));
-    inputEl.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') stopEditing(true);
-      else if (e.key === 'Escape') stopEditing(false);
+    generateBtn?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!fileId) return;
+      withButtonLoading(
+        generateBtn,
+        '<span class="material-symbols-outlined text-[16px] animate-spin">sync</span>',
+        async () => {
+          await api.generateFileDescription(fileId);
+          refreshFiles();
+        }
+      ).catch(() => alert('Generation failed.'));
     });
   });
 

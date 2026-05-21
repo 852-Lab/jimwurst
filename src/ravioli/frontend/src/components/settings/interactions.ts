@@ -2,6 +2,7 @@ import { api } from '../../services/api';
 import { store } from '../../store';
 import { state } from './state';
 import { renderGeneralHtml, renderIntegrationsHtml } from './templates';
+import { withButtonLoading } from '../utils/dom';
 
 export const renderContent = (container: HTMLElement) => {
     const user = store.getCurrentUser();
@@ -60,26 +61,21 @@ export const attachGeneralListeners = (container: HTMLElement, user: any) => {
     saveBtn?.addEventListener('click', async () => {
       const newName = nameInput.value.trim();
       if (!newName) return;
-
-      const btn = saveBtn as HTMLButtonElement;
-      btn.disabled = true;
-      btn.innerHTML = '<span class="animate-spin mr-2">⏳</span> Saving...';
-
-      try {
-        const updatedUser = await api.updateUser(user.id, { name: newName });
-        store.setCurrentUser(updatedUser);
-
-        if (status) {
-          status.classList.remove('opacity-0');
-          setTimeout(() => status.classList.add('opacity-0'), 2000);
+      await withButtonLoading(
+        saveBtn as HTMLButtonElement,
+        '<span class="animate-spin mr-2">⏳</span> Saving...',
+        async () => {
+          const updatedUser = await api.updateUser(user.id, { name: newName });
+          store.setCurrentUser(updatedUser);
+          if (status) {
+            status.classList.remove('opacity-0');
+            setTimeout(() => status.classList.add('opacity-0'), 2000);
+          }
         }
-      } catch (err) {
+      ).catch(err => {
         console.error('Failed to update profile', err);
         alert('Failed to update profile. Please try again.');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = 'Save Changes';
-      }
+      });
     });
   };
 
@@ -299,22 +295,19 @@ export const attachIntegrationsListeners = (container: HTMLElement, renderConten
         let tokenToSave = tokenInput.value;
         if (state.motherduckTokenIsSet && !tokenToSave) tokenToSave = REDACTED;
 
-        const btn = saveMdBtn as HTMLButtonElement;
-        btn.disabled = true;
-        btn.textContent = 'Saving...';
-
-        try {
-          await api.updateSetting('motherduck', { token: tokenToSave });
-          state.motherduckTokenIsSet = tokenToSave !== '';
-          state.isConfiguringMotherduck = false;
-          renderContent(container);
-        } catch (e) {
+        await withButtonLoading(
+          saveMdBtn as HTMLButtonElement,
+          'Saving...',
+          async () => {
+            await api.updateSetting('motherduck', { token: tokenToSave });
+            state.motherduckTokenIsSet = tokenToSave !== '';
+            state.isConfiguringMotherduck = false;
+            renderContent(container);
+          }
+        ).catch(e => {
           console.error('Failed to save Motherduck settings', e);
           alert('Failed to save settings');
-        } finally {
-          btn.disabled = false;
-          btn.textContent = 'Save';
-        }
+        });
       });
     }
 
