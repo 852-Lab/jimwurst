@@ -329,7 +329,7 @@ def test_execute_python_cell_failure(client, session, mocker):
     assert response.json()["detail"] == "Analysis not found"
 
 
-@pytest.mark.asyncio
+@pytest.mark.anyio
 def test_stream_question_ai_cell(client, session, mocker):
     analysis_id = uuid.uuid4()
     
