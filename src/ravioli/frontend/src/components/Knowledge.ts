@@ -1,6 +1,7 @@
 import { store } from '../store';
 import { format } from 'date-fns';
-import { escapeHTML, sanitizeImageUrl, getCoverUrl, getIconDisplay, getBlocksPreview } from './knowledge/utils';
+import { getCoverUrl, getIconDisplay, getBlocksPreview } from './knowledge/utils';
+import { escapeHTML, sanitizeImageUrl } from './utils/security';
 import { renderKnowledgeEditor } from './knowledge/interactions';
 
 export function renderKnowledge() {

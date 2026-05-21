@@ -1,7 +1,8 @@
 import { api } from '../../services/api';
 import { store } from '../../store';
-import { escapeHTML, sanitizeImageUrl, getCoverUrl, getIconDisplay, getBlocksPreview, textToBlocks } from './utils';
+import { getCoverUrl, getIconDisplay, getBlocksPreview, textToBlocks } from './utils';
 import { createModal, closeModal } from '../utils/dom';
+import { escapeHTML, sanitizeImageUrl } from '../utils/security';
 
 export function renderKnowledgeEditor(id?: string) {
   const existing = id ? store.getKnowledgePages().find(p => p.id === id) : null;
