@@ -6,8 +6,7 @@ import {
   toggleComment, 
   updateLineNumbers, 
   updateLineGutterScroll,
-  highlightSQL,
-  highlightPython
+  highlightSQL
 } from './utils';
 import { renderMarkdown } from './templates';
 
