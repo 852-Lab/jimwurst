@@ -62,6 +62,8 @@ def test_jupyter_manager_duckdb_con(manager):
     try:
         duckdb.connect(str(settings.duckdb_path)).close()
     except duckdb.IOException:
+        # Best-effort DB file bootstrap for CI: if the path is not writable/accessible here,
+        # later test logic will exercise and report connection behavior explicitly.
         pass
 
     analysis_id = uuid.uuid4()
