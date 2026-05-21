@@ -337,9 +337,11 @@ def test_stream_question_ai_cell(client, session, mocker):
         def __init__(self):
             self.id = analysis_id
             self.title = "Test Analysis"
-            self.analysis_metadata = {"filename": "test.csv"}
+            self.analysis_metadata = {"file_id": "12345678-1234-5678-1234-567812345678"}
             self.result = "Summary"
             self.notebook = {}
+            self.table_name = "test_table"
+            self.schema_name = "main"
             
     mock_analysis = MockAnalysis()
     
