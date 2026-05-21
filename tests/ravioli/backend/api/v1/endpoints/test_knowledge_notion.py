@@ -14,7 +14,7 @@ def mock_notion_service():
 @pytest.fixture
 def setup_notion_token(session):
     # Mocking an encrypted token for test
-    from ravioli.backend.core.security import encrypt_value
+    from ravioli.backend.core.encryption import encrypt_value
     token_data = {"token": encrypt_value("secret_test_token")}
     
     mock_setting = MagicMock(spec=models.SystemSetting)
