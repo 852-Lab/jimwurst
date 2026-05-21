@@ -70,7 +70,15 @@ class KowalskiAgent:
                 num_predict=1000,
                 model=model
             )
-            if parser: return parser.parse(response_text)
+            if parser:
+                try:
+                    return parser.parse(response_text)
+                except Exception:
+                    import re
+                    match = re.search(r'\{.*\}', response_text, re.DOTALL)
+                    if match:
+                        return parser.parse(match.group(0))
+                    raise
             return response_text
         except Exception as e:
             logger.error(f"KowalskiAgent: LLM Generation failed ({task_name}): {e}")

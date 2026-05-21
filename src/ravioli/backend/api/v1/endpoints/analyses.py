@@ -569,9 +569,20 @@ async def stream_question(
                         elif update.get("answer_type") == "viz":
                             viz_payload = update.get("viz")
                             if viz_payload and viz_payload.get("type") == "error":
-                                context_str += f"\nSystem: Data visualization failed due to error: {viz_payload.get('message')}. Please inform the user that their request cannot be done due to this error.\n"
+                                error_msg = viz_payload.get('message')
+                                err_md = f"\n> [!ERROR]\n> **Visualization Failed:** {error_msg}\n\n"
+                                full_response += err_md
+                                lines = err_md.split('\n')
+                                sse_data = '\n'.join(f"data: {line}" for line in lines)
+                                yield f"{sse_data}\n\n"
+                                context_str += f"\nSystem: Data visualization failed due to error: {error_msg}. Please inform the user that their request cannot be done due to this error.\n"
                         elif update.get("answer_type") == "error":
                             error_msg = update.get("message")
+                            err_md = f"\n> [!ERROR]\n> **Agent Error:** {error_msg}\n\n"
+                            full_response += err_md
+                            lines = err_md.split('\n')
+                            sse_data = '\n'.join(f"data: {line}" for line in lines)
+                            yield f"{sse_data}\n\n"
                             context_str += f"\nSystem: Data processing failed due to error: {error_msg}. Please inform the user that their request cannot be done due to this error.\n"
 
             # 2. Stream the textual answer from Gemma (persona)
