@@ -173,19 +173,30 @@ class NotionSyncService:
 
     def push_all_pages(self) -> int:
         """
-        Pushes all KnowledgePages back to Notion. 
-        Updates existing ones and creates new ones for locally authored pages.
+        Pushes KnowledgePages back to Notion.
+        Priority 1: Creates new pages or updates locally authored pages (source = Ravioli/manual/None)
+        Priority 2: Updates pages that were originally imported from Notion (source = notion)
         """
-        # Exclude pages from other integrations if they exist (e.g. confluence, motherduck)
-        # We only push 'Ravioli' or 'manual' pages
-        pages = self.db.query(models.KnowledgePage).filter(
+        count = 0
+        
+        # Phase 1: Local pages
+        local_pages = self.db.query(models.KnowledgePage).filter(
             models.KnowledgePage.source.in_(["Ravioli", "manual", None])
         ).all()
         
-        count = 0
-        for page in pages:
+        for page in local_pages:
             if self._push_page(page):
                 count += 1
+                
+        # Phase 2: Imported pages
+        imported_pages = self.db.query(models.KnowledgePage).filter(
+            models.KnowledgePage.source == "notion"
+        ).all()
+        
+        for page in imported_pages:
+            if self._push_page(page):
+                count += 1
+                
         return count
 
     def push_pages_by_ids(self, page_ids: list[str]) -> int:
