@@ -356,6 +356,123 @@ export const attachIntegrationsListeners = (container: HTMLElement, renderConten
 
     pushAllBtn?.addEventListener('click', () => handleSyncAll('push'));
     pullAllBtn?.addEventListener('click', () => handleSyncAll('pull'));
+
+    // Notion listeners
+    const configureNotionBtn = container.querySelector('#btn-configure-notion');
+    if (configureNotionBtn) {
+      configureNotionBtn.addEventListener('click', () => {
+        state.isConfiguringNotion = true;
+        renderContent(container);
+      });
+    }
+
+    const cancelNotionBtn = container.querySelector('#btn-cancel-notion');
+    if (cancelNotionBtn) {
+      cancelNotionBtn.addEventListener('click', () => {
+        state.isConfiguringNotion = false;
+        renderContent(container);
+      });
+    }
+
+    const clearNotionTokenBtn = container.querySelector('#btn-clear-notion-token');
+    if (clearNotionTokenBtn) {
+      clearNotionTokenBtn.addEventListener('click', () => {
+        state.notionTokenIsSet = false;
+        renderContent(container);
+      });
+    }
+
+    const saveNotionBtn = container.querySelector('#btn-save-notion');
+    if (saveNotionBtn) {
+      saveNotionBtn.addEventListener('click', async () => {
+        const tokenInput = container.querySelector('#notion-token') as HTMLInputElement;
+        const REDACTED = '••••••••';
+        let tokenToSave = tokenInput.value;
+        if (state.notionTokenIsSet && !tokenToSave) tokenToSave = REDACTED;
+
+        await withButtonLoading(
+          saveNotionBtn as HTMLButtonElement,
+          'Saving...',
+          async () => {
+            await api.updateSetting('notion', { token: tokenToSave });
+            state.notionTokenIsSet = tokenToSave !== '';
+            state.isConfiguringNotion = false;
+            renderContent(container);
+          }
+        ).catch(e => {
+          console.error('Failed to save Notion settings', e);
+          alert('Failed to save settings');
+        });
+      });
+    }
+
+    const pullNotionBtn = container.querySelector('#btn-pull-notion');
+    const pushNotionBtn = container.querySelector('#btn-push-notion');
+    const syncNotionStatus = container.querySelector('#sync-notion-status');
+
+    if (pullNotionBtn && syncNotionStatus) {
+      pullNotionBtn.addEventListener('click', async () => {
+        const btn = pullNotionBtn as HTMLButtonElement;
+        const originalText = btn.innerHTML;
+        
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">sync</span> Pulling...';
+        
+        syncNotionStatus.classList.remove('hidden', 'text-red-400', 'text-green-400');
+        syncNotionStatus.classList.add('text-on-surface-variant');
+        syncNotionStatus.innerHTML = '<div class="animate-pulse">Fetching pages from Notion...</div>';
+        
+        try {
+          const result = await api.syncNotionPages(true);
+          syncNotionStatus.classList.remove('text-on-surface-variant');
+          syncNotionStatus.classList.add('text-green-400');
+          syncNotionStatus.innerHTML = `<span class="material-symbols-outlined text-sm inline-block align-middle mr-1">check_circle</span> Successfully pulled ${result.synced_count} pages!`;
+          
+          // Update global state so the Knowledge page reflects the new data
+          const updatedPages = await api.listKnowledgePages();
+          store.setKnowledgePages(updatedPages);
+        } catch (err: any) {
+          syncNotionStatus.classList.remove('text-on-surface-variant');
+          syncNotionStatus.classList.add('text-red-400');
+          syncNotionStatus.innerHTML = `<div class="font-bold">Pull Error: ${err.message}</div>`;
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        }
+      });
+    }
+
+    if (pushNotionBtn && syncNotionStatus) {
+      pushNotionBtn.addEventListener('click', async () => {
+        const btn = pushNotionBtn as HTMLButtonElement;
+        const originalText = btn.innerHTML;
+        
+        btn.disabled = true;
+        btn.innerHTML = '<span class="material-symbols-outlined text-sm animate-spin">sync</span> Pushing...';
+        
+        syncNotionStatus.classList.remove('hidden', 'text-red-400', 'text-green-400');
+        syncNotionStatus.classList.add('text-on-surface-variant');
+        syncNotionStatus.innerHTML = '<div class="animate-pulse">Pushing local changes to Notion...</div>';
+        
+        try {
+          const result = await api.pushNotionPages(true);
+          syncNotionStatus.classList.remove('text-on-surface-variant');
+          syncNotionStatus.classList.add('text-green-400');
+          syncNotionStatus.innerHTML = `<span class="material-symbols-outlined text-sm inline-block align-middle mr-1">check_circle</span> Successfully pushed ${result.pushed_count} pages!`;
+          
+          // Update global state so the Knowledge page reflects the new data
+          const updatedPages = await api.listKnowledgePages();
+          store.setKnowledgePages(updatedPages);
+        } catch (err: any) {
+          syncNotionStatus.classList.remove('text-on-surface-variant');
+          syncNotionStatus.classList.add('text-red-400');
+          syncNotionStatus.innerHTML = `<div class="font-bold">Push Error: ${err.message}</div>`;
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        }
+      });
+    }
   };
 
 export const loadInitialData = (container: HTMLElement, renderContent: (c: HTMLElement) => void) => {
@@ -374,4 +491,11 @@ export const loadInitialData = (container: HTMLElement, renderContent: (c: HTMLE
       renderContent(container);
     }
   }).catch(e => console.error('Failed to fetch Motherduck settings', e));
+
+  api.getSetting('notion').then(setting => {
+    if (setting && setting.value && setting.value.token) {
+      state.notionTokenIsSet = setting.value.token === '••••••••';
+      renderContent(container);
+    }
+  }).catch(e => console.error('Failed to fetch Notion settings', e));
 }

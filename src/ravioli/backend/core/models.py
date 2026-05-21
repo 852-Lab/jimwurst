@@ -280,6 +280,10 @@ class KnowledgePage(Base):
     # Each block: {"type": "paragraph", "paragraph": {...}, ...}
     content: Mapped[Optional[List[dict]]] = mapped_column(JSON)
     
+    # Integration tracking
+    source: Mapped[Optional[str]] = mapped_column(String(50))
+    source_id: Mapped[Optional[str]] = mapped_column(String(255))
+    
     # Ownership & Audit
     owner: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.user_groups.id"))
     created_by: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("app.users.id"))

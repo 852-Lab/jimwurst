@@ -295,11 +295,14 @@ class KnowledgePageBase(BaseModel):
             return {} if isinstance(v, dict) or v is None else v
         return v
 
-    # Simplified version just for properties to be safe
     @field_validator('properties', mode='before')
     @classmethod
     def validate_properties(cls, v):
         return v if v is not None else {}
+
+class NotionSyncRequest(BaseModel):
+    sync_all: bool = False
+    page_ids: List[str] = []
 
 class KnowledgePageCreate(KnowledgePageBase):
     pass
