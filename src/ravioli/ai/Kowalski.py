@@ -25,8 +25,9 @@ from ravioli.ai.tools import create_viz_payload as tool_create_viz_payload
 logger = logging.getLogger(__name__)
 
 class AnalysisDecision(BaseModel):
-    """Decision on whether visualization is needed."""
-    requires_viz: bool = Field(description="Whether the question requires a data visualization")
+    """Decision on whether SQL query or visualization is needed."""
+    requires_sql: bool = Field(description="Whether the question requires querying data from the database using SQL")
+    requires_viz: bool = Field(description="Whether the question requires a data visualization chart")
 
 class KowalskiAgent:
     """
@@ -91,16 +92,18 @@ class KowalskiAgent:
 
     async def process_question(self, question: str, table_name: str, schema_name: str = "main") -> AsyncGenerator[Any, None]:
         parser = JsonOutputParser(pydantic_object=AnalysisDecision)
-        prompt = PromptTemplate.from_template("Does this require a chart?\nQuestion: \"{question}\"\n{format_instructions}")
+        prompt = PromptTemplate.from_template("Does this require a SQL query? Does this require a chart?\nQuestion: \"{question}\"\n{format_instructions}")
         try:
             result = await self.generate(prompt.format(question=question, format_instructions=parser.get_format_instructions()), "Decision", parser=parser)
-            if result.get("requires_viz"):
+            if result.get("requires_sql") or result.get("requires_viz"):
                 yield "_[Engaging Statistical Brain...]_"
                 sql = await self.generate_sql(question, table_name, schema_name)
                 if sql:
-                    yield f"_[Assembling vision strategy...]_"
-                    viz = await self.create_viz_payload(sql, question)
-                    yield {"answer_type": "viz", "sql": sql, "viz": viz}
+                    yield {"answer_type": "sql_generated", "sql": sql}
+                    if result.get("requires_viz"):
+                        yield f"_[Assembling vision strategy...]_"
+                        viz = await self.create_viz_payload(sql, question)
+                        yield {"answer_type": "viz", "sql": sql, "viz": viz}
                     return
             yield {"answer_type": "text"}
         except Exception as e:

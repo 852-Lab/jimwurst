@@ -40,7 +40,7 @@ Prompts (bullet points only):"""
 
 async def generate_answer(filename: str, summary: str, context: str, question: str, generate_func) -> str:
     """Generate a clinical, precise answer to a user question."""
-    prompt = f"Context: Analyzing dataset \"{filename}\".\nSummary: {summary}\nConversation: {context}\nQuestion: {question}\n\nIMPORTANT: The basic interaction framework is DuckDB. Your output should be SQL for DuckDB by default, unless the user explicitly says otherwise. Wrap your SQL in markdown code blocks.\n\nAnswer:"
+    prompt = f"Context: Analyzing dataset \"{filename}\".\nSummary: {summary}\nConversation: {context}\nQuestion: {question}\n\nIMPORTANT: If 'Executed SQL' and 'Query Results' (or an Error) are present in the Conversation Context, provide a concise, clinical analysis of those results to answer the user's question. Do not generate raw SQL yourself, as the system has already executed it for you.\n\nAnswer:"
     try:
         return await generate_func(prompt, "Agent Answer", temperature=0.4)
     except Exception as e:
@@ -48,6 +48,6 @@ async def generate_answer(filename: str, summary: str, context: str, question: s
 
 async def stream_answer(filename: str, summary: str, context: str, question: str, persona: str, stream_func) -> AsyncGenerator[str, None]:
     """Stream a clinical, precise answer to a user question."""
-    prompt = f"{persona}\n\nContext: Analyzing dataset \"{filename}\".\nSummary: {summary}\nConversation: {context}\nQuestion: {question}\n\nIMPORTANT: The basic interaction framework is DuckDB. Your output should be SQL for DuckDB by default, unless the user explicitly says otherwise. Wrap your SQL in markdown code blocks.\n\nAnswer:"
+    prompt = f"{persona}\n\nContext: Analyzing dataset \"{filename}\".\nSummary: {summary}\nConversation: {context}\nQuestion: {question}\n\nIMPORTANT: If 'Executed SQL' and 'Query Results' (or an Error) are present in the Conversation Context, provide a concise, clinical analysis of those results to answer the user's question. Do not generate raw SQL yourself, as the system has already executed it for you.\n\nAnswer:"
     async for token in stream_func(prompt):
         yield token
