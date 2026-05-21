@@ -10,6 +10,8 @@ export const state = {
   isConfiguringOllama: false,
   motherduckTokenIsSet: false,
   isConfiguringMotherduck: false,
+  notionTokenIsSet: false,
+  isConfiguringNotion: false,
 };
 
 export const clearSettingsState = () => {
@@ -24,4 +26,6 @@ export const clearSettingsState = () => {
   state.isConfiguringOllama = false;
   state.motherduckTokenIsSet = false;
   state.isConfiguringMotherduck = false;
+  state.notionTokenIsSet = false;
+  state.isConfiguringNotion = false;
 };

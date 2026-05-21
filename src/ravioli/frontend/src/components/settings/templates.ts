@@ -186,10 +186,61 @@ export const renderIntegrationsHtml = () => {
                 <span class="material-symbols-outlined text-neutral-100 text-2xl">book</span>
                 <h3 class="text-lg font-medium text-neutral-100">Notion</h3>
               </div>
-              <span class="text-[10px] bg-primary-fixed-dim/20 text-primary-fixed-dim border border-primary-fixed-dim/30 px-2 py-1 rounded-full font-bold uppercase tracking-wider">Planned</span>
+              ${state.notionTokenIsSet ? `
+                <span class="text-[10px] bg-green-400/20 text-green-400 border border-green-400/30 px-2 py-1 rounded-full font-bold uppercase tracking-wider">Connected</span>
+              ` : `
+                <span class="text-[10px] bg-green-400/20 text-green-400 border border-green-400/30 px-2 py-1 rounded-full font-bold uppercase tracking-wider">Available</span>
+              `}
             </div>
-            <p class="text-sm text-on-surface-variant mb-4">Synchronize structured page content and properties directly from your workspace.</p>
-            <button class="text-sm font-bold text-outline-variant cursor-not-allowed" disabled>Coming Soon</button>
+
+            ${!state.isConfiguringNotion ? `
+              <p class="text-sm text-on-surface-variant mb-4">Synchronize structured page content and properties directly from your workspace.</p>
+              <div class="flex items-center gap-4">
+                <button id="btn-configure-notion" class="text-sm font-bold text-primary-fixed-dim hover:text-primary-fixed transition-colors">Configure</button>
+              </div>
+
+              ${state.notionTokenIsSet ? `
+                <div class="mt-6 pt-6 border-t border-outline-variant/30">
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Synchronize Workspace Pages</span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <button id="btn-sync-notion" class="flex-1 bg-surface-container-highest border border-outline-variant/50 text-neutral-100 font-bold py-2.5 px-4 rounded-xl text-xs hover:bg-primary-fixed-dim hover:text-on-primary-fixed transition-all flex items-center justify-center gap-2 shadow-sm group">
+                      <span class="material-symbols-outlined text-sm group-hover:scale-110 transition-transform">sync</span> Sync Now
+                    </button>
+                  </div>
+                  <div id="sync-notion-status" class="mt-3 text-[10px] hidden p-3 rounded-lg bg-black/20 border border-outline-variant/10 font-mono text-on-surface-variant"></div>
+                </div>
+              ` : ''}
+            ` : `
+              <div class="space-y-4 pt-2">
+                <div>
+                  <label class="block text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Notion Integration Token</label>
+                  ${state.notionTokenIsSet ? `
+                    <div class="flex items-center gap-3 mb-2">
+                      <span class="flex items-center gap-1 text-xs font-bold text-green-400 bg-green-400/10 border border-green-400/30 px-3 py-1 rounded-full">
+                        <span class="material-symbols-outlined text-sm">lock</span> Token stored securely
+                      </span>
+                      <button id="btn-clear-notion-token" class="text-xs text-on-surface-variant hover:text-red-400 transition-colors underline">Replace</button>
+                    </div>
+                  ` : ''}
+                  <input id="notion-token" type="password" class="w-full bg-surface-container-highest border border-outline-variant/50 rounded-lg px-4 py-3 text-sm text-neutral-100 focus:outline-none focus:border-primary-fixed-dim focus:ring-1 focus:ring-primary-fixed-dim transition-colors" placeholder="${state.notionTokenIsSet ? 'Enter new token' : 'secret_...'}" />
+                  <div class="mt-2">
+                    <a href="https://developers.notion.com/docs/authorization" target="_blank" class="text-[10px] text-on-surface-variant hover:text-neutral-100 transition-colors flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[12px]">info</span>
+                      Guide: Create an Internal Integration Token
+                    </a>
+                  </div>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                  <button id="btn-save-notion" class="bg-primary-fixed-dim text-on-primary-fixed font-bold py-2 px-6 rounded-full text-sm hover:brightness-110 transition-all shadow-md">
+                    Save
+                  </button>
+                  <button id="btn-cancel-notion" class="text-sm font-bold text-on-surface-variant hover:text-neutral-100 transition-colors">Cancel</button>
+                </div>
+              </div>
+            `}
           </div>
 
           <!-- Confluence -->
