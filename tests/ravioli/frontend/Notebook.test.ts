@@ -235,7 +235,7 @@ describe('Notebook Component - Stability & Granular Updates', () => {
 
     // Trigger run cell
     const { api } = await import('../../../src/ravioli/frontend/src/services/api');
-    const playBtn = notebook.querySelector('.btn-run-cell') as HTMLElement;
+    const playBtn = notebook.querySelector('.btn-rerun-cell') as HTMLElement;
     expect(playBtn).not.toBeNull();
 
     // Mock streamQuestion to simulate SSE chunks

@@ -367,7 +367,7 @@ def test_stream_question_ai_cell(client, session, mocker):
     mock_df.empty = False
     mock_df.head().to_markdown.return_value = "| count |\n|-------|\n|     1 |"
     mock_connection.execute.return_value.fetchdf.return_value = mock_df
-    mocker.patch("ravioli.backend.api.v1.endpoints.analyses.duckdb_manager.connection", new=mock_connection)
+    mocker.patch("ravioli.backend.data.olap.duckdb_manager.DuckDBManager.connection", new_callable=mocker.PropertyMock, return_value=mock_connection)
 
     # Mock skill_comm stream_answer
     async def mock_stream_answer(filename, summary, context_str, question, persona, stream_func):
