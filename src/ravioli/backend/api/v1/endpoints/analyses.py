@@ -559,7 +559,7 @@ async def stream_question(
                             
                             except Exception as e:
                                 error_msg = str(e)
-                                err_md = f"\n> [!ERROR]\n> **Execution Failed:** {error_msg}\n\n"
+                                err_md = f"\n```bash\n[!ERROR] Execution Failed: {error_msg}\n```\n\n"
                                 full_response += err_md
                                 lines = err_md.split('\n')
                                 sse_data = '\n'.join(f"data: {line}" for line in lines)
@@ -570,7 +570,7 @@ async def stream_question(
                             viz_payload = update.get("viz")
                             if viz_payload and viz_payload.get("type") == "error":
                                 error_msg = viz_payload.get('message')
-                                err_md = f"\n> [!ERROR]\n> **Visualization Failed:** {error_msg}\n\n"
+                                err_md = f"\n```bash\n[!ERROR] Visualization Failed: {error_msg}\n```\n\n"
                                 full_response += err_md
                                 lines = err_md.split('\n')
                                 sse_data = '\n'.join(f"data: {line}" for line in lines)
@@ -578,7 +578,7 @@ async def stream_question(
                                 context_str += f"\nSystem: Data visualization failed due to error: {error_msg}. Please inform the user that their request cannot be done due to this error.\n"
                         elif update.get("answer_type") == "error":
                             error_msg = update.get("message")
-                            err_md = f"\n> [!ERROR]\n> **Agent Error:** {error_msg}\n\n"
+                            err_md = f"\n```bash\n[!ERROR] Agent Error: {error_msg}\n```\n\n"
                             full_response += err_md
                             lines = err_md.split('\n')
                             sse_data = '\n'.join(f"data: {line}" for line in lines)

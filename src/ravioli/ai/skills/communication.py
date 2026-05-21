@@ -48,6 +48,6 @@ async def generate_answer(filename: str, summary: str, context: str, question: s
 
 async def stream_answer(filename: str, summary: str, context: str, question: str, persona: str, stream_func) -> AsyncGenerator[str, None]:
     """Stream a clinical, precise answer to a user question."""
-    prompt = f"{persona}\n\nContext: Analyzing dataset \"{filename}\".\nSummary: {summary}\nConversation: {context}\nQuestion: {question}\n\nIMPORTANT: If 'Executed SQL' and 'Query Results' (or an Error) are present in the Conversation Context, provide a concise, clinical analysis of those results to answer the user's question. Do not generate raw SQL yourself, as the system has already executed it for you.\n\nAnswer:"
+    prompt = f"{persona}\n\nContext: Analyzing dataset \"{filename}\".\nSummary: {summary}\nConversation: {context}\nQuestion: {question}\n\nIMPORTANT: If 'Executed SQL' and 'Query Results' (or an Error) are present in the Conversation Context, provide a concise, clinical analysis of those results to answer the user's question. Do not generate raw SQL yourself, as the system has already executed it for you. Always format dataset names, table names, and column names with backticks (e.g. `table_name`).\n\nAnswer:"
     async for token in stream_func(prompt):
         yield token

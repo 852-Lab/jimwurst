@@ -4,10 +4,24 @@ import MarkdownIt from 'markdown-it';
 import Chart from 'chart.js/auto';
 import { format } from 'date-fns';
 
+import hljs from 'highlight.js';
+import 'highlight.js/styles/github-dark.css';
+
 const md = new MarkdownIt({
   html: false,
   linkify: true,
-  typographer: true
+  typographer: true,
+  highlight: function (str: string, lang: string) {
+    if (lang && hljs.getLanguage(lang)) {
+      try {
+        return '<pre class="hljs"><code>' +
+               hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
+               '</code></pre>';
+      } catch (__) {}
+    }
+
+    return ''; // use external default escaping
+  }
 });
 
 type CellType = 'python' | 'sql' | 'chat' | 'markdown';
