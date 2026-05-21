@@ -192,7 +192,6 @@ export function bindInteractions(container: HTMLElement, updateNotebookUI: (c: H
   }
 
   const input = container.querySelector('#cell-input') as HTMLTextAreaElement;
-  const btn = container.querySelector('#btn-execute');
   const btnMagic = container.querySelector('#btn-magic');
   const magicPopover = container.querySelector('#magic-popover');
   const suggestionsList = container.querySelector('#magic-suggestions-list');
