@@ -123,6 +123,9 @@ class NotionSyncService:
                 return False
             
             title = self._extract_title(page.get("properties", {}))
+            if len(title) > 255:
+                title = title[:252] + "..."
+                
             icon = page.get("icon")
             cover = page.get("cover")
             properties = page.get("properties", {})
@@ -141,6 +144,8 @@ class NotionSyncService:
                 db_page.properties = properties
                 db_page.content = blocks
                 db_page.updated_by = self.user_id
+                from sqlalchemy.orm.attributes import flag_modified
+                flag_modified(db_page, "properties")
             else:
                 db_page = models.KnowledgePage(
                     title=title,
