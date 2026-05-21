@@ -426,6 +426,10 @@ export const attachIntegrationsListeners = (container: HTMLElement, renderConten
           syncNotionStatus.classList.remove('text-on-surface-variant');
           syncNotionStatus.classList.add('text-green-400');
           syncNotionStatus.innerHTML = `<span class="material-symbols-outlined text-sm inline-block align-middle mr-1">check_circle</span> Successfully synced ${result.synced_count} pages!`;
+          
+          // Update global state so the Knowledge page reflects the new data
+          const updatedPages = await api.listKnowledgePages();
+          store.setKnowledgePages(updatedPages);
         } catch (err: any) {
           syncNotionStatus.classList.remove('text-on-surface-variant');
           syncNotionStatus.classList.add('text-red-400');
