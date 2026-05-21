@@ -204,6 +204,12 @@ export const renderIntegrationsHtml = () => {
                   <div class="flex items-center justify-between mb-3">
                     <span class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Synchronize Workspace Pages</span>
                   </div>
+                  <div class="flex items-start gap-2 mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-500/90">
+                    <span class="material-symbols-outlined text-[16px] mt-0.5">warning</span>
+                    <span class="text-[10px] font-medium leading-relaxed">
+                      Remember to grant Ravioli access! Notion integrations cannot see any pages by default. Open the page in Notion, click the ••• menu, go to "Add connections", and select your integration.
+                    </span>
+                  </div>
                   <div class="flex items-center gap-3">
                     <button id="btn-sync-notion" class="flex-1 bg-surface-container-highest border border-outline-variant/50 text-neutral-100 font-bold py-2.5 px-4 rounded-xl text-xs hover:bg-primary-fixed-dim hover:text-on-primary-fixed transition-all flex items-center justify-center gap-2 shadow-sm group">
                       <span class="material-symbols-outlined text-sm group-hover:scale-110 transition-transform">sync</span> Sync Now
