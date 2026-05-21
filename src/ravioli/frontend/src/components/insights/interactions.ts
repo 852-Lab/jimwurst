@@ -1,7 +1,7 @@
 import { api } from '../../services/api';
 import { format } from 'date-fns';
 import type { LineageNode, LineageEdge, LineageResponse } from '../../types';
-import { state, DAY_OPTIONS } from './state';
+import { state } from './state';
 import { banCard, insightPill, renderNodeElement, renderExpandButton } from './templates';
 
 export async function hydrate(container: HTMLElement) {

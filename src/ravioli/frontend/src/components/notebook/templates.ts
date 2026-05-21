@@ -24,7 +24,7 @@ export function renderMarkdown(content: string) {
   
   // Transform GitHub style alerts: > [!TYPE]
   // This regex matches the blockquote with alert marker
-  let transformed = content.replace(/^> \\[!(IMPORTANT|NOTE|TIP|WARNING|CAUTION)\\]\n((?:>.*\n?)+)/gm, (_match, type, body) => {
+  let transformed = content.replace(/^> \[!(IMPORTANT|NOTE|TIP|WARNING|CAUTION)\]\n((?:>.*\n?)+)/gm, (_match, type, body) => {
     const lowerType = type.toLowerCase();
     const icon = type === 'IMPORTANT' ? 'priority_high' : 'info';
     // Remove the leading '>' from each line of the body

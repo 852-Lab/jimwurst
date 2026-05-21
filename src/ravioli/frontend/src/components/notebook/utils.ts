@@ -1,4 +1,3 @@
-import hljs from 'highlight.js';
 import 'highlight.js/styles/github-dark.css';
 
 export type CellType = 'python' | 'sql' | 'chat' | 'markdown';

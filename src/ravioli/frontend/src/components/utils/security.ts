@@ -17,21 +17,21 @@ export function sanitizeImageUrl(input: string): string | null {
   }
 
   try {
-    const parsed = new URL(value, window.location.origin);
-
     if (value.startsWith('//')) {
       return null;
     }
+
+    const parsed = new URL(value, window.location.origin);
 
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
       return null;
     }
 
-    if (value.startsWith('/')) {
-      return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    if (parsed.username || parsed.password) {
+      return null;
     }
 
-    return parsed.toString();
+    return parsed.href;
   } catch {
     return null;
   }
