@@ -6,6 +6,8 @@ from uuid import UUID
 from ravioli.backend.core import models, schemas
 from ravioli.backend.core.database import get_db
 from ravioli.backend.api.v1.endpoints.data import get_current_user
+from ravioli.backend.core.notion import NotionSyncService
+from ravioli.backend.core.encryption import decrypt_value
 
 router = APIRouter()
 
@@ -96,3 +98,31 @@ def delete_knowledge_page(page_id: UUID, db: Session = Depends(get_db)):
     db.delete(page)
     db.commit()
     return None
+
+@router.post("/notion/sync", status_code=status.HTTP_200_OK)
+def sync_notion_pages(
+    request: schemas.NotionSyncRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Sync Notion pages into the Knowledge Base."""
+    # 1. Fetch token from SystemSettings
+    setting = db.query(models.SystemSetting).filter(models.SystemSetting.key == "notion").first()
+    if not setting or "token" not in setting.value or not setting.value["token"]:
+        raise HTTPException(status_code=400, detail="Notion token not configured in system settings.")
+        
+    token = decrypt_value(setting.value["token"])
+    
+    # 2. Initialize Notion service
+    notion_service = NotionSyncService(token=token, db=db, user_id=current_user.id)
+    
+    # 3. Perform sync
+    synced_count = 0
+    if request.sync_all:
+        synced_count = notion_service.sync_all_accessible_pages()
+    elif request.page_ids:
+        synced_count = notion_service.sync_pages_by_ids(request.page_ids)
+    else:
+        raise HTTPException(status_code=400, detail="Must specify sync_all or provide page_ids.")
+        
+    return {"status": "success", "synced_count": synced_count}
