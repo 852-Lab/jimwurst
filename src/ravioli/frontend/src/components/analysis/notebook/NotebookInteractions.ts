@@ -602,8 +602,7 @@ export function bindNotebookInteractions(container: HTMLElement, updateNotebookU
                 if (streamingContent) streamingContent.innerHTML = renderMarkdown(fullText) + '<span class="inline-block w-1 h-4 bg-primary animate-pulse ml-1"></span>';
              },
              async () => {
-                const newCellBlock = runNewBtn.closest('.new-cell-block');
-                newCellBlock?.remove();
+                cellBody.remove();
 
                 const newLogs = await api.listLogs(activeId!);
                 store.setLogs(newLogs);
@@ -633,8 +632,7 @@ export function bindNotebookInteractions(container: HTMLElement, updateNotebookU
                  currentStreamingContent.removeAttribute('id');
              }
 
-             const newCellBlock = runNewBtn.closest('.new-cell-block');
-             newCellBlock?.remove();
+             cellBody.remove();
 
              const newLogs = await api.listLogs(activeId);
              store.setLogs(newLogs);
