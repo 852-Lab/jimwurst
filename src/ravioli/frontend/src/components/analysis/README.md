@@ -4,6 +4,29 @@ This document describes the structure and domain modeling of Analyses within Rav
 
 ## Core Domain Modeling
 
+```mermaid
+classDiagram
+    Analysis <|-- QuickInsight
+    Analysis <|-- Notebook
+    Notebook <|-- DeepDive
+
+    class Analysis {
+        <<Top Class>>
+    }
+    class QuickInsight {
+        Default type
+        Perplexity style chatting
+    }
+    class Notebook {
+        Advanced type
+        Cell-based analysis
+    }
+    class DeepDive {
+        Upcoming
+        AI-powered Notebook analysis
+    }
+```
+
 1. **Analysis (`Analysis`)**: The top-level class. Represents a structured container for data exploration and insights.
 2. **Quick Insight (`quick_insight`)**: The default analysis type. Provides a Perplexity-style chatting experience with data. Users ask questions and get concise, rich-text responses containing insights, tables, and charts.
 3. **Notebook (`notebook`)**: A more advanced, professional mode. Uses a cell-based architecture where users can write Python code, execute SQL, chat with AI, and write Markdown documentation. 
