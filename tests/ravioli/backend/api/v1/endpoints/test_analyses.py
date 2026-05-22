@@ -420,6 +420,11 @@ def test_stream_quick_insight(client, session, mocker, current_user):
         return "Test summary", ["Test question"]
     mocker.patch("ravioli.backend.api.v1.endpoints.analyses.generate_summary", side_effect=mock_generate_summary)
     
+    # Mock session refresh to set an ID
+    def mock_refresh(obj):
+        obj.id = uuid.uuid4()
+    session.refresh.side_effect = mock_refresh
+    
     # Execute request
     response = client.post(
         "/api/v1/analyses/quick-insight-stream",
