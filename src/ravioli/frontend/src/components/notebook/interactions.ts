@@ -263,6 +263,83 @@ export function bindInteractions(container: HTMLElement, updateNotebookUI: (c: H
     cellContainer.scrollTop = cellContainer.scrollHeight;
   });
 
+  // Helper for Chatbox submissions (Quick Insights)
+  function handleQuickInsightSend(questionText: string) {
+    if (!questionText.trim()) return;
+    
+    const textarea = container.querySelector('#quick-insight-chat-input') as HTMLTextAreaElement;
+    if (textarea) {
+       textarea.value = '';
+       textarea.style.height = 'auto';
+    }
+    
+    const cellContainer = container.querySelector('#cell-container');
+    if (!cellContainer) return;
+    
+    const welcome = cellContainer.querySelector('#notebook-welcome');
+    if (welcome) welcome.remove();
+    
+    const logs = store.getLogs();
+    const lastLog = logs[logs.length - 1];
+    const afterLogId = lastLog?.id ?? null;
+    
+    const children = Array.from(cellContainer.children);
+    const lastChild = children[children.length - 1] as HTMLElement;
+    
+    if (lastChild) {
+      createCellEditBlock('chat', afterLogId, lastChild);
+    } else {
+      const dummy = document.createElement('div');
+      dummy.className = 'hidden';
+      cellContainer.appendChild(dummy);
+      createCellEditBlock('chat', afterLogId, dummy);
+    }
+    
+    // Auto-run the new cell
+    setTimeout(() => {
+      const newCellBlock = container.querySelector('.new-cell-block:last-child');
+      if (newCellBlock) {
+        const input = newCellBlock.querySelector('textarea');
+        const runBtn = newCellBlock.querySelector('.btn-execute-new-cell') as HTMLButtonElement;
+        if (input && runBtn) {
+          input.value = questionText.trim();
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          runBtn.click();
+        }
+      }
+      cellContainer.scrollTop = cellContainer.scrollHeight;
+    }, 50);
+  }
+
+  // Quick Insight Chatbox Send Button Click
+  container.addEventListener('click', (e) => {
+    const sendBtn = (e.target as HTMLElement).closest('#btn-quick-insight-send') as HTMLButtonElement;
+    if (sendBtn) {
+      const textarea = container.querySelector('#quick-insight-chat-input') as HTMLTextAreaElement;
+      if (textarea) handleQuickInsightSend(textarea.value);
+    }
+  });
+
+  // Quick Insight Chatbox Input Auto-resize
+  container.addEventListener('input', (e) => {
+    const textarea = e.target as HTMLTextAreaElement;
+    if (textarea && textarea.id === 'quick-insight-chat-input') {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, 128) + 'px';
+    }
+  });
+
+  // Quick Insight Chatbox Enter Key
+  container.addEventListener('keydown', (e) => {
+    const textarea = e.target as HTMLTextAreaElement;
+    if (textarea && textarea.id === 'quick-insight-chat-input') {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleQuickInsightSend(textarea.value);
+      }
+    }
+  });
+
   // Delegated events for In-place Cell Editing
   container.addEventListener('click', async (e) => {
     const target = e.target as HTMLElement;
@@ -370,6 +447,16 @@ export function bindInteractions(container: HTMLElement, updateNotebookUI: (c: H
           }
         );
       }
+    }
+
+    // Follow-up Question Click
+    const followupBtn = target.closest('.followup-question-btn') as HTMLElement;
+    if (followupBtn) {
+      const question = followupBtn.getAttribute('data-question');
+      if (question) {
+         handleQuickInsightSend(question);
+      }
+      return;
     }
 
     // Run Static Cell directly

@@ -183,6 +183,18 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
         </div>
 
         <!-- Add Cell Footer Bar -->
+        ${analysis.analysis_metadata?.type === 'quick_insight' ? `
+        <div class="shrink-0 flex items-center justify-center py-6 px-12 border-t border-outline-variant/10 bg-surface-container-low/40 backdrop-blur-sm z-20 relative" id="quick-insight-bar">
+          <div class="w-full max-w-4xl relative group flex items-end bg-surface-container-highest border border-outline-variant/20 rounded-[28px] transition-all focus-within:border-secondary/50 focus-within:shadow-lg focus-within:shadow-secondary/10 overflow-hidden">
+            <textarea id="quick-insight-chat-input" class="w-full bg-transparent py-4 pl-6 pr-16 text-[15px] leading-relaxed text-on-surface focus:outline-none resize-none max-h-32 custom-scrollbar font-body-lg" rows="1" placeholder="Ask a follow-up question..."></textarea>
+            <div class="absolute right-3 bottom-2 flex items-center">
+              <button id="btn-quick-insight-send" class="w-10 h-10 rounded-full bg-secondary/10 text-secondary flex items-center justify-center hover:bg-secondary hover:text-on-secondary transition-colors group/send">
+                <span class="material-symbols-outlined text-[20px] group-hover/send:-translate-y-0.5 transition-transform" data-icon="arrow_upward">arrow_upward</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        ` : `
         <div class="shrink-0 flex items-center justify-center gap-3 py-4 px-12 border-t border-outline-variant/10 bg-surface-container-low/40 backdrop-blur-sm" id="add-cell-bar">
           <span class="text-[10px] text-outline uppercase tracking-widest font-label-sm opacity-60 mr-2">Add cell</span>
           <button class="btn-add-cell flex items-center gap-1.5 px-4 py-1.5 bg-surface-container-highest border border-outline-variant/20 text-outline text-[11px] rounded-full hover:bg-emerald-500/10 hover:border-emerald-500/30 hover:text-emerald-400 transition-all duration-200 group/add" data-type="python">
@@ -202,6 +214,7 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
             Text / MD
           </button>
         </div>
+        `}
       </div>
     `;
     
