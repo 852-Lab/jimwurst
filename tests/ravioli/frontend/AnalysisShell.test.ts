@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderNotebook, updateNotebookUI } from '../../../src/ravioli/frontend/src/components/Notebook';
+import { renderAnalysis, updateAnalysisUI } from '../../../src/ravioli/frontend/src/components/analysis/AnalysisShell';
 import { store } from '../../../src/ravioli/frontend/src/store';
 
 // Mock the api
@@ -12,7 +12,7 @@ vi.mock('../../../src/ravioli/frontend/src/services/api', () => ({
   }
 }));
 
-describe('Notebook Component - Stability & Granular Updates', () => {
+describe('AnalysisShell Component - Stability & Granular Updates', () => {
   beforeEach(() => {
     // Reset store state
     store.setAnalyses([]);
@@ -40,10 +40,10 @@ describe('Notebook Component - Stability & Granular Updates', () => {
     store.setActiveAnalysisId('a1');
     store.setLogs(mockLogs as any);
     
-    const notebook = renderNotebook();
+    const notebook = renderAnalysis();
     expect(notebook.textContent).toContain('Deep Research');
     expect(notebook.textContent).toContain('Step 1 complete');
-    expect(notebook.querySelector('#add-cell-bar')).not.toBeNull();
+    expect(notebook.querySelector('#quick-insight-bar')).not.toBeNull();
   });
 
   it('mitigation: updates logs without replacing the main container', () => {
@@ -52,7 +52,7 @@ describe('Notebook Component - Stability & Granular Updates', () => {
     store.setActiveAnalysisId('a1');
     store.setLogs([{ id: 'l1', content: 'Initial log', log_type: 'agent_response' }] as any);
     
-    const notebook = renderNotebook();
+    const notebook = renderAnalysis();
     (notebook as any).__test_marker = 'persistent';
     
     // Simulate background poll finding a new log
@@ -63,7 +63,7 @@ describe('Notebook Component - Stability & Granular Updates', () => {
     store.setLogs(updatedLogs as any);
     
     // Trigger granular update (like main.ts does)
-    updateNotebookUI(notebook);
+    updateAnalysisUI(notebook);
     
     // Verify reference stability
     expect((notebook as any).__test_marker).toBe('persistent');
@@ -72,7 +72,7 @@ describe('Notebook Component - Stability & Granular Updates', () => {
     expect(notebook.textContent).toContain('New background log');
     
     // Verify the add-cell bar still exists and hasn't been destroyed by the update.
-    const addBar = notebook.querySelector('#add-cell-bar') as HTMLElement;
+    const addBar = notebook.querySelector('#quick-insight-bar') as HTMLElement;
     expect(addBar).not.toBeNull();
   });
 
@@ -82,7 +82,7 @@ describe('Notebook Component - Stability & Granular Updates', () => {
     store.setActiveAnalysisId('a1');
     store.setLogs([{ id: 'l1', content: 'Log 1', log_type: 'agent_response' }] as any);
     
-    const notebook = renderNotebook();
+    const notebook = renderAnalysis();
     const cellContainer = notebook.querySelector('#cell-container')!;
     
     // Simulate an active stream by adding a streaming-content marker
@@ -99,7 +99,7 @@ describe('Notebook Component - Stability & Granular Updates', () => {
     store.setLogs(updatedLogs as any);
     
     // Trigger update
-    updateNotebookUI(notebook);
+    updateAnalysisUI(notebook);
     
     // Log 2 should NOT be rendered yet because we are streaming
     expect(notebook.textContent).not.toContain('Log 2');
@@ -114,7 +114,7 @@ describe('Notebook Component - Stability & Granular Updates', () => {
       { id: 'l1', content: '# Welcome to Markdown\nThis is **bold** text.', log_type: 'user_query', tool_name: 'markdown' }
     ] as any);
 
-    const notebook = renderNotebook();
+    const notebook = renderAnalysis();
     expect(notebook.querySelector('.cell-static-view')).not.toBeNull();
     expect(notebook.textContent).toContain('Welcome to Markdown');
     expect(notebook.querySelector('strong')?.textContent).toBe('bold');
@@ -128,7 +128,7 @@ describe('Notebook Component - Stability & Granular Updates', () => {
       { id: 'l1', content: 'Double click test', log_type: 'user_query', tool_name: 'markdown' }
     ] as any);
 
-    const notebook = renderNotebook();
+    const notebook = renderAnalysis();
     const staticView = notebook.querySelector('#cell-static-1') as HTMLElement;
     const editView = notebook.querySelector('#cell-edit-1') as HTMLElement;
 
@@ -150,7 +150,7 @@ describe('Notebook Component - Stability & Granular Updates', () => {
       { id: 'l1', content: 'Delete me cell', log_type: 'user_query', tool_name: 'markdown' }
     ] as any);
 
-    const notebook = renderNotebook();
+    const notebook = renderAnalysis();
     const deleteBtn = notebook.querySelector('.btn-delete-cell') as HTMLElement;
     expect(deleteBtn).not.toBeNull();
 
@@ -170,14 +170,14 @@ describe('Notebook Component - Stability & Granular Updates', () => {
   });
 
   it('covers SQL cells: renders with vertical gutter, updates highlighting, and triggers executeSql on rerun', async () => {
-    const mockAnalysis = { id: 'a1', title: 'SQL Testing', status: 'completed' };
+    const mockAnalysis = { id: 'a1', title: 'SQL Testing', status: 'completed', analysis_metadata: { type: 'notebook' } };
     store.setAnalyses([mockAnalysis] as any);
     store.setActiveAnalysisId('a1');
     store.setLogs([
       { id: 'l1', content: 'SELECT * FROM ravioli', log_type: 'user_query', tool_name: 'sql', index: 1 }
     ] as any);
 
-    const notebook = renderNotebook();
+    const notebook = renderAnalysis();
 
     // Verify SQL cell static view and capsular LOC displays correctly
     expect(notebook.textContent).toContain('SELECT * FROM ravioli');
@@ -220,14 +220,14 @@ describe('Notebook Component - Stability & Granular Updates', () => {
   });
 
   it('renders AI chat cells correctly and handles streaming', async () => {
-    const mockAnalysis = { id: 'a1', title: 'AI Testing', status: 'completed' };
+    const mockAnalysis = { id: 'a1', title: 'AI Testing', status: 'completed', analysis_metadata: { type: 'notebook' } };
     store.setAnalyses([mockAnalysis] as any);
     store.setActiveAnalysisId('a1');
     store.setLogs([
       { id: 'l1', content: 'Tell me a joke', log_type: 'user_query', tool_name: 'chat', index: 1 }
     ] as any);
 
-    const notebook = renderNotebook();
+    const notebook = renderAnalysis();
 
     // Verify AI chat cell displays properly with user prompt
     expect(notebook.textContent).toContain('Tell me a joke');
@@ -263,7 +263,7 @@ describe('Notebook Component - Stability & Granular Updates', () => {
     store.setLogs([]);
     
     // First render to set lastLogsJson to '[]'
-    renderNotebook();
+    renderAnalysis();
     
     // Switch to another analysis also with NO logs
     const mockAnalysis2 = { id: 'a2', title: 'Another Empty Analysis', status: 'completed' };
@@ -273,7 +273,7 @@ describe('Notebook Component - Stability & Granular Updates', () => {
     
     // Render again! isInitial will be true since renderNotebook creates a new container.
     // If the fix is correct, it should bypass the logsJson !== lastLogsJson check and populate.
-    const notebook2 = renderNotebook();
+    const notebook2 = renderAnalysis();
     
     const cellContainer = notebook2.querySelector('#cell-container');
     expect(cellContainer).not.toBeNull();
