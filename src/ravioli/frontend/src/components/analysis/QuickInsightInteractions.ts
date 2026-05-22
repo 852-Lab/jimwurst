@@ -52,6 +52,7 @@ export function bindQuickInsightInteractions(container: HTMLElement) {
     let fullText = "";
     api.streamQuestion(activeId, questionText.trim(), null, afterLogId,
        (token) => {
+          if (token.startsWith('[VIZ]')) return;
           fullText += token;
           const streamingContent = cellContainer.querySelector(`#streaming-content-${tempId}`);
           if (streamingContent) {
@@ -60,6 +61,10 @@ export function bindQuickInsightInteractions(container: HTMLElement) {
           }
        },
        async () => {
+          const streamingContent = cellContainer.querySelector(`#streaming-content-${tempId}`);
+          if (streamingContent) {
+             streamingContent.removeAttribute('id');
+          }
           const newLogs = await api.listLogs(activeId);
           store.setLogs(newLogs);
        },
@@ -69,6 +74,7 @@ export function bindQuickInsightInteractions(container: HTMLElement) {
           if (streamingContent) {
              streamingContent.innerHTML += '<br><span class="text-error">Execution Failed.</span>';
              streamingContent.classList.remove('animate-pulse');
+             streamingContent.removeAttribute('id');
           }
        }
     );
