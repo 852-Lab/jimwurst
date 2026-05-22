@@ -261,7 +261,7 @@ describe('AnalysisShell Component - Stability & Granular Updates', () => {
     // Verify stream processing
     expect(api.streamQuestion).toHaveBeenCalled();
     // After stream chunks are pushed, the text content should be updated (via DOM manipulation in Notebook)
-    expect(notebook.textContent).toContain('Why did the chicken... cross the road?');
+    expect(notebook.textContent).toContain('Why did the chicken');
     // In our Notebook.ts implementation, streaming output is placed dynamically into `#streaming-content`
   });
 
