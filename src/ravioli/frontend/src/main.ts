@@ -2,7 +2,7 @@ import './style.css';
 import { store } from './store';
 import { api } from './services/api';
 import { renderSidebar, updateSidebarUI } from './components/Sidebar';
-import { renderNotebook, updateNotebookUI } from './components/Notebook';
+import { renderAnalysis, updateAnalysisUI } from './components/analysis/AnalysisShell';
 import { renderInsights } from './components/Insights';
 import { renderCreateAnalysis } from './components/CreateAnalysis';
 import { renderKnowledge } from './components/Knowledge';
