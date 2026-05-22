@@ -99,8 +99,8 @@ class DuckDBManager:
                         if "already attached" not in str(e).lower():
                             logger.error(f"Failed to attach workspace root: {e}")
                     
-                    # Use 'md:ravioli' to avoid local naming conflicts with local 'ravioli' catalog
-                    self._connection.execute("CREATE DATABASE IF NOT EXISTS \"md:ravioli\"")
+                    # Use 'ravioli' instead of 'md:ravioli' for database creation
+                    self._connection.execute("CREATE DATABASE IF NOT EXISTS ravioli")
                 except Exception as create_err:
                     logger.error(f"Creation of 'ravioli' database failed: {create_err}")
                 
@@ -139,13 +139,13 @@ class DuckDBManager:
                             
                             # Force recreate the remote database on Motherduck
                             try:
-                                self._connection.execute("DROP DATABASE IF EXISTS \"md:ravioli\"")
+                                self._connection.execute("DROP DATABASE IF EXISTS ravioli")
                             except Exception as drop_err:
                                 logger.debug(
-                                    "Ignoring non-fatal failure while dropping 'md:ravioli' during recreate flow: %s",
+                                    "Ignoring non-fatal failure while dropping 'ravioli' during recreate flow: %s",
                                     drop_err,
                                 )
-                            self._connection.execute("CREATE DATABASE \"md:ravioli\"")
+                            self._connection.execute("CREATE DATABASE ravioli")
                             
                             # Try to attach again
                             try:
@@ -437,3 +437,16 @@ class DuckDBManager:
 
 duckdb_manager = DuckDBManager()
 data_ingestor = DataIngestor(duckdb_manager)
+
+# Eagerly initialize the DuckDB connection in a background thread
+# so that the first SQL cell execution doesn't block for MotherDuck attachment
+import threading
+def _pre_init_duckdb():
+    try:
+        _ = duckdb_manager.connection
+        logger.info("DuckDB Manager eagerly initialized successfully.")
+    except Exception as e:
+        logger.error(f"DuckDB Manager eager initialization failed: {e}")
+
+threading.Thread(target=_pre_init_duckdb, daemon=True).start()
+
