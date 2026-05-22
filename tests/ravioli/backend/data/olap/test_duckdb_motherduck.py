@@ -71,8 +71,8 @@ def test_duckdb_manager_reconnect(mock_db_session, mock_duckdb, mock_decrypt):
 def test_push_all_non_pii(mock_duckdb):
     with patch.object(DuckDBManager, '_instance', None):
         manager = DuckDBManager()
-        # Mock connection property to avoid attachment logic
-        manager._connection = mock_duckdb.return_value
+        # Mock _md_connection to avoid MotherDuck attachment logic during test
+        manager._md_connection = mock_duckdb.return_value
         
         # Mock is_motherduck_connected to return True
         with patch.object(manager, 'is_motherduck_connected', return_value=True):

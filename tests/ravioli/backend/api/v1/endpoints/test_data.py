@@ -84,7 +84,7 @@ def test_delete_file(client, session, mocker):
     assert response.status_code == 200
     assert session.delete.called
     mock_unlink.assert_called_once()
-    mock_duckdb.connection.execute.assert_called_once_with('DROP TABLE IF EXISTS "s_manual"."test_table"')
+    mock_duckdb.execute_ddl.assert_called_once_with('DROP TABLE IF EXISTS "s_manual"."test_table"')
 
 def test_update_file_pii(client, session, current_user):
     file_id = uuid.uuid4()

@@ -85,7 +85,7 @@ class DuckDBManager:
 
         # Check if ravioli is already specifically attached as a Motherduck DB
         try:
-            res = self._connection.execute("PRAGMA show_databases").fetchall()
+            res = self._md_connection.execute("PRAGMA show_databases").fetchall()
             logger.info(f"Currently attached databases: {res}")
             # Be safe with tuple length as it varies between DuckDB versions/modes
             for row in res:
@@ -110,15 +110,15 @@ class DuckDBManager:
                 logger.info("Motherduck token found, preparing to attach...")
                 # Only initialize Motherduck if it's not already set up
                 try:
-                    self._connection.execute("INSTALL motherduck; LOAD motherduck;")
+                    self._md_connection.execute("INSTALL motherduck; LOAD motherduck;")
                     # Check if token is already set to avoid initialization error
-                    current_token = self._connection.execute("SELECT current_setting('motherduck_token')").fetchone()[0]
+                    current_token = self._md_connection.execute("SELECT current_setting('motherduck_token')").fetchone()[0]
                     if not current_token:
-                        self._connection.execute(f"SET motherduck_token='{token}';")
+                        self._md_connection.execute(f"SET motherduck_token='{token}';")
                 except Exception as init_err:
                     if "can only be set during initialization" not in str(init_err):
                         try:
-                            self._connection.execute(f"SET motherduck_token='{token}';")
+                            self._md_connection.execute(f"SET motherduck_token='{token}';")
                         except Exception as token_set_err:
                             logger.debug(
                                 "Non-fatal: failed to set motherduck token during fallback setup: %s",
@@ -128,7 +128,7 @@ class DuckDBManager:
                 # IMPORTANT: The following management logic must run every time
                 # Force multi-database mode so we can see 'ravioli' as a separate DB
                 try:
-                    self._connection.execute("SET motherduck_attach_mode='multi';")
+                    self._md_connection.execute("SET motherduck_attach_mode='multi';")
                 except Exception as attach_mode_err:
                     logger.debug(
                         "Could not set motherduck_attach_mode='multi'; continuing without multi attach mode: %s",
@@ -139,13 +139,13 @@ class DuckDBManager:
                 try:
                     # In workspace mode, we attach 'md:' directly to run management commands
                     try:
-                        self._connection.execute("ATTACH 'md:'")
+                        self._md_connection.execute("ATTACH 'md:'")
                     except Exception as e:
                         if "already attached" not in str(e).lower():
                             logger.error(f"Failed to attach workspace root: {e}")
                     
                     # Use 'ravioli' instead of 'md:ravioli' for database creation
-                    self._connection.execute("CREATE DATABASE IF NOT EXISTS ravioli")
+                    self._md_connection.execute("CREATE DATABASE IF NOT EXISTS ravioli")
                 except Exception as create_err:
                     logger.error(f"Creation of 'ravioli' database failed: {create_err}")
                 
@@ -154,15 +154,15 @@ class DuckDBManager:
                     logger.info("Attempting to ATTACH 'md:ravioli'...")
                     # We try with an alias first, fallback to canonical name for workspace mode
                     try:
-                        self._connection.execute("ATTACH 'md:ravioli' AS ravioli")
+                        self._md_connection.execute("ATTACH 'md:ravioli' AS ravioli")
                     except Exception as alias_err:
                         if "aliases are not yet supported" in str(alias_err):
-                            self._connection.execute("ATTACH 'md:ravioli'")
+                            self._md_connection.execute("ATTACH 'md:ravioli'")
                         else:
                             raise alias_err
                     
                     # Verify Identity & Context
-                    id_info = self._connection.execute("SELECT current_user(), current_database()").fetchone()
+                    id_info = self._md_connection.execute("SELECT current_user(), current_database()").fetchone()
                     if id_info and len(id_info) >= 2:
                         logger.info(f"Successfully attached! Cloud Identity: {id_info[0]} | Active DB: {id_info[1]}")
                     else:
@@ -174,7 +174,7 @@ class DuckDBManager:
                         try:
                             # Attach 'md:' workspace root if not already attached
                             try:
-                                self._connection.execute("ATTACH 'md:'")
+                                self._md_connection.execute("ATTACH 'md:'")
                             except Exception as workspace_attach_err:
                                 logger.debug(
                                     "Ignoring failure while attaching optional Motherduck workspace root 'md:' "
@@ -184,19 +184,19 @@ class DuckDBManager:
                             
                             # Force recreate the remote database on Motherduck
                             try:
-                                self._connection.execute("DROP DATABASE IF EXISTS ravioli")
+                                self._md_connection.execute("DROP DATABASE IF EXISTS ravioli")
                             except Exception as drop_err:
                                 logger.debug(
                                     "Ignoring non-fatal failure while dropping 'ravioli' during recreate flow: %s",
                                     drop_err,
                                 )
-                            self._connection.execute("CREATE DATABASE ravioli")
+                            self._md_connection.execute("CREATE DATABASE ravioli")
                             
                             # Try to attach again
                             try:
-                                self._connection.execute("ATTACH 'md:ravioli' AS ravioli")
+                                self._md_connection.execute("ATTACH 'md:ravioli' AS ravioli")
                             except Exception:
-                                self._connection.execute("ATTACH 'md:ravioli'")
+                                self._md_connection.execute("ATTACH 'md:ravioli'")
                             logger.info("Successfully recreated and attached 'md:ravioli' from scratch!")
                             return
                         except Exception as recreate_err:
@@ -206,7 +206,7 @@ class DuckDBManager:
                         logger.error(f"Could not attach 'md:ravioli': {attach_err}")
                         # Final fallback
                         try:
-                            self._connection.execute("ATTACH 'md:'")
+                            self._md_connection.execute("ATTACH 'md:'")
                         except Exception as fallback_err:
                             logger.warning(f"Final fallback ATTACH 'md:' also failed: {fallback_err}")
         except Exception as e:
@@ -224,12 +224,12 @@ class DuckDBManager:
         Close existing connection and force a new one on next access.
         Used when settings change or connection state gets corrupted.
         """
-        if self._connection:
+        if self._md_connection:
             try:
-                self._connection.close()
+                self._md_connection.close()
             except Exception as e:
                 logger.warning("Failed to close existing DuckDB connection during reconnect: %s", e)
-        self._connection = None
+        self._md_connection = None
 
     def list_tables(self):
         """
