@@ -1,6 +1,6 @@
-import { api } from '../../services/api';
-import { store } from '../../store';
-import { withButtonLoading } from '../utils/dom';
+import { api } from '../../../services/api';
+import { store } from '../../../store';
+import { withButtonLoading } from '../../utils/dom';
 
 export interface CreateAnalysisContext {
   mode: string;

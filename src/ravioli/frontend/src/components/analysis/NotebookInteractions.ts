@@ -7,12 +7,12 @@ import {
   updateLineNumbers, 
   updateLineGutterScroll,
   highlightSQL
-} from './utils';
-import { renderMarkdown } from './templates';
+} from './notebook/utils';
+import { renderMarkdown } from './notebook/templates';
 
 const executingCells = new Set<string>();
 
-export function bindInteractions(container: HTMLElement, updateNotebookUI: (c: HTMLElement) => void) {
+export function bindNotebookInteractions(container: HTMLElement, updateNotebookUI: (c: HTMLElement) => void) {
   const activeId = store.getActiveAnalysisId();
 
   // Double click to edit cell static view
