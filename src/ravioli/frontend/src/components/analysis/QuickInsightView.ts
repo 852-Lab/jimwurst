@@ -122,7 +122,7 @@ export function updateQuickInsightView(container: HTMLElement) {
 
   // 1. Executive Summary as Cell 0 / Overview
   if (analysis.result) {
-    html += \`
+    html += `
       <div class="glass-panel p-6 rounded-3xl space-y-6 bg-surface-container-low/30 border-outline-variant/10 relative overflow-hidden flex items-start gap-4">
         <div class="w-12 h-12 rounded-2xl bg-secondary/15 flex flex-shrink-0 items-center justify-center border border-secondary/20 shadow-lg shadow-secondary/5">
           <span class="material-symbols-outlined text-secondary text-2xl" data-icon="auto_awesome">auto_awesome</span>
@@ -130,25 +130,25 @@ export function updateQuickInsightView(container: HTMLElement) {
         <div class="flex-1 min-w-0">
           <h3 class="text-xl font-headline-sm text-white mb-2 tracking-tight">Executive Summary</h3>
           <div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg">
-            \${renderMarkdown(analysis.result)}
+            ${renderMarkdown(analysis.result)}
           </div>
         </div>
       </div>
-    \`;
+    `;
   }
 
   // 2. Render chat cells
   const chatCells = groupLogsIntoChatCells(logs);
   
   html += chatCells.map(cell => {
-    return \`
+    return `
       <div class="space-y-8 py-4 relative group animate-in fade-in duration-300">
         <!-- User Question Bubble -->
-        \${cell.inputContent && cell.inputContent !== 'Initialize Sequence Brain' ? \`
+        ${cell.inputContent && cell.inputContent !== 'Initialize Sequence Brain' ? `
         <div class="flex flex-col items-end gap-2 mb-8">
-           <div class="max-w-[85%] bg-surface-container-highest/80 px-6 py-4 rounded-3xl rounded-tr-md text-on-surface text-[15px] font-medium leading-relaxed border border-outline-variant/10 shadow-sm whitespace-pre-wrap">\${cell.inputContent}</div>
+           <div class="max-w-[85%] bg-surface-container-highest/80 px-6 py-4 rounded-3xl rounded-tr-md text-on-surface text-[15px] font-medium leading-relaxed border border-outline-variant/10 shadow-sm whitespace-pre-wrap">${cell.inputContent}</div>
         </div>
-        \` : ''}
+        ` : ''}
         
         <!-- AI Answer -->
         <div class="flex items-start gap-4">
@@ -156,17 +156,17 @@ export function updateQuickInsightView(container: HTMLElement) {
             <span class="material-symbols-outlined text-secondary" data-icon="auto_awesome">auto_awesome</span>
           </div>
           <div class="flex-1 min-w-0 space-y-6 pt-1">
-            \${cell.outputs.length === 0 
+            ${cell.outputs.length === 0 
               ? (executingCells.has(cell.inputLogId) ? '<div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg animate-pulse" id="streaming-content-' + cell.index + '"><span class="inline-block w-1 h-4 bg-primary animate-pulse"></span></div>' : '<span class="text-xs text-outline italic">No output generated</span>')
               : cell.outputs.map(out => {
                   let contentHtml = out.content && out.content.trim() !== '[SQL Execution Result]' && out.content.trim() !== '[Python Execution Result]' 
-                      ? \`<div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg">\${renderMarkdown(out.content)}</div>\` 
+                      ? `<div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg">${renderMarkdown(out.content)}</div>` 
                       : '';
                   
                   let dataHtml = '';
                   if (out.data) {
                     if (out.data.type === 'chart') {
-                      dataHtml += \`<div class="mt-4 glass-panel p-6 rounded-2xl border-primary/20 h-80 relative bg-surface-container-lowest/30"><canvas id="chart-\${out.id}"></canvas></div>\`;
+                      dataHtml += `<div class="mt-4 glass-panel p-6 rounded-2xl border-primary/20 h-80 relative bg-surface-container-lowest/30"><canvas id="chart-${out.id}"></canvas></div>`;
                     }
                     if (out.data.sql_outputs) {
                       dataHtml += out.data.sql_outputs.map((so: any) => renderRichOutput(so)).join('');
@@ -182,7 +182,7 @@ export function updateQuickInsightView(container: HTMLElement) {
           </div>
         </div>
       </div>
-    \`;
+    `;
   }).join('');
 
   cellContainer.innerHTML = html;

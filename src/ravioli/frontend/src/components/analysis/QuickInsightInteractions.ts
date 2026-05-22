@@ -51,7 +51,7 @@ export function bindQuickInsightInteractions(container: HTMLElement) {
     api.streamQuestion(activeId, questionText.trim(), null, afterLogId,
        (token) => {
           fullText += token;
-          const streamingContent = cellContainer.querySelector(\`#streaming-content-\${tempId}\`);
+          const streamingContent = cellContainer.querySelector(`#streaming-content-${tempId}`);
           if (streamingContent) {
              streamingContent.innerHTML = renderMarkdown(fullText) + '<span class="inline-block w-1 h-4 bg-primary animate-pulse ml-1"></span>';
              cellContainer.scrollTop = cellContainer.scrollHeight;
@@ -63,7 +63,7 @@ export function bindQuickInsightInteractions(container: HTMLElement) {
        },
        (err) => {
           console.error(err);
-          const streamingContent = cellContainer.querySelector(\`#streaming-content-\${tempId}\`);
+          const streamingContent = cellContainer.querySelector(`#streaming-content-${tempId}`);
           if (streamingContent) {
              streamingContent.innerHTML += '<br><span class="text-error">Execution Failed.</span>';
              streamingContent.classList.remove('animate-pulse');
