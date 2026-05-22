@@ -31,7 +31,7 @@ export function bindQuickInsightInteractions(container: HTMLElement) {
     chatBlock.className = 'space-y-8 py-4 relative group animate-in fade-in duration-300';
     chatBlock.innerHTML = `
       <div class="flex flex-col items-end gap-2 mb-8">
-         <div class="max-w-[85%] bg-surface-container-highest/80 px-6 py-4 rounded-3xl rounded-tr-md text-on-surface text-[15px] font-medium leading-relaxed border border-outline-variant/10 shadow-sm whitespace-pre-wrap">${questionText.trim()}</div>
+         <div class="max-w-[85%] bg-surface-container-highest/80 px-6 py-4 rounded-3xl rounded-tr-md text-on-surface text-[15px] font-medium leading-relaxed border border-outline-variant/10 shadow-sm whitespace-pre-wrap"><span data-role="user-question"></span></div>
       </div>
       <div class="flex items-start gap-4">
         <div class="w-10 h-10 rounded-2xl bg-secondary/15 flex flex-shrink-0 items-center justify-center border border-secondary/20 shadow-lg shadow-secondary/5 mt-1">
@@ -44,6 +44,8 @@ export function bindQuickInsightInteractions(container: HTMLElement) {
         </div>
       </div>
     `;
+    const userQuestion = chatBlock.querySelector('[data-role="user-question"]');
+    if (userQuestion) userQuestion.textContent = questionText.trim();
     cellContainer.appendChild(chatBlock);
     cellContainer.scrollTop = cellContainer.scrollHeight;
     
