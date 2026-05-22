@@ -61,13 +61,9 @@ class TestConnectContextManager:
 
     def test_connect_closes_even_on_exception(self, fresh_manager, mock_duckdb_connect):
         conn_mock = mock_duckdb_connect.return_value
-        try:
+        with pytest.raises(ValueError):
             with fresh_manager.connect():
                 raise ValueError("intentional error")
-        except ValueError:
-            pass
-        else:
-            pytest.fail("Expected ValueError was not raised")
         conn_mock.close.assert_called_once()
 
     def test_connect_does_not_retain_reference(self, fresh_manager, mock_duckdb_connect):
