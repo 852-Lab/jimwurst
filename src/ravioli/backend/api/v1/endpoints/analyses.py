@@ -539,7 +539,7 @@ async def stream_question(
                             import pandas as pd
                             try:
                                 # Execute the SQL
-                                df = duckdb_manager.connection.execute(sql).fetchdf()
+                                df = duckdb_manager.execute_df(sql)
                                 
                                 # Stream Tabular Result
                                 if df.empty:
@@ -937,7 +937,7 @@ async def create_quick_insight_existing(
         columns = ", ".join([row['column_name'] for row in df_cols[:5]])
         
         # Get full data and create a profile for AI context
-        df_full = duckdb_manager.connection.execute(f'SELECT * FROM "{db_source.schema_name}"."{db_source.table_name}"').fetchdf()
+        df_full = duckdb_manager.execute_df(f'SELECT * FROM "{db_source.schema_name}"."{db_source.table_name}"')
         df_full = prepare_dataframe_for_analysis(df_full)
         data_profile = create_data_profile(df_full)
     except Exception as e:

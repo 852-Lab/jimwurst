@@ -207,7 +207,7 @@ def test_push_all_to_motherduck_success(client, session, mocker):
     mock_duckdb.push_all_non_pii = MagicMock()
     
     # Mock table existence check in local DuckDB (execute returns True for existence check)
-    mock_duckdb.connection.execute.return_value.fetchone.return_value = (1,)
+    mock_duckdb.execute_fetchone.return_value = (1,)
 
     # Mock DataSource query results
     mock_source = DataSource(

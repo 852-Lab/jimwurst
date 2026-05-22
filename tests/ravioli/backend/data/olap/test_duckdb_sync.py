@@ -4,7 +4,8 @@ from ravioli.backend.data.olap.duckdb_manager import DuckDBManager
 
 @pytest.fixture
 def mock_duckdb():
-    with patch("duckdb.connect") as mock:
+    # Must patch via the module that imports duckdb so the connect() call is intercepted
+    with patch("ravioli.backend.data.olap.duckdb_manager.duckdb.connect") as mock:
         conn = MagicMock()
         mock.return_value = conn
         yield mock
@@ -13,8 +14,8 @@ def mock_duckdb():
 def manager(mock_duckdb):
     with patch.object(DuckDBManager, '_instance', None):
         manager = DuckDBManager()
-        # Mock connection property to avoid _attach_motherduck call logic complexities in init
-        manager._connection = mock_duckdb.return_value
+        # Inject the mock directly as the MD connection so _attach_motherduck is bypassed
+        manager._md_connection = mock_duckdb.return_value
         return manager
 
 def test_is_motherduck_connected(manager, mock_duckdb):

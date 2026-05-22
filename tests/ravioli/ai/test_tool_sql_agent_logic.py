@@ -6,7 +6,7 @@ from unittest.mock import patch, MagicMock, AsyncMock
 # to avoid ANY file access or property calls that trigger duckdb.connect()
 from ravioli.backend.data.olap.duckdb_manager import duckdb_manager
 mock_connection = MagicMock()
-duckdb_manager._connection = mock_connection
+duckdb_manager._md_connection = mock_connection
 
 from ravioli.ai.Kowalski import KowalskiAgent
 

@@ -45,11 +45,10 @@ class JupyterManager:
             self.clients[aid_str] = kc
             
             # Setup environment with pre-imports, inline plotting, and a lazy DuckDB wrapper.
-            # IMPORTANT: We do NOT hold a persistent duckdb connection in the kernel process.
-            # A persistent connection (even read_only=True) would conflict with the main backend's
-            # read-write DuckDBManager connection via OS-level file locking.
-            # Instead, _LazyDuckDB opens a fresh connection per execute() call and closes it
-            # immediately after fetching — same con.execute(sql).df() API, zero lock contention.
+            # _LazyDuckDB opens a fresh read_only=True connection per query and closes it
+            # immediately. This is now safe because DuckDBManager no longer holds a persistent
+            # read-write file lock — it too opens and closes connections per operation.
+
             db_path = str(settings.duckdb_path.absolute()).replace("\\", "\\\\")
             startup_code = f"""
 import pandas as pd
@@ -87,14 +86,14 @@ class _LazyDuckDB:
         finally:
             _c.close()
         return _LazyDuckDBResult(_df)
-        
+
     def table(self, table_name):
         \"\"\"Convenience method to load an entire table directly into a DataFrame.\"\"\"
         return self.execute(f"SELECT * FROM {{table_name}}").df()
 
 try:
     con = _LazyDuckDB('{db_path}')
-    
+
     _original_read_sql = pd.read_sql
     def _patched_read_sql(sql, con=None, **kwargs):
         \"\"\"Patched pd.read_sql that automatically uses the DuckDB wrapper if no con is provided.\"\"\"
@@ -102,7 +101,7 @@ try:
             return globals()['con'].execute(sql).df()
         return _original_read_sql(sql, con=con, **kwargs)
     pd.read_sql = _patched_read_sql
-        
+
     # Pre-load available tables so users can inspect them with `tables`
     tables = con.execute("SHOW ALL TABLES").df()[['schema', 'name']].copy()
     tables.columns = ['schema', 'table']
@@ -120,8 +119,8 @@ except Exception as _e:
 """
             kc.execute(startup_code)
 
-            
         return self.clients[aid_str]
+
 
     def execute_code(self, analysis_id: uuid.UUID, code: str) -> List[dict]:
         """

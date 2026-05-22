@@ -2,12 +2,62 @@ import { store } from '../../store';
 import { format } from 'date-fns';
 import { renderNotebookView, updateNotebookView } from './notebook/NotebookView';
 import { renderQuickInsightView, updateQuickInsightView } from './quickinsights/QuickInsightView';
+import { showDataPreviewModal } from './notebook/NotebookInteractions';
 
 export function renderAnalysis() {
   const container = document.createElement('main');
   container.id = 'analysis-view';
   container.className = 'flex-1 ml-64 relative overflow-hidden bg-background h-screen flex flex-col';
   
+  container.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+
+    // Preview Data Source
+    const previewBtn = target.closest('.btn-preview-data') as HTMLElement;
+    if (previewBtn) {
+      const fullTable = previewBtn.getAttribute('data-table');
+      const filename = previewBtn.getAttribute('data-filename');
+      if (fullTable) {
+        showDataPreviewModal(fullTable, filename || 'Data Source');
+      }
+    }
+
+    // Insert Table Name trigger
+    const insertTableBtn = target.closest('.btn-insert-table') as HTMLElement;
+    if (insertTableBtn) {
+      const fullTable = insertTableBtn.getAttribute('data-table');
+      if (fullTable) {
+        let activeTextarea: HTMLTextAreaElement | null = null;
+        
+        // 1. Try currently focused
+        if (document.activeElement && document.activeElement.tagName === 'TEXTAREA' && container.contains(document.activeElement)) {
+          activeTextarea = document.activeElement as HTMLTextAreaElement;
+        } 
+        // 2. Try the new cell block
+        else if (container.querySelector('.new-cell-block textarea')) {
+          activeTextarea = container.querySelector('.new-cell-block textarea') as HTMLTextAreaElement;
+        }
+        // 3. Try any open edit view
+        else {
+          const editViews = container.querySelectorAll('.cell-edit-view:not(.hidden) textarea');
+          if (editViews.length > 0) {
+            activeTextarea = editViews[0] as HTMLTextAreaElement;
+          }
+        }
+
+        if (activeTextarea) {
+          const start = activeTextarea.selectionStart;
+          const end = activeTextarea.selectionEnd;
+          const val = activeTextarea.value;
+          activeTextarea.value = val.substring(0, start) + fullTable + val.substring(end);
+          activeTextarea.selectionStart = activeTextarea.selectionEnd = start + fullTable.length;
+          activeTextarea.dispatchEvent(new Event('input', { bubbles: true }));
+          activeTextarea.focus();
+        }
+      }
+    }
+  });
+
   updateAnalysisUI(container, true);
   return container;
 }

@@ -153,7 +153,7 @@ async def upload_file(
                 # PII Scan
                 try:
                     full_table_name = f'"s_manual"."{table_name}"'
-                    df_sample = duckdb_manager.connection.execute(f'SELECT * FROM {full_table_name} LIMIT 100').fetchdf()
+                    df_sample = duckdb_manager.execute_df(f'SELECT * FROM {full_table_name} LIMIT 100')
                     db_source.has_pii = pii_scanner.scan_dataframe(df_sample)
                 except Exception as e:
                     logger.warning("PII scan failed for table %s: %s", table_name, e)
@@ -165,7 +165,7 @@ async def upload_file(
                 try:
                     kowalski_agent = KowalskiAgent(db)
                     full_table_name = f'"s_manual"."{table_name}"'
-                    df_sample = duckdb_manager.connection.execute(f'SELECT * FROM {full_table_name} LIMIT 5').fetchdf()
+                    df_sample = duckdb_manager.execute_df(f'SELECT * FROM {full_table_name} LIMIT 5')
                     db_source.description = await skill_comm.generate_description(db_source.original_filename, df_sample.to_csv(index=False), kowalski_agent.generate, context=context)
                 except Exception as e:
                     logger.warning("Auto-description failed for CSV: %s", e)
@@ -201,7 +201,7 @@ async def upload_file(
                     # PII Scan for primary
                     try:
                         full_table_name = f'"s_manual"."{db_source.table_name}"'
-                        df_sample = duckdb_manager.connection.execute(f'SELECT * FROM {full_table_name} LIMIT 100').fetchdf()
+                        df_sample = duckdb_manager.execute_df(f'SELECT * FROM {full_table_name} LIMIT 100')
                         db_source.has_pii = pii_scanner.scan_dataframe(df_sample)
                     except Exception as e:
                         logger.warning("PII scan failed for table %s: %s", db_source.table_name, e)
@@ -229,7 +229,7 @@ async def upload_file(
                         # PII Scan for other
                         try:
                             full_table_name = f'"s_manual"."{other["table_name"]}"'
-                            df_sample = duckdb_manager.connection.execute(f'SELECT * FROM {full_table_name} LIMIT 100').fetchdf()
+                            df_sample = duckdb_manager.execute_df(f'SELECT * FROM {full_table_name} LIMIT 100')
                             other_source.has_pii = pii_scanner.scan_dataframe(df_sample)
                         except Exception as e:
                             logger.warning("PII scan failed for table %s: %s", other["table_name"], e)
@@ -262,7 +262,7 @@ async def upload_file(
                     try:
                         kowalski_agent = KowalskiAgent(db)
                         full_table_name = f'"s_manual"."{db_source.table_name}"'
-                        df_sample = duckdb_manager.connection.execute(f'SELECT * FROM {full_table_name} LIMIT 5').fetchdf()
+                        df_sample = duckdb_manager.execute_df(f'SELECT * FROM {full_table_name} LIMIT 5')
                         db_source.description = await skill_comm.generate_description(db_source.original_filename, df_sample.to_csv(index=False), kowalski_agent.generate, context=context)
                     except Exception as e:
                         logger.warning("Auto-description failed for primary sheet: %s", e)
@@ -270,7 +270,7 @@ async def upload_file(
                     # PII Scan for primary
                     try:
                         full_table_name = f'"s_manual"."{db_source.table_name}"'
-                        df_sample = duckdb_manager.connection.execute(f'SELECT * FROM {full_table_name} LIMIT 100').fetchdf()
+                        df_sample = duckdb_manager.execute_df(f'SELECT * FROM {full_table_name} LIMIT 100')
                         db_source.has_pii = pii_scanner.scan_dataframe(df_sample)
                     except Exception as e:
                         logger.warning("PII scan failed for table %s: %s", db_source.table_name, e)
@@ -298,7 +298,7 @@ async def upload_file(
                         # PII Scan for other
                         try:
                             full_table_name = f'"s_manual"."{other["table_name"]}"'
-                            df_sample = duckdb_manager.connection.execute(f'SELECT * FROM {full_table_name} LIMIT 100').fetchdf()
+                            df_sample = duckdb_manager.execute_df(f'SELECT * FROM {full_table_name} LIMIT 100')
                             other_source.has_pii = pii_scanner.scan_dataframe(df_sample)
                         except Exception as e:
                             logger.warning("PII scan failed for table %s: %s", other["table_name"], e)
@@ -307,7 +307,7 @@ async def upload_file(
                         try:
                             agent = KowalskiAgent(db)
                             full_table_name = f'"s_manual"."{other["table_name"]}"'
-                            df_sample = duckdb_manager.connection.execute(f'SELECT * FROM {full_table_name} LIMIT 5').fetchdf()
+                            df_sample = duckdb_manager.execute_df(f'SELECT * FROM {full_table_name} LIMIT 5')
                             other_source.description = await skill_comm.generate_description(other_source.original_filename, df_sample.to_csv(index=False), agent.generate, context=context)
                         except Exception as e:
                             logger.warning("Auto-description failed for sheet %s: %s", other['sheet_name'], e)
@@ -382,7 +382,7 @@ async def delete_file(file_id: uuid.UUID, db: Session = Depends(get_db)):
         # 2. Drop table from DuckDB
         if db_source.table_name:
             full_table_name = f'"{db_source.schema_name}"."{db_source.table_name}"'
-            duckdb_manager.connection.execute(f"DROP TABLE IF EXISTS {full_table_name}")
+            duckdb_manager.execute_ddl(f"DROP TABLE IF EXISTS {full_table_name}")
             
         # 3. Delete physical file
         file_path = UPLOAD_DIR / db_source.filename
@@ -459,7 +459,7 @@ async def generate_file_description(
         # Get sample data from DuckDB
         full_table_name = f'"{db_source.schema_name}"."{db_source.table_name}"'
         query = f'SELECT * FROM {full_table_name} LIMIT 5'
-        df = duckdb_manager.connection.execute(query).fetchdf()
+        df = duckdb_manager.execute_df(query)
         sample_data = df.to_csv(index=False)
 
         # Generate description using Kowalski
@@ -563,7 +563,7 @@ async def _run_wfs_ingestion(file_id: uuid.UUID, url: str, layer: Optional[str],
             logger.info(f"Auto-detected layer: {layer}, table: {table_name}")
 
         # Ensure schema exists in DuckDB before dlt starts
-        duckdb_manager.connection.execute(f"CREATE SCHEMA IF NOT EXISTS {schema_name}")
+        duckdb_manager.execute_ddl(f"CREATE SCHEMA IF NOT EXISTS {schema_name}")
 
         base_generator = client.get_features_generator(layer)
 
@@ -592,12 +592,12 @@ async def _run_wfs_ingestion(file_id: uuid.UUID, url: str, layer: Optional[str],
 
         # Final accurate row count from DuckDB
         full_table_name = f'"{schema_name}"."{table_name}"'
-        db_source.row_count = duckdb_manager.connection.execute(f"SELECT COUNT(*) FROM {full_table_name}").fetchone()[0]
+        db_source.row_count = duckdb_manager.execute_fetchone(f"SELECT COUNT(*) FROM {full_table_name}")[0]
 
         # PII Scan
         logger.info(f"Performing PII scan on {full_table_name}...")
         try:
-            df_sample = duckdb_manager.connection.execute(f"SELECT * FROM {full_table_name} LIMIT 100").fetchdf()
+            df_sample = duckdb_manager.execute_df(f"SELECT * FROM {full_table_name} LIMIT 100")
             db_source.has_pii = pii_scanner.scan_dataframe(df_sample)
             logger.info(f"PII scan completed. Detected: {db_source.has_pii}")
         except Exception as scan_err:

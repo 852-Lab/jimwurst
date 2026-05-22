@@ -9,6 +9,7 @@ vi.mock('../../../src/ravioli/frontend/src/services/api', () => ({
     getJupyterStatus: vi.fn().mockResolvedValue({ status: 'connected' }),
     deleteLog: vi.fn().mockResolvedValue(undefined),
     executeSql: vi.fn().mockResolvedValue(undefined),
+    executePython: vi.fn().mockResolvedValue(undefined),
     streamQuestion: vi.fn(),
   }
 }));
@@ -261,8 +262,7 @@ describe('AnalysisShell Component - Stability & Granular Updates', () => {
     // Verify stream processing
     expect(api.streamQuestion).toHaveBeenCalled();
     // After stream chunks are pushed, the text content should be updated (via DOM manipulation in Notebook)
-    const streamContentContainer = notebook.querySelector('#streaming-content-1');
-    expect(streamContentContainer).not.toBeNull();
+    expect(notebook.textContent).toContain('Why did the chicken');
     // In our Notebook.ts implementation, streaming output is placed dynamically into `#streaming-content`
   });
 
@@ -363,5 +363,76 @@ describe('AnalysisShell Component - Stability & Granular Updates', () => {
     // The QuickInsightView should have rendered the chart log and called renderChart
     const { renderChart } = await import('../../../src/ravioli/frontend/src/components/analysis/notebook/templates');
     expect(renderChart).toHaveBeenCalled();
+  });
+
+  it('mitigation: ensures rerunning an existing Python cell scrubs the streaming-content ID', async () => {
+    const mockAnalysis = { id: 'a1', title: 'Python Test', status: 'completed', analysis_metadata: { type: 'notebook' } };
+    store.setAnalyses([mockAnalysis] as any);
+    store.setActiveAnalysisId('a1');
+    store.setLogs([
+      { id: 'l1', content: 'print("hello")', log_type: 'user_query', tool_name: 'python', index: 1 }
+    ] as any);
+
+    const notebook = renderAnalysis();
+    
+    const { api } = await import('../../../src/ravioli/frontend/src/services/api');
+    
+    // Simulate clicking rerun
+    const rerunBtn = notebook.querySelector('.btn-rerun-cell') as HTMLElement;
+    expect(rerunBtn).not.toBeNull();
+    
+    // Mock the API response
+    (api.executePython as any).mockResolvedValue(undefined);
+    (api.listLogs as any).mockResolvedValue([{ id: 'l1', content: 'print("hello")', log_type: 'user_query', tool_name: 'python', index: 1 }]);
+    
+    // Click the rerun button and wait for the async execution
+    rerunBtn.click();
+    
+    // Wait for the async click handler to resolve executePython and remove the ID
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    // Check if the DOM has any element with id starting with streaming-content
+    // This is the bug that blocked updateAnalysisUI previously
+    const streamingContent = notebook.querySelector('[id^="streaming-content"]');
+    expect(streamingContent).toBeNull();
+  });
+
+  it('mitigation: ensures executing a new Python cell removes the streaming-content ID from the cell block', async () => {
+    const mockAnalysis = { id: 'a1', title: 'Python Test', status: 'completed', analysis_metadata: { type: 'notebook' } };
+    store.setAnalyses([mockAnalysis] as any);
+    store.setActiveAnalysisId('a1');
+    store.setLogs([] as any);
+
+    const notebook = renderAnalysis();
+    
+    // Click the 'First cell' button for python to generate the .new-cell-block
+    const firstPythonBtn = notebook.querySelector('.btn-first-cell[data-type="python"]') as HTMLElement;
+    if (firstPythonBtn) {
+      firstPythonBtn.click();
+    }
+    
+    const newCellBlock = notebook.querySelector('.new-cell-block') as HTMLElement;
+    expect(newCellBlock).not.toBeNull();
+    
+    const runNewBtn = notebook.querySelector('.btn-execute-new-cell') as HTMLElement;
+    expect(runNewBtn).not.toBeNull();
+    
+    // The event handler early-returns if the input is empty. Fill it first!
+    const textarea = newCellBlock.querySelector('textarea') as HTMLTextAreaElement;
+    textarea.value = 'print("hello")';
+    
+    const { api } = await import('../../../src/ravioli/frontend/src/services/api');
+    (api.executePython as any).mockResolvedValue(undefined);
+    (api.listLogs as any).mockResolvedValue([]);
+    
+    runNewBtn.click();
+    
+    // Wait for the async click handler to resolve executePython and remove the block
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    // The new cell block should be removed
+    expect(notebook.querySelector('.new-cell-block')).toBeNull();
+    // And no streaming-content ID should be lingering anywhere in the notebook container
+    expect(notebook.querySelector('[id^="streaming-content"]')).toBeNull();
   });
 });
