@@ -263,7 +263,7 @@ describe('Notebook Component - Stability & Granular Updates', () => {
     store.setLogs([]);
     
     // First render to set lastLogsJson to '[]'
-    const notebook1 = renderNotebook();
+    renderNotebook();
     
     // Switch to another analysis also with NO logs
     const mockAnalysis2 = { id: 'a2', title: 'Another Empty Analysis', status: 'completed' };
