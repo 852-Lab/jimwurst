@@ -17,12 +17,14 @@ const app = document.querySelector<HTMLDivElement>('#app')!;
 let lastView = '';
 let lastActiveId = '';
 let lastUserId = '';
+let lastViewVersion = -1;
 let lastInitializing = true;
 let pollInterval: any;
 let currentPollId: string | null = null;
 
 function updateUI() {
   const currentView = store.getCurrentView();
+  const currentViewVersion = store.getCurrentViewVersion();
   const activeId = store.getActiveAnalysisId() || '';
   const currentUser = store.getCurrentUser();
   const isInitializing = store.getInitializing();
@@ -107,7 +109,7 @@ function updateUI() {
 
   // Update Content area only if view or active analysis changed
   const contentContainer = document.getElementById('content-container')!;
-  if (currentView !== lastView || activeId !== lastActiveId || currentUser.id !== lastUserId) {
+  if (currentView !== lastView || currentViewVersion !== lastViewVersion || activeId !== lastActiveId || currentUser.id !== lastUserId) {
     contentContainer.innerHTML = '';
     
     let content: HTMLElement;
@@ -130,6 +132,7 @@ function updateUI() {
     contentContainer.appendChild(content);
     
     lastView = currentView;
+    lastViewVersion = currentViewVersion;
     lastActiveId = activeId;
     lastUserId = currentUser.id;
   } else {
@@ -259,4 +262,3 @@ store.subscribe(async () => {
 
 init();
 updateUI();
-
