@@ -9,6 +9,11 @@ classDiagram
     Analysis <|-- QuickInsight
     Analysis <|-- Notebook
     Notebook <|-- DeepDive
+    Notebook *-- Cell
+    Cell <|-- SQLCell
+    Cell <|-- PythonCell
+    Cell <|-- AICell
+    Cell <|-- MarkdownCell
 
     class Analysis {
         <<Top Class>>
@@ -24,6 +29,21 @@ classDiagram
     class DeepDive {
         Upcoming
         AI-powered Notebook analysis
+    }
+    class Cell {
+        <<Abstract>>
+    }
+    class SQLCell {
+        DuckDB
+    }
+    class PythonCell {
+        Jupyter
+    }
+    class AICell {
+        Chat
+    }
+    class MarkdownCell {
+        Rich Text
     }
 ```
 
