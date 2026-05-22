@@ -21,7 +21,7 @@ from ravioli.ai.skills import communication as skill_comm
 from ravioli.ai.skills import analysis as skill_analysis
 from ravioli.backend.data.olap.duckdb_manager import duckdb_manager
 from ydata_profiling import ProfileReport
-from ravioli.backend.api.v1.endpoints.data import get_current_user
+from ravioli.backend.api.v1.endpoints.data import get_current_user, LogCaptureHandler
 
 
 router = APIRouter()
@@ -860,6 +860,56 @@ async def create_quick_insight(
         followup_questions=followup_questions
     )
 
+@router.post("/quick-insight-stream")
+async def create_quick_insight_stream(
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    log_queue = asyncio.Queue()
+    loop = asyncio.get_running_loop()
+    handler = LogCaptureHandler(log_queue, loop)
+    
+    root_logger = logging.getLogger()
+    if handler not in root_logger.handlers:
+        root_logger.addHandler(handler)
+    root_logger.setLevel(logging.INFO)
+
+    async def event_generator():
+        try:
+            logging.info("[SYSTEM] Initializing Quick Insight Stream...")
+            yield f"data: LOG:INFO: [SYSTEM] Analyzing file: {file.filename}\n\n"
+            
+            # Start the actual insight generation
+            task = asyncio.create_task(create_quick_insight(background_tasks, file, db, current_user))
+            
+            while not task.done():
+                try:
+                    msg = await asyncio.wait_for(log_queue.get(), timeout=0.5)
+                    yield f"data: LOG:{msg}\n\n"
+                except asyncio.TimeoutError:
+                    yield f"data: PING:keep-alive\n\n"
+                    continue
+            
+            while not log_queue.empty():
+                msg = log_queue.get_nowait()
+                yield f"data: LOG:{msg}\n\n"
+            
+            try:
+                result = await task
+                result_dict = result.model_dump(mode="json")
+                yield f"data: DONE:{json.dumps(result_dict)}\n\n"
+            except Exception as e:
+                logger.exception(f"Error during quick insight generation for {file.filename}")
+                yield "data: ERROR:An internal error occurred.\n\n"
+                
+        finally:
+            root_logger = logging.getLogger()
+            root_logger.removeHandler(handler)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
+
 @router.post("/quick-insight/existing", response_model=schemas.QuickInsightResponse)
 async def create_quick_insight_existing(
     background_tasks: BackgroundTasks,
@@ -928,6 +978,55 @@ async def create_quick_insight_existing(
         stats={"rows": row_count, "cols": col_count},
         followup_questions=followup_questions
     )
+
+@router.post("/quick-insight-stream/existing")
+async def create_quick_insight_stream_existing(
+    background_tasks: BackgroundTasks,
+    request: schemas.QuickInsightExistingRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    log_queue = asyncio.Queue()
+    loop = asyncio.get_running_loop()
+    handler = LogCaptureHandler(log_queue, loop)
+    
+    root_logger = logging.getLogger()
+    if handler not in root_logger.handlers:
+        root_logger.addHandler(handler)
+    root_logger.setLevel(logging.INFO)
+
+    async def event_generator():
+        try:
+            logging.info(f"[SYSTEM] Initializing Quick Insight Stream for existing file ID: {request.file_id}...")
+            yield f"data: LOG:INFO: [SYSTEM] Analyzing existing file...\n\n"
+            
+            task = asyncio.create_task(create_quick_insight_existing(background_tasks, request, db, current_user))
+            
+            while not task.done():
+                try:
+                    msg = await asyncio.wait_for(log_queue.get(), timeout=0.5)
+                    yield f"data: LOG:{msg}\n\n"
+                except asyncio.TimeoutError:
+                    yield f"data: PING:keep-alive\n\n"
+                    continue
+            
+            while not log_queue.empty():
+                msg = log_queue.get_nowait()
+                yield f"data: LOG:{msg}\n\n"
+            
+            try:
+                result = await task
+                result_dict = result.model_dump(mode="json")
+                yield f"data: DONE:{json.dumps(result_dict)}\n\n"
+            except Exception as e:
+                logger.exception(f"Error during existing quick insight generation")
+                yield "data: ERROR:An internal error occurred.\n\n"
+                
+        finally:
+            root_logger = logging.getLogger()
+            root_logger.removeHandler(handler)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 from pydantic import BaseModel
 
