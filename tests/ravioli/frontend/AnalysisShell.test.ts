@@ -9,8 +9,18 @@ vi.mock('../../../src/ravioli/frontend/src/services/api', () => ({
     getJupyterStatus: vi.fn().mockResolvedValue({ status: 'connected' }),
     deleteLog: vi.fn().mockResolvedValue(undefined),
     executeSql: vi.fn().mockResolvedValue(undefined),
+    streamQuestion: vi.fn(),
   }
 }));
+
+// Mock templates to verify renderChart is called
+vi.mock('../../../src/ravioli/frontend/src/components/analysis/notebook/templates', async () => {
+  const actual = await vi.importActual<any>('../../../src/ravioli/frontend/src/components/analysis/notebook/templates');
+  return {
+    ...actual,
+    renderChart: vi.fn()
+  };
+});
 
 describe('AnalysisShell Component - Stability & Granular Updates', () => {
   beforeEach(() => {
@@ -282,5 +292,76 @@ describe('AnalysisShell Component - Stability & Granular Updates', () => {
     // It should contain the notebook welcome text (the empty state content, not a completely blank container)
     expect(cellContainer?.innerHTML).toContain('Start your analysis');
     expect(cellContainer?.innerHTML).toContain('Choose a cell type to begin');
+  });
+
+  it('handles quick insight stream properly: ignores VIZ tag, removes streaming ID, and renders chart', async () => {
+    const mockAnalysis = { id: 'a1', title: 'Quick Insight Test', status: 'completed', analysis_metadata: { type: 'quick_insight' } };
+    store.setAnalyses([mockAnalysis] as any);
+    store.setActiveAnalysisId('a1');
+    store.setLogs([
+       { id: 'l1', content: 'Init', log_type: 'thought' }
+    ] as any);
+
+    const notebook = renderAnalysis();
+    
+    // Type in chat input and send
+    const textarea = notebook.querySelector('#quick-insight-chat-input') as HTMLTextAreaElement;
+    expect(textarea).not.toBeNull();
+    textarea.value = 'Show me a chart';
+    
+    const sendBtn = notebook.querySelector('#btn-quick-insight-send') as HTMLButtonElement;
+    expect(sendBtn).not.toBeNull();
+    
+    // Import API to mock streamQuestion
+    const { api } = await import('../../../src/ravioli/frontend/src/services/api');
+    
+    let streamOnMessage: any;
+    let streamOnComplete: any;
+    
+    (api.streamQuestion as any).mockImplementation((analysisId: string, question: string, replaceLogId: string | null, insertAfterLogId: string | null, onMessage: any, onComplete: any, onError: any) => {
+      streamOnMessage = onMessage;
+      streamOnComplete = onComplete;
+    });
+    
+    // Click send
+    sendBtn.click();
+    
+    expect(api.streamQuestion).toHaveBeenCalled();
+    
+    // Send some tokens
+    streamOnMessage('Here ');
+    streamOnMessage('is ');
+    streamOnMessage('a ');
+    streamOnMessage('chart.');
+    streamOnMessage('[VIZ]{ "type": "chart" }'); // This should be ignored
+    
+    // Check if streaming content exists and does NOT contain VIZ
+    const cellContainer = notebook.querySelector('#cell-container') as HTMLElement;
+    const streamingContent = cellContainer.querySelector('[id^="streaming-content-temp-"]') as HTMLElement;
+    expect(streamingContent).not.toBeNull();
+    expect(streamingContent.textContent).not.toContain('[VIZ]');
+    expect(streamingContent.textContent).toContain('Here is a chart.');
+    
+    // Complete stream
+    (api.listLogs as any).mockResolvedValue([
+       { id: 'l1', content: 'Init', log_type: 'thought' },
+       { id: 'l2', content: 'Show me a chart', log_type: 'user_query' },
+       { id: 'l3', content: 'Here is a chart.', log_type: 'thought', data: { type: 'chart', title: 'My Chart' } }
+    ]);
+    
+    await streamOnComplete();
+    
+    // Verify ID is removed so DOM state is unlocked
+    expect(streamingContent.hasAttribute('id')).toBe(false);
+    
+    // Trigger update manually (normally done by main.ts store subscription)
+    updateAnalysisUI(notebook);
+    
+    // Let event loop process
+    await new Promise(resolve => setTimeout(resolve, 0));
+    
+    // The QuickInsightView should have rendered the chart log and called renderChart
+    const { renderChart } = await import('../../../src/ravioli/frontend/src/components/analysis/notebook/templates');
+    expect(renderChart).toHaveBeenCalled();
   });
 });

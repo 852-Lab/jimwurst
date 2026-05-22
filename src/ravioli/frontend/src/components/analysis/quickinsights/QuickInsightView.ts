@@ -1,5 +1,5 @@
 import { store } from '../../../store';
-import { renderMarkdown, renderRichOutput } from '../notebook/templates';
+import { renderMarkdown, renderRichOutput, renderChart } from '../notebook/templates';
 import { bindQuickInsightInteractions } from './QuickInsightInteractions';
 
 const executingCells = new Set<string>();
@@ -189,6 +189,15 @@ export function updateQuickInsightView(container: HTMLElement) {
   const isAtBottom = cellContainer.scrollHeight - prevScrollTop <= cellContainer.clientHeight + 50;
 
   cellContainer.innerHTML = html;
+
+  // Render charts that are present in the output data
+  chatCells.forEach(cell => {
+    cell.outputs.forEach(out => {
+      if (out.data && out.data.type === 'chart') {
+        renderChart(`chart-${out.id}`, out.data);
+      }
+    });
+  });
 
   if (isAtBottom) {
     cellContainer.scrollTop = cellContainer.scrollHeight;
