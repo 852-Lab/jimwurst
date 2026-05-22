@@ -371,6 +371,23 @@ async def get_table_preview(full_table_name: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch preview: {str(e)}")
 
+class _QueryRequest(BaseModel):
+    sql: str
+
+@router.post("/query")
+async def run_query(request: _QueryRequest):
+    """
+    Execute a SQL query via the backend's shared DuckDBManager connection.
+    This is used by the Jupyter kernel so it can run queries without opening
+    a separate DuckDB file connection (which would conflict with the main
+    read-write lock held by this process).
+    """
+    try:
+        df = duckdb_manager.connection.execute(request.sql).fetchdf()
+        return {"columns": list(df.columns), "data": df.to_dict(orient="records")}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 @router.delete("/files/{file_id}")
 async def delete_file(file_id: uuid.UUID, db: Session = Depends(get_db)):
     # 1. Fetch record
