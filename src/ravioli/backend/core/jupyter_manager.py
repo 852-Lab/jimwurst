@@ -45,24 +45,21 @@ class JupyterManager:
             self.clients[aid_str] = kc
             
             # Setup environment with pre-imports, inline plotting, and a lazy DuckDB wrapper.
-            # IMPORTANT: We do NOT hold a persistent duckdb connection in the kernel process.
-            # A persistent connection (even read_only=True) would conflict with the main backend's
-            # read-write DuckDBManager connection via OS-level file locking.
-            # Instead, _LazyDuckDB opens a fresh connection per execute() call and closes it
+            # _LazyDuckDB opens a fresh read_only=True connection per query and closes it
+            # immediately. This is now safe because DuckDBManager no longer holds a persistent
+            # read-write file lock — it too opens and closes connections per operation.
+
+            db_path = str(settings.duckdb_path.absolute()).replace("\\", "\\\\")
             startup_code = f"""
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import json as _json
-import urllib.request as _urllib_req
-import urllib.error as _urllib_err
+import duckdb as _duckdb_module
 %matplotlib inline
 pd.set_option('display.notebook_repr_html', True)
 
-_RAVIOLI_QUERY_URL = 'http://localhost:8000/api/v1/data/query'
-
 class _LazyDuckDBResult:
-    \"\"\"Holds eagerly-fetched results so .df() / .fetchall() / .fetchone() all work.\"\"\"
+    \"\"\"Holds eagerly-fetched results so .df() / .fetchall() / .fetchone() all work after the connection closes.\"\"\"
     def __init__(self, df):
         self._df = df
     def df(self):
@@ -78,38 +75,28 @@ class _LazyDuckDBResult:
         return repr(self._df)
 
 class _LazyDuckDB:
-    \"\"\"Routes queries through the backend HTTP API to avoid cross-process DuckDB file lock conflicts.\"\"\"
-    def __init__(self, url):
-        self._url = url
+    \"\"\"Opens a fresh read-only connection per query and closes it immediately — no persistent file lock.\"\"\"
+    def __init__(self, path):
+        self._path = path
     def execute(self, sql, *args):
-        payload = _json.dumps({{'sql': sql}}).encode('utf-8')
-        req = _urllib_req.Request(self._url, data=payload, headers={{'Content-Type': 'application/json'}})
+        _c = _duckdb_module.connect(self._path, read_only=True)
         try:
-            with _urllib_req.urlopen(req, timeout=60) as resp:
-                body = _json.loads(resp.read())
-        except _urllib_err.HTTPError as e:
-            detail = ''
-            try:
-                detail = _json.loads(e.read()).get('detail', str(e))
-            except Exception:
-                detail = str(e)
-            raise RuntimeError(f'DuckDB query failed: {{detail}}') from None
-        columns = body.get('columns', [])
-        data = body.get('data', [])
-        import pandas as _pd
-        df = _pd.DataFrame(data, columns=columns)
-        return _LazyDuckDBResult(df)
+            _rel = _c.execute(sql, *args)
+            _df = _rel.fetchdf()
+        finally:
+            _c.close()
+        return _LazyDuckDBResult(_df)
 
     def table(self, table_name):
         \"\"\"Convenience method to load an entire table directly into a DataFrame.\"\"\"
-        return self.execute(f'SELECT * FROM {{table_name}}').df()
+        return self.execute(f"SELECT * FROM {{table_name}}").df()
 
 try:
-    con = _LazyDuckDB(_RAVIOLI_QUERY_URL)
+    con = _LazyDuckDB('{db_path}')
 
     _original_read_sql = pd.read_sql
     def _patched_read_sql(sql, con=None, **kwargs):
-        \"\"\"Patched pd.read_sql that automatically uses the DuckDB proxy if no con is provided.\"\"\"
+        \"\"\"Patched pd.read_sql that automatically uses the DuckDB wrapper if no con is provided.\"\"\"
         if con is None:
             return globals()['con'].execute(sql).df()
         return _original_read_sql(sql, con=con, **kwargs)
@@ -128,12 +115,12 @@ try:
     ))
 except Exception as _e:
     import logging as _logging
-    _logging.getLogger('IPython').warning("DuckDB proxy wrapper init failed: " + str(_e))
+    _logging.getLogger('IPython').warning("DuckDB lazy wrapper init failed: " + str(_e))
 """
             kc.execute(startup_code)
 
-            
         return self.clients[aid_str]
+
 
     def execute_code(self, analysis_id: uuid.UUID, code: str) -> List[dict]:
         """

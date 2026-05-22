@@ -12,32 +12,77 @@ from ravioli.backend.data.olap.ingestion.ingestor import DataIngestor
 
 logger = logging.getLogger(__name__)
 
+import contextlib
+
 class DuckDBManager:
     _instance = None
-    _connection = None
+
+    # _md_connection is kept only for MotherDuck operations that require session
+    # continuity (ATTACH / USE / DETACH across multiple statements). All other
+    # operations open a fresh connection via connect() and close it immediately.
+    _md_connection = None
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(DuckDBManager, cls).__new__(cls)
         return cls._instance
 
+    def _db_path(self) -> str:
+        os.makedirs(os.path.dirname(settings.duckdb_path), exist_ok=True)
+        return str(settings.duckdb_path)
+
+    @contextlib.contextmanager
+    def connect(self):
+        """
+        Open a fresh DuckDB connection, yield it, then close it immediately.
+        Use this for all local (non-MotherDuck) operations so no file lock
+        is held between requests.
+        """
+        conn = duckdb.connect(self._db_path())
+        try:
+            yield conn
+        finally:
+            try:
+                conn.close()
+            except Exception as e:
+                logger.warning("Failed to close ephemeral DuckDB connection: %s", e)
+
+    # ------------------------------------------------------------------ helpers
+    def execute_df(self, sql: str) -> pd.DataFrame:
+        """Execute SQL and return the result as a DataFrame."""
+        with self.connect() as conn:
+            return conn.execute(sql).fetchdf()
+
+    def execute_fetchone(self, sql: str):
+        """Execute SQL and return the first row as a tuple (or None)."""
+        with self.connect() as conn:
+            return conn.execute(sql).fetchone()
+
+    def execute_ddl(self, sql: str) -> None:
+        """Execute a DDL / DML statement (no return value)."""
+        with self.connect() as conn:
+            conn.execute(sql)
+
+    # ------------------------------------------------------------------ legacy shim
     @property
     def connection(self):
-        if self._connection is None:
-            # Ensure the directory exists
-            os.makedirs(os.path.dirname(settings.duckdb_path), exist_ok=True)
-            self._connection = duckdb.connect(str(settings.duckdb_path))
-            
-            # Try to attach Motherduck if configured
+        """
+        DEPRECATED shim — returns a fresh connection that is NOT automatically
+        closed. Callers that need this for MotherDuck multi-statement ops should
+        use _md_connection directly. All other callers should migrate to
+        connect(), execute_df(), execute_fetchone(), or execute_ddl().
+        """
+        if self._md_connection is None:
+            self._md_connection = duckdb.connect(self._db_path())
             self._attach_motherduck()
-            
-        return self._connection
+        return self._md_connection
 
     def _attach_motherduck(self):
         """
         Check for Motherduck token in system_settings and attach if found.
         Handles workspace mode where aliases might be restricted.
         """
+
         # Check if ravioli is already specifically attached as a Motherduck DB
         try:
             res = self._connection.execute("PRAGMA show_databases").fetchall()
@@ -190,40 +235,40 @@ class DuckDBManager:
         """
         List all user tables across all schemas in the DuckDB database.
         """
-        conn = self.connection
-        # Using information_schema to see all tables
         query = """
             SELECT table_schema || '.' || table_name 
             FROM information_schema.tables 
             WHERE table_schema NOT IN ('information_schema', 'pg_catalog')
         """
-        return [row[0] for row in conn.execute(query).fetchall()]
+        with self.connect() as conn:
+            return [row[0] for row in conn.execute(query).fetchall()]
 
     def query(self, sql: str):
         """
         Execute a query and return results as a list of dictionaries.
         Ensures results are JSON serializable (handles timestamps and NaNs).
         """
-        df = self.connection.execute(sql).fetchdf()
-        
+        df = self.execute_df(sql)
+
         # Convert all timestamp columns to ISO format strings
         for col in df.select_dtypes(include=['datetime64', 'datetimetz']).columns:
             df[col] = df[col].dt.strftime('%Y-%m-%d %H:%M:%S')
-        
+
         # Replace NaN/NaT with None for JSON compliance
         return df.where(pd.notnull(df), None).to_dict(orient='records')
 
     def is_motherduck_connected(self):
         """Check if Motherduck database is attached."""
         try:
-            res = self.connection.execute(
+            conn = self.connection  # MD-persistent connection
+            res = conn.execute(
                 "SELECT database_name, path, type FROM duckdb_databases()"
             ).fetchall()
             for row in res:
                 db_name = row[0]
                 path = row[1] if len(row) > 1 else None
                 db_type = row[2] if len(row) > 2 else None
-                
+
                 if db_type == 'motherduck' or (path and str(path).lower().startswith('md:')):
                     return True
                 # Legacy / mock testing support
@@ -233,16 +278,17 @@ class DuckDBManager:
         except Exception as e:
             logger.warning(f"Error checking Motherduck connection, attempting reconnect: {e}")
             try:
-                # Force close and clear the connection to heal stale/broken state (e.g. remotely dropped databases)
+                # Force close and clear the connection to heal stale/broken state
                 self.reconnect()
-                res = self.connection.execute(
+                conn = self.connection
+                res = conn.execute(
                     "SELECT database_name, path, type FROM duckdb_databases()"
                 ).fetchall()
                 for row in res:
                     db_name = row[0]
                     path = row[1] if len(row) > 1 else None
                     db_type = row[2] if len(row) > 2 else None
-                    
+
                     if db_type == 'motherduck' or (path and str(path).lower().startswith('md:')):
                         return True
                     # Legacy / mock testing support
@@ -438,15 +484,16 @@ class DuckDBManager:
 duckdb_manager = DuckDBManager()
 data_ingestor = DataIngestor(duckdb_manager)
 
-# Eagerly initialize the DuckDB connection in a background thread
-# so that the first SQL cell execution doesn't block for MotherDuck attachment
+# Eagerly open and immediately close a connection so the DuckDB file is
+# created and any one-time startup work (e.g. WAL replay) happens at boot
+# rather than on the first user request.
 import threading
 def _pre_init_duckdb():
     try:
-        _ = duckdb_manager.connection
+        with duckdb_manager.connect() as conn:
+            conn.execute("SELECT 1").fetchone()
         logger.info("DuckDB Manager eagerly initialized successfully.")
     except Exception as e:
         logger.error(f"DuckDB Manager eager initialization failed: {e}")
 
 threading.Thread(target=_pre_init_duckdb, daemon=True).start()
-

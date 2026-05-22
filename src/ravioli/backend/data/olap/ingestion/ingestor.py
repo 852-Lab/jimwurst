@@ -90,31 +90,26 @@ class DataIngestor:
 
     def ingest_csv(self, file_path: Path, table_name: str, schema: str = "main") -> int:
         """Standard CSV Ingestion."""
-        conn = self.duckdb_manager.connection
-        conn.execute(f"CREATE SCHEMA IF NOT EXISTS {schema}")
         full_table_name = f'"{schema}"."{table_name}"'
-        
-        if self._is_chucking(file_path):
-            logger.info(f"CHUCKING MODE ACTIVATED for CSV: {file_path}")
-            # DuckDB handles this well natively, but we could add specific settings here
-        
-        conn.execute(f"CREATE OR REPLACE TABLE {full_table_name} AS SELECT * FROM read_csv_auto('{file_path}')")
-        return conn.execute(f"SELECT COUNT(*) FROM {full_table_name}").fetchone()[0]
+        with self.duckdb_manager.connect() as conn:
+            conn.execute(f"CREATE SCHEMA IF NOT EXISTS {schema}")
+            if self._is_chucking(file_path):
+                logger.info(f"CHUCKING MODE ACTIVATED for CSV: {file_path}")
+            conn.execute(f"CREATE OR REPLACE TABLE {full_table_name} AS SELECT * FROM read_csv_auto('{file_path}')")
+            return conn.execute(f"SELECT COUNT(*) FROM {full_table_name}").fetchone()[0]
 
     async def ingest_xlsx(self, file_path: Path, base_table_name: str, schema: str = "main", kowalski_agent=None) -> list:
         """XLSX Ingestion with AI analysis."""
-        conn = self.duckdb_manager.connection
-        conn.execute(f"CREATE SCHEMA IF NOT EXISTS {schema}")
         results = []
         is_chucking = self._is_chucking(file_path)
-        
+
         try:
             excel_file = pd.ExcelFile(file_path)
             for sheet_name in excel_file.sheet_names:
                 clean_name = "".join(c if c.isalnum() else "_" for c in sheet_name).lower()
                 table_name = f"{base_table_name}_{clean_name}__xlsx"
                 full_table_name = f'"{schema}"."{table_name}"'
-                
+
                 # Analyze sheet structure regardless of size (using small sample)
                 df_raw_sample = pd.read_excel(file_path, sheet_name=sheet_name, nrows=20, header=None)
                 grid_lines = [f"Row {i}: | " + " | ".join([str(v).strip().replace('\n',' ') for v in row]) + " |" for i, row in df_raw_sample.iterrows()]
@@ -128,11 +123,14 @@ class DataIngestor:
                     xlsx_pipeline.run(gen, table_name=table_name)
                 else:
                     df_final = process_sheet_with_analysis(pd.read_excel(file_path, sheet_name=sheet_name, header=None), analysis)
-                    conn.register("tmp_df_final", df_final)
-                    conn.execute(f"CREATE OR REPLACE TABLE {full_table_name} AS SELECT * FROM tmp_df_final")
-                    conn.unregister("tmp_df_final")
-                
-                results.append({"sheet_name": sheet_name, "table_name": table_name, "status": "completed", "row_count": conn.execute(f"SELECT COUNT(*) FROM {full_table_name}").fetchone()[0]})
+                    with self.duckdb_manager.connect() as conn:
+                        conn.execute(f"CREATE SCHEMA IF NOT EXISTS {schema}")
+                        conn.register("tmp_df_final", df_final)
+                        conn.execute(f"CREATE OR REPLACE TABLE {full_table_name} AS SELECT * FROM tmp_df_final")
+                        conn.unregister("tmp_df_final")
+
+                row_count = (self.duckdb_manager.execute_fetchone(f"SELECT COUNT(*) FROM {full_table_name}") or (0,))[0]
+                results.append({"sheet_name": sheet_name, "table_name": table_name, "status": "completed", "row_count": row_count})
         except Exception as e:
             logger.error(f"XLSX Ingestion failed: {e}")
             raise e
@@ -191,7 +189,7 @@ class DataIngestor:
             for table_cfg in strategy["tables"]:
                 tn = table_cfg["table_name"]
                 try:
-                    count = self.duckdb_manager.connection.execute(f'SELECT COUNT(*) FROM "{schema}"."{tn}"').fetchone()[0]
+                    count = (self.duckdb_manager.execute_fetchone(f'SELECT COUNT(*) FROM "{schema}"."{tn}"') or (0,))[0]
                     results.append({"table_name": tn, "row_count": count, "status": "completed"})
                     logger.info(f"Ingestion successful for table '{tn}': {count:,} rows.")
                 except Exception as e:
@@ -226,5 +224,5 @@ class DataIngestor:
         tn = table_name
         p = create_ravioli_pipeline(f"gpx_{uuid.uuid4().hex[:8]}_{original_filename}", schema)
         p.run(dlt.resource(parse_gpx(), name=tn), table_name=tn)
-        count = self.duckdb_manager.connection.execute(f'SELECT COUNT(*) FROM "{schema}"."{tn}"').fetchone()[0]
+        count = (self.duckdb_manager.execute_fetchone(f'SELECT COUNT(*) FROM "{schema}"."{tn}"') or (0,))[0]
         return [{"table_name": tn, "row_count": count, "status": "completed"}]

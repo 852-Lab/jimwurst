@@ -81,10 +81,10 @@ async def push_all_to_motherduck(db: Session = Depends(get_db)):
             # Verify which tables were copied
             for schema, table in tables_to_push:
                 try:
-                    exists = duckdb_manager.connection.execute(
+                    exists = (duckdb_manager.execute_fetchone(
                         f"SELECT count(*) FROM information_schema.tables "
                         f"WHERE table_schema='{schema}' AND table_name='{table}'"
-                    ).fetchone()[0] > 0
+                    ) or (0,))[0] > 0
                 except Exception:
                     exists = False
                 
