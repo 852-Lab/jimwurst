@@ -59,6 +59,10 @@ The code is organized into the following structure:
 ```text
 analysis/
 ├── AnalysisShell.ts           # Generic wrapper for any Analysis
+├── create-analysis/           # Specialized views for Analysis creation
+│   ├── CreateAnalysis.ts
+│   ├── interactions.ts
+│   └── templates.ts
 ├── quickinsights/             # Specialized views for Quick Insight
 │   ├── QuickInsightInteractions.ts
 │   └── QuickInsightView.ts
