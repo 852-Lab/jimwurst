@@ -361,8 +361,54 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
 
     // 2. Parse and Group logs list into Jupyter Notebook cell cards
     const notebookCells = groupLogsIntoCells(logs);
+    const isQuickInsight = analysis.analysis_metadata?.type === 'quick_insight';
     
     html += notebookCells.map(cell => {
+      if (isQuickInsight) {
+        return `
+          <div class="space-y-8 py-4 relative group animate-in fade-in duration-300">
+            <!-- User Question Bubble -->
+            ${cell.inputContent && cell.inputContent !== 'Initialize Sequence Brain' ? `
+            <div class="flex flex-col items-end gap-2 mb-8">
+               <div class="max-w-[85%] bg-surface-container-highest/80 px-6 py-4 rounded-3xl rounded-tr-md text-on-surface text-[15px] font-medium leading-relaxed border border-outline-variant/10 shadow-sm whitespace-pre-wrap">${cell.inputContent}</div>
+            </div>
+            ` : ''}
+            
+            <!-- AI Answer -->
+            <div class="flex items-start gap-4">
+              <div class="w-10 h-10 rounded-2xl bg-secondary/15 flex flex-shrink-0 items-center justify-center border border-secondary/20 shadow-lg shadow-secondary/5 mt-1">
+                <span class="material-symbols-outlined text-secondary" data-icon="auto_awesome">auto_awesome</span>
+              </div>
+              <div class="flex-1 min-w-0 space-y-6 pt-1">
+                ${cell.outputs.length === 0 
+                  ? (executingCells.has(cell.inputLogId) ? '<div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg animate-pulse" id="streaming-content-' + cell.index + '"><span class="inline-block w-1 h-4 bg-primary animate-pulse"></span></div>' : '<span class="text-xs text-outline italic">No output generated</span>')
+                  : cell.outputs.map(out => {
+                      let contentHtml = out.content && out.content.trim() !== '[SQL Execution Result]' && out.content.trim() !== '[Python Execution Result]' 
+                          ? `<div class="prose prose-invert max-w-none text-on-surface-variant leading-relaxed font-body-lg">${renderMarkdown(out.content)}</div>` 
+                          : '';
+                      
+                      let dataHtml = '';
+                      if (out.data) {
+                        if (out.data.type === 'chart') {
+                          dataHtml += `<div class="mt-4 glass-panel p-6 rounded-2xl border-primary/20 h-80 relative bg-surface-container-lowest/30"><canvas id="chart-${out.id}"></canvas></div>`;
+                        }
+                        if (out.data.sql_outputs) {
+                          dataHtml += out.data.sql_outputs.map((so: any) => renderRichOutput(so)).join('');
+                        }
+                        if (out.data.jupyter_outputs) {
+                          dataHtml += out.data.jupyter_outputs.map((jo: any) => renderRichOutput(jo)).join('');
+                        }
+                      }
+                      
+                      return contentHtml + dataHtml;
+                    }).join('')
+                }
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
       if (cell.toolName === 'markdown') {
         return `
           <div class="glass-panel p-6 rounded-3xl bg-surface-container-low/30 border-outline-variant/10 relative overflow-hidden group hover:border-indigo-400/20 transition-all duration-300 animate-in fade-in duration-300">
