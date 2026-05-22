@@ -1,6 +1,6 @@
 import { api } from '../../services/api';
 import { store } from '../../store';
-import { clearInsightsCache } from '../analysis/Insights';
+import { clearInsightsCache } from '../Insights';
 import type { User, UserRole, UserGroup, Insight } from '../../types';
 import { insightReviewCard } from './templates';
 import { createModal, closeModal } from '../utils/dom';

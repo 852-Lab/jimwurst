@@ -1,4 +1,4 @@
-import type { InsightsSummary, LineageResponse } from '../../../types';
+import type { InsightsSummary, LineageResponse } from '../../types';
 
 export const state = {
   activeDays: 7,

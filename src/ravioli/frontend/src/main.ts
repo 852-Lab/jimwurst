@@ -3,7 +3,7 @@ import { store } from './store';
 import { api } from './services/api';
 import { renderSidebar, updateSidebarUI } from './components/Sidebar';
 import { renderAnalysis, updateAnalysisUI } from './components/analysis/AnalysisShell';
-import { renderInsights } from './components/analysis/Insights';
+import { renderInsights } from './components/Insights';
 import { renderCreateAnalysis } from './components/analysis/CreateAnalysis';
 import { renderKnowledge } from './components/Knowledge';
 import { renderData } from './components/Data';

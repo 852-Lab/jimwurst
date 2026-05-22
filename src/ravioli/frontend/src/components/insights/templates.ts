@@ -1,5 +1,5 @@
 import { formatDistanceToNow, format } from 'date-fns';
-import type { Insight, LineageNode } from '../../../types';
+import type { Insight, LineageNode } from '../../types';
 
 export function banCard(value: number | string, label: string, icon: string, accent = 'text-primary') {
   return `
