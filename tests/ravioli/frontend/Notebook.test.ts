@@ -254,4 +254,32 @@ describe('Notebook Component - Stability & Granular Updates', () => {
     expect(streamContentContainer).not.toBeNull();
     // In our Notebook.ts implementation, streaming output is placed dynamically into `#streaming-content`
   });
+
+  it('populates cellContainer on initial render even if logs match previous state', () => {
+    // Setup an analysis with NO logs
+    const mockAnalysis = { id: 'a1', title: 'Empty Analysis', status: 'completed' };
+    store.setAnalyses([mockAnalysis] as any);
+    store.setActiveAnalysisId('a1');
+    store.setLogs([]);
+    
+    // First render to set lastLogsJson to '[]'
+    renderNotebook();
+    
+    // Switch to another analysis also with NO logs
+    const mockAnalysis2 = { id: 'a2', title: 'Another Empty Analysis', status: 'completed' };
+    store.setAnalyses([mockAnalysis, mockAnalysis2] as any);
+    store.setActiveAnalysisId('a2');
+    store.setLogs([]);
+    
+    // Render again! isInitial will be true since renderNotebook creates a new container.
+    // If the fix is correct, it should bypass the logsJson !== lastLogsJson check and populate.
+    const notebook2 = renderNotebook();
+    
+    const cellContainer = notebook2.querySelector('#cell-container');
+    expect(cellContainer).not.toBeNull();
+    
+    // It should contain the notebook welcome text (the empty state content, not a completely blank container)
+    expect(cellContainer?.innerHTML).toContain('Start your analysis');
+    expect(cellContainer?.innerHTML).toContain('Choose a cell type to begin');
+  });
 });

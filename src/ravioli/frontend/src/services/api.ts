@@ -163,6 +163,98 @@ export const api = {
     return response.json();
   },
 
+  streamQuickInsight(file: File, onLog: (msg: string) => void): Promise<QuickInsightResponse> {
+    return new Promise((resolve, reject) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      fetch(`${API_BASE}/analyses/quick-insight-stream`, {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      }).then(async (response) => {
+        if (!response.ok) throw new Error('Stream failed');
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        
+        if (!reader) {
+          reject(new Error('No response body'));
+          return;
+        }
+
+        let buffer = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          buffer += decoder.decode(value, { stream: true });
+          const chunks = buffer.split('\n\n');
+          buffer = chunks.pop() || '';
+          
+          for (const chunk of chunks) {
+            if (chunk.startsWith('data: ')) {
+              const content = chunk.substring(6);
+              if (content.startsWith('LOG:')) {
+                onLog(content.substring(4));
+              } else if (content.startsWith('PING:')) {
+                console.debug('Stream PING: keep-alive');
+              } else if (content.startsWith('DONE:')) {
+                resolve(JSON.parse(content.substring(5)));
+              } else if (content.startsWith('ERROR:')) {
+                reject(new Error(content.substring(6)));
+              }
+            }
+          }
+        }
+      }).catch(reject);
+    });
+  },
+
+  streamQuickInsightFromExisting(fileId: string, onLog: (msg: string) => void): Promise<QuickInsightResponse> {
+    return new Promise((resolve, reject) => {
+      fetch(`${API_BASE}/analyses/quick-insight-stream/existing`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ file_id: fileId }),
+        credentials: 'include'
+      }).then(async (response) => {
+        if (!response.ok) throw new Error('Stream failed');
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        
+        if (!reader) {
+          reject(new Error('No response body'));
+          return;
+        }
+
+        let buffer = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          buffer += decoder.decode(value, { stream: true });
+          const chunks = buffer.split('\n\n');
+          buffer = chunks.pop() || '';
+          
+          for (const chunk of chunks) {
+            if (chunk.startsWith('data: ')) {
+              const content = chunk.substring(6);
+              if (content.startsWith('LOG:')) {
+                onLog(content.substring(4));
+              } else if (content.startsWith('PING:')) {
+                console.debug('Stream PING: keep-alive');
+              } else if (content.startsWith('DONE:')) {
+                resolve(JSON.parse(content.substring(5)));
+              } else if (content.startsWith('ERROR:')) {
+                reject(new Error(content.substring(6)));
+              }
+            }
+          }
+        }
+      }).catch(reject);
+    });
+  },
+
   async listFiles(): Promise<DataSource[]> {
     const response = await fetch(`${API_BASE}/data/files`, { credentials: 'include' });
     if (!response.ok) throw new Error('Failed to fetch files');

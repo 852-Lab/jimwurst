@@ -194,13 +194,26 @@ export async function handleFileUpload(container: HTMLElement, file: File) {
   const dropZone = container.querySelector('#drop-zone');
   const processingState = container.querySelector('#processing-state');
   const backBtn = container.querySelector('#back-to-select');
+  const logsContainer = container.querySelector('#quick-insight-logs');
 
   dropZone?.classList.add('hidden');
   processingState?.classList.remove('hidden');
   if (backBtn) (backBtn as HTMLButtonElement).disabled = true;
 
+  if (logsContainer) {
+    logsContainer.innerHTML = '';
+    logsContainer.classList.remove('hidden');
+  }
+
   try {
-    const result = await api.generateQuickInsight(file);
+    const result = await api.streamQuickInsight(file, (msg) => {
+      if (logsContainer) {
+        const logLine = document.createElement('div');
+        logLine.textContent = msg;
+        logsContainer.appendChild(logLine);
+        logsContainer.scrollTop = logsContainer.scrollHeight;
+      }
+    });
     const analyses = await api.listAnalyses();
     store.setAnalyses(analyses);
     store.setActiveAnalysisId(result.analysis_id);
@@ -217,13 +230,26 @@ export async function handleExistingFileSelection(container: HTMLElement, fileId
   const mainContent = container.querySelector('#quick-main-content');
   const processingState = container.querySelector('#processing-state');
   const backBtn = container.querySelector('#back-to-select');
+  const logsContainer = container.querySelector('#quick-insight-logs');
 
   mainContent?.classList.add('hidden');
   processingState?.classList.remove('hidden');
   if (backBtn) (backBtn as HTMLButtonElement).disabled = true;
 
+  if (logsContainer) {
+    logsContainer.innerHTML = '';
+    logsContainer.classList.remove('hidden');
+  }
+
   try {
-    const result = await api.generateQuickInsightFromExisting(fileId);
+    const result = await api.streamQuickInsightFromExisting(fileId, (msg) => {
+      if (logsContainer) {
+        const logLine = document.createElement('div');
+        logLine.textContent = msg;
+        logsContainer.appendChild(logLine);
+        logsContainer.scrollTop = logsContainer.scrollHeight;
+      }
+    });
     const analyses = await api.listAnalyses();
     store.setAnalyses(analyses);
     store.setActiveAnalysisId(result.analysis_id);

@@ -302,7 +302,7 @@ export function updateNotebookUI(container: HTMLElement, isInitial = false) {
                       cellContainer?.querySelector('.new-cell-block') !== null ||
                       cellContainer?.querySelector('.cell-edit-view:not(.hidden)') !== null;
   
-  if (cellContainer && logsJson !== lastLogsJson && !isStreaming) {
+  if (cellContainer && (isInitial || logsJson !== lastLogsJson) && !isStreaming) {
     lastLogsJson = logsJson;
     
     let html = '';

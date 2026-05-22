@@ -404,3 +404,38 @@ def test_stream_question_ai_cell(client, session, mocker):
     assert "data: This is the answer." in content
     assert session.add.called
     assert session.commit.called
+
+@pytest.mark.anyio
+def test_stream_quick_insight(client, session, mocker, current_user):
+    # Mock file upload
+    from io import BytesIO
+    file_content = b"col1,col2\n1,2"
+    
+    # Mock prepare_dataframe_for_analysis and create_data_profile
+    mocker.patch("ravioli.backend.api.v1.endpoints.analyses.prepare_dataframe_for_analysis", return_value="mock_df")
+    mocker.patch("ravioli.backend.api.v1.endpoints.analyses.create_data_profile", return_value="mock_profile")
+    
+    # Mock generate_summary
+    async def mock_generate_summary(*args, **kwargs):
+        return "Test summary", ["Test question"]
+    mocker.patch("ravioli.backend.api.v1.endpoints.analyses.generate_summary", side_effect=mock_generate_summary)
+    
+    # Mock session refresh to set an ID
+    def mock_refresh(obj):
+        obj.id = uuid.uuid4()
+    session.refresh.side_effect = mock_refresh
+    
+    # Execute request
+    response = client.post(
+        "/api/v1/analyses/quick-insight-stream",
+        files={"file": ("test.csv", BytesIO(file_content), "text/csv")}
+    )
+    
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/event-stream; charset=utf-8"
+    content = response.content.decode("utf-8")
+    assert "data: LOG:INFO: [SYSTEM] Analyzing file: test.csv" in content
+    assert "data: DONE:" in content
+    assert session.add.called
+    assert session.commit.called
+
