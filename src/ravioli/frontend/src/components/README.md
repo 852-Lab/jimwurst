@@ -8,11 +8,16 @@ At a high level, the application distinguishes between the process of data explo
 
 ```mermaid
 classDiagram
-    Analysis "1" --> "0..*" Insight : Produces
+    Analysis "1" --> "0..*" ReviewQueue : Submits for Review
+    ReviewQueue "1" --> "0..*" Insight : Admin Approves and Publishes
     
     class Analysis {
         Workspace for Data Exploration
         QuickInsight or Notebook
+    }
+    class ReviewQueue {
+        Governance
+        Admin or Steward Verification
     }
     class Insight {
         Distilled Output
