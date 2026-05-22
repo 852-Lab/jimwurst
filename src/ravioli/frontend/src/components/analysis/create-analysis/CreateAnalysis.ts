@@ -1,7 +1,7 @@
-import { renderSelection, renderQuick, renderDeep } from './templates';
+import { renderSelection, renderQuick, renderNotebook } from './templates';
 import { attachEventListeners, type CreateAnalysisContext } from './interactions';
 
-type CreationMode = 'select' | 'quick' | 'deep';
+type CreationMode = 'select' | 'quick' | 'notebook';
 
 export function renderCreateAnalysis() {
   let mode: CreationMode = 'select';
@@ -35,8 +35,20 @@ export function renderCreateAnalysis() {
     } else if (mode === 'quick') {
       modeContent = renderQuick(isFetchingFiles, existingFiles);
     } else {
-      modeContent = renderDeep(selectedDataSourceIds, selectedKnowledgePageIds);
+      modeContent = renderNotebook(selectedDataSourceIds, selectedKnowledgePageIds);
     }
+
+    const title = mode === 'select'
+      ? 'Choose Your Path'
+      : mode === 'quick'
+        ? 'Quick Insights'
+        : 'Custom Notebook';
+
+    const subtitle = mode === 'select'
+      ? 'Select the level of orchestration required.'
+      : mode === 'quick'
+        ? 'Initialize your parameters for processing.'
+        : 'Configure your workspace for hands-on analysis.';
 
     container.innerHTML = `
       <!-- Cinematic Vignette Overlay -->
@@ -45,10 +57,10 @@ export function renderCreateAnalysis() {
       <div class="max-w-4xl w-full space-y-12 relative z-10 px-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
         <div class="text-center space-y-4">
           <h2 class="text-5xl font-display-lg text-on-surface tracking-tight">
-            ${mode === 'select' ? 'Choose Your Path' : mode === 'quick' ? 'Quick Insight' : 'Deep Dive'}
+            ${title}
           </h2>
           <p class="font-label-sm text-label-sm tracking-[0.4em] text-tertiary-fixed-dim uppercase">
-            ${mode === 'select' ? 'Select the level of orchestration required.' : 'Initialize your parameters for processing.'}
+            ${subtitle}
           </p>
         </div>
 

@@ -39,9 +39,9 @@ export function attachEventListeners(container: HTMLElement, ctx: CreateAnalysis
       }
     });
 
-    container.querySelector('#mode-deep')?.addEventListener('click', () => {
-      ctx.mode = 'deep';
-      // Reset selected states when re-entering Deep Dive setup
+    container.querySelector('#mode-notebook')?.addEventListener('click', () => {
+      ctx.mode = 'notebook';
+      // Reset selected states when re-entering notebook setup
       ctx.selectedDataSourceIds = [];
       ctx.selectedKnowledgePageIds = [];
       ctx.updateUI();
@@ -81,7 +81,7 @@ export function attachEventListeners(container: HTMLElement, ctx: CreateAnalysis
       });
     });
 
-    // Direct DOM bindings for Deep Dive Selectors
+    // Direct DOM bindings for notebook selectors
     container.querySelectorAll('.ds-select-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const dsId = btn.getAttribute('data-ds-id');
@@ -126,9 +126,9 @@ export function attachEventListeners(container: HTMLElement, ctx: CreateAnalysis
       });
     });
 
-    // Deep Dive Confirm
+    // Custom Notebook confirm
     container.querySelector('#confirm-create')?.addEventListener('click', async () => {
-      console.log('Initialize Deep Dive button clicked!');
+      console.log('Launch Notebook button clicked!');
       const titleInput = container.querySelector('#analysis-title') as HTMLInputElement;
       const descInput = container.querySelector('#analysis-desc') as HTMLTextAreaElement;
 
@@ -141,7 +141,7 @@ export function attachEventListeners(container: HTMLElement, ctx: CreateAnalysis
       const title = titleInput.value.trim();
       if (!title) {
         titleInput.classList.add('border-error');
-        alert('Please enter a Title for your analysis before initializing.');
+        alert('Please enter a title for your notebook before launching.');
         return;
       }
 
@@ -149,13 +149,13 @@ export function attachEventListeners(container: HTMLElement, ctx: CreateAnalysis
       
       await withButtonLoading(
         btn,
-        '<span>Initializing Deep Dive...</span>',
+        '<span>Launching Notebook...</span>',
         async () => {
           console.log('Dispatching api.createAnalysis request with:', {
             title,
             description: descInput?.value.trim() || '',
             analysis_metadata: {
-              type: 'deep_dive',
+              type: 'notebook',
               data_sources: ctx.selectedDataSourceIds,
               knowledge_pages: ctx.selectedKnowledgePageIds
             }
@@ -165,13 +165,13 @@ export function attachEventListeners(container: HTMLElement, ctx: CreateAnalysis
             title,
             description: descInput?.value.trim() || '',
             analysis_metadata: {
-              type: 'deep_dive',
+              type: 'notebook',
               data_sources: ctx.selectedDataSourceIds,
               knowledge_pages: ctx.selectedKnowledgePageIds
             }
           });
           
-          console.log('Deep Dive Analysis created successfully:', newAnalysis);
+          console.log('Notebook analysis created successfully:', newAnalysis);
           
           const currentAnalyses = store.getAnalyses();
           store.setAnalyses([newAnalysis, ...currentAnalyses]);
@@ -179,7 +179,7 @@ export function attachEventListeners(container: HTMLElement, ctx: CreateAnalysis
         }
       ).catch(err => {
         console.error('Failed to create analysis', err);
-        alert(`Failed to initialize Deep Dive analysis: ${err.message || err}`);
+        alert(`Failed to launch notebook: ${err.message || err}`);
       });
     });
   }
