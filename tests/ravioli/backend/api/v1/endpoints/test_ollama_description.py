@@ -38,10 +38,11 @@ async def test_generate_file_description(client, session, mocker):
     
     # Mock DuckDB interaction by patching the class property
     mock_conn = MagicMock()
-    mocker.patch("ravioli.backend.data.olap.duckdb_manager.DuckDBManager.connection", new_callable=lambda: mock_conn)
-    
+    mocker.patch("ravioli.backend.data.olap.duckdb_manager.DuckDBManager.connection", new_callable=mocker.PropertyMock, return_value=mock_conn)
+
     mock_df = MagicMock()
     mock_conn.execute.return_value.fetchdf.return_value = mock_df
+    mocker.patch("ravioli.backend.data.olap.duckdb_manager.DuckDBManager.execute_df", return_value=mock_df)
     mock_df.to_csv.return_value = "col1,col2\nval1,val2"
     
     # Mock AI Agent and Skill
