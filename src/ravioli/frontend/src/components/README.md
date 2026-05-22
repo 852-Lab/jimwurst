@@ -12,11 +12,11 @@ classDiagram
     
     class Analysis {
         Workspace for Data Exploration
-        (e.g., QuickInsight, Notebook)
+        QuickInsight or Notebook
     }
     class Insight {
-        Distilled Output / Conclusion
-        Global Feed & Lineage
+        Distilled Output
+        Global Feed and Lineage
     }
 ```
 
