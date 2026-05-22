@@ -25,6 +25,12 @@ function resetStore() {
   store.setCurrentView('insights');
 }
 
+function getButtonLabel(button: Element) {
+  const clone = button.cloneNode(true) as HTMLElement;
+  clone.querySelectorAll('.material-symbols-outlined').forEach(icon => icon.remove());
+  return clone.textContent?.replace(/\s+/g, ' ').trim();
+}
+
 describe('notebook cell buttons', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
@@ -40,9 +46,7 @@ describe('notebook cell buttons', () => {
     const container = renderNotebookView();
     document.body.appendChild(container);
 
-    const labels = Array.from(container.querySelectorAll('#add-cell-bar .btn-add-cell')).map(button =>
-      button.textContent?.replace(/\s+/g, ' ').trim()
-    );
+    const labels = Array.from(container.querySelectorAll('#add-cell-bar .btn-add-cell')).map(getButtonLabel);
 
     expect(labels).toEqual(['AI Cell', 'SQL Cell', 'Python Cell', 'Text / Markdown']);
   });
@@ -55,9 +59,7 @@ describe('notebook cell buttons', () => {
     document.body.appendChild(container);
     updateNotebookView(container);
 
-    const labels = Array.from(container.querySelectorAll('#notebook-welcome .btn-first-cell')).map(button =>
-      button.textContent?.replace(/\s+/g, ' ').trim()
-    );
+    const labels = Array.from(container.querySelectorAll('#notebook-welcome .btn-first-cell')).map(getButtonLabel);
 
     expect(labels).toHaveLength(4);
     expect(labels[0]).toContain('AI Cell');
