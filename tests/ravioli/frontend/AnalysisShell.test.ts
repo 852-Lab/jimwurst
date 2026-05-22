@@ -386,7 +386,10 @@ describe('AnalysisShell Component - Stability & Granular Updates', () => {
     (api.listLogs as any).mockResolvedValue([{ id: 'l1', content: 'print("hello")', log_type: 'user_query', tool_name: 'python', index: 1 }]);
     
     // Click the rerun button and wait for the async execution
-    await rerunBtn.click();
+    rerunBtn.click();
+    
+    // Wait for the async click handler to resolve executePython and remove the ID
+    await new Promise(resolve => setTimeout(resolve, 10));
     
     // Check if the DOM has any element with id starting with streaming-content
     // This is the bug that blocked updateAnalysisUI previously
@@ -418,7 +421,10 @@ describe('AnalysisShell Component - Stability & Granular Updates', () => {
     (api.executePython as any).mockResolvedValue(undefined);
     (api.listLogs as any).mockResolvedValue([]);
     
-    await runNewBtn.click();
+    runNewBtn.click();
+    
+    // Wait for the async click handler to resolve executePython and remove the block
+    await new Promise(resolve => setTimeout(resolve, 10));
     
     // The new cell block should be removed
     expect(notebook.querySelector('.new-cell-block')).toBeNull();
