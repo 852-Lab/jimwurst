@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { api } from '../../../src/ravioli/frontend/src/services/api';
-import { highlightSQL } from '../../../src/ravioli/frontend/src/components/notebook/utils';
+import { highlightSQL } from '../../../src/ravioli/frontend/src/components/analysis/notebook/utils';
 
 test('api service is syntactically valid and exportable', () => {
   expect(api).toBeDefined();

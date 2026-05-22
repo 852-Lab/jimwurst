@@ -47,7 +47,7 @@ describe('AnalysisShell Component - Stability & Granular Updates', () => {
   });
 
   it('mitigation: updates logs without replacing the main container', () => {
-    const mockAnalysis = { id: 'a1', title: 'Deep Research', status: 'completed' };
+    const mockAnalysis = { id: 'a1', title: 'Deep Research', status: 'completed', analysis_metadata: { type: 'notebook' } };
     store.setAnalyses([mockAnalysis] as any);
     store.setActiveAnalysisId('a1');
     store.setLogs([{ id: 'l1', content: 'Initial log', log_type: 'agent_response' }] as any);
@@ -77,7 +77,7 @@ describe('AnalysisShell Component - Stability & Granular Updates', () => {
   });
 
   it('mitigation: does NOT update logs if a streaming bubble is present', () => {
-    const mockAnalysis = { id: 'a1', title: 'Deep Research', status: 'completed' };
+    const mockAnalysis = { id: 'a1', title: 'Deep Research', status: 'completed', analysis_metadata: { type: 'notebook' } };
     store.setAnalyses([mockAnalysis] as any);
     store.setActiveAnalysisId('a1');
     store.setLogs([{ id: 'l1', content: 'Log 1', log_type: 'agent_response' }] as any);
@@ -107,7 +107,7 @@ describe('AnalysisShell Component - Stability & Granular Updates', () => {
   });
 
   it('renders markdown cells correctly', () => {
-    const mockAnalysis = { id: 'a1', title: 'Deep Research', status: 'completed' };
+    const mockAnalysis = { id: 'a1', title: 'Deep Research', status: 'completed', analysis_metadata: { type: 'notebook' } };
     store.setAnalyses([mockAnalysis] as any);
     store.setActiveAnalysisId('a1');
     store.setLogs([
@@ -121,7 +121,7 @@ describe('AnalysisShell Component - Stability & Granular Updates', () => {
   });
 
   it('triggers editing view when double-clicking static cell view', () => {
-    const mockAnalysis = { id: 'a1', title: 'Deep Research', status: 'completed' };
+    const mockAnalysis = { id: 'a1', title: 'Deep Research', status: 'completed', analysis_metadata: { type: 'notebook' } };
     store.setAnalyses([mockAnalysis] as any);
     store.setActiveAnalysisId('a1');
     store.setLogs([
@@ -143,7 +143,7 @@ describe('AnalysisShell Component - Stability & Granular Updates', () => {
   });
 
   it('triggers delete confirmation and API call on delete button click', async () => {
-    const mockAnalysis = { id: 'a1', title: 'Deep Research', status: 'completed' };
+    const mockAnalysis = { id: 'a1', title: 'Deep Research', status: 'completed', analysis_metadata: { type: 'notebook' } };
     store.setAnalyses([mockAnalysis] as any);
     store.setActiveAnalysisId('a1');
     store.setLogs([
@@ -257,7 +257,7 @@ describe('AnalysisShell Component - Stability & Granular Updates', () => {
 
   it('populates cellContainer on initial render even if logs match previous state', () => {
     // Setup an analysis with NO logs
-    const mockAnalysis = { id: 'a1', title: 'Empty Analysis', status: 'completed' };
+    const mockAnalysis = { id: 'a1', title: 'Empty Analysis', status: 'completed', analysis_metadata: { type: 'notebook' } };
     store.setAnalyses([mockAnalysis] as any);
     store.setActiveAnalysisId('a1');
     store.setLogs([]);

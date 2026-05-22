@@ -7,8 +7,8 @@ import {
   updateLineNumbers, 
   updateLineGutterScroll,
   highlightSQL
-} from '../notebook/utils';
-import { renderMarkdown } from '../notebook/templates';
+} from './notebook/utils';
+import { renderMarkdown } from './notebook/templates';
 
 const executingCells = new Set<string>();
 

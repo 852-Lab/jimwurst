@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { renderInsights, clearInsightsCache } from '../../../src/ravioli/frontend/src/components/Insights';
+import { renderInsights, clearInsightsCache } from '../../../src/ravioli/frontend/src/components/analysis/Insights';
 import { api } from '../../../src/ravioli/frontend/src/services/api';
 
 vi.mock('../../../src/ravioli/frontend/src/services/api', () => ({

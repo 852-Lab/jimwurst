@@ -1,4 +1,4 @@
-import { store } from '../store';
+import { store } from '../../store';
 import { renderSelection, renderQuick, renderDeep } from './create-analysis/templates';
 import { attachEventListeners, type CreateAnalysisContext } from './create-analysis/interactions';
 
