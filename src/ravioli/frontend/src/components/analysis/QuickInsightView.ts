@@ -185,5 +185,14 @@ export function updateQuickInsightView(container: HTMLElement) {
     `;
   }).join('');
 
+  const prevScrollTop = cellContainer.scrollTop;
+  const isAtBottom = cellContainer.scrollHeight - prevScrollTop <= cellContainer.clientHeight + 50;
+
   cellContainer.innerHTML = html;
+
+  if (isAtBottom) {
+    cellContainer.scrollTop = cellContainer.scrollHeight;
+  } else {
+    cellContainer.scrollTop = prevScrollTop;
+  }
 }
