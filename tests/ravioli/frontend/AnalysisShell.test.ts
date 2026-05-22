@@ -29,8 +29,9 @@ describe('AnalysisShell Component - Stability & Granular Updates', () => {
   it('renders active analysis and logs', () => {
     const mockAnalysis = {
       id: 'a1',
-      title: 'Deep Research',
+      title: 'Initial Analysis',
       status: 'completed',
+      analysis_metadata: { type: 'notebook' }
     };
     const mockLogs = [
       { id: 'l1', content: 'Step 1 complete', log_type: 'agent_response' }
