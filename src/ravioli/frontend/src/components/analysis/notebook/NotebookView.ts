@@ -1,6 +1,6 @@
-import { store } from '../../store';
-import { highlightSQL, highlightPython } from './notebook/utils';
-import { renderMarkdown, renderRichOutput } from './notebook/templates';
+import { store } from '../../../store';
+import { highlightSQL, highlightPython } from './utils';
+import { renderMarkdown, renderRichOutput } from './templates';
 import { bindNotebookInteractions } from './NotebookInteractions';
 
 const executingCells = new Set<string>();

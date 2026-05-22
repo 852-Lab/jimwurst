@@ -1,5 +1,5 @@
-import { store } from '../../store';
-import { api } from '../../services/api';
+import { store } from '../../../store';
+import { api } from '../../../services/api';
 import { 
   parseCellType, 
   parseAfterLogId, 
@@ -7,8 +7,8 @@ import {
   updateLineNumbers, 
   updateLineGutterScroll,
   highlightSQL
-} from './notebook/utils';
-import { renderMarkdown } from './notebook/templates';
+} from './utils';
+import { renderMarkdown } from './templates';
 
 const executingCells = new Set<string>();
 

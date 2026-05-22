@@ -1,5 +1,5 @@
-import { renderSelection, renderQuick, renderDeep } from './create-analysis/templates';
-import { attachEventListeners, type CreateAnalysisContext } from './create-analysis/interactions';
+import { renderSelection, renderQuick, renderDeep } from './templates';
+import { attachEventListeners, type CreateAnalysisContext } from './interactions';
 
 type CreationMode = 'select' | 'quick' | 'deep';
 

@@ -1,5 +1,5 @@
-import { store } from '../../store';
-import { renderMarkdown, renderRichOutput, renderChart } from './notebook/templates';
+import { store } from '../../../store';
+import { renderMarkdown, renderRichOutput, renderChart } from '../notebook/templates';
 import { bindQuickInsightInteractions } from './QuickInsightInteractions';
 
 const executingCells = new Set<string>();

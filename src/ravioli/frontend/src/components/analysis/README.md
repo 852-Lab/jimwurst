@@ -52,6 +52,27 @@ classDiagram
 3. **Notebook (`notebook`)**: A more advanced, professional mode. Uses a cell-based architecture where users can write Python code, execute SQL, chat with AI, and write Markdown documentation. 
 4. **Deep Dive (`deep_dive`)**: *(Upcoming)* An AI-driven workflow where the AI drafts an analysis plan upfront, and then populates a full Notebook based on that plan.
 
+## Folder Structure
+
+The code is organized into the following structure:
+
+```text
+analysis/
+├── AnalysisShell.ts           # Generic wrapper for any Analysis
+├── create-analysis/           # Specialized views for Analysis creation
+│   ├── CreateAnalysis.ts
+│   ├── interactions.ts
+│   └── templates.ts
+├── quickinsights/             # Specialized views for Quick Insight
+│   ├── QuickInsightInteractions.ts
+│   └── QuickInsightView.ts
+└── notebook/                  # Specialized views for Notebook
+    ├── NotebookInteractions.ts
+    ├── NotebookView.ts
+    ├── templates.ts           # Shared templates for cells
+    └── utils.ts               # Shared utilities
+```
+
 ## Frontend Component Structure
 
 To support these distinct UX paradigms without duplicating the underlying state management and execution logic, the UI is broken into:
@@ -67,8 +88,8 @@ The generic wrapper for any Analysis. It provides:
 ### Specialized Views
 The shell delegates the rendering of logs (cells/chats) and interactions to specialized views based on `analysis.analysis_metadata?.type`:
 
-- **`QuickInsightView` & `QuickInsightInteractions`**: Renders the logs as conversational chat bubbles and provides a simple, sticky chat input box at the bottom of the screen. Follow-up questions are rendered natively as clickable chips.
-- **`NotebookView` & `NotebookInteractions`**: Renders the logs as Jupyter-style blocks (`In [*]`, `Out [*]`). Provides floating toolbars and a sticky footer bar for manually injecting Python, SQL, Chat, and Markdown cells.
+- **`quickinsights/QuickInsightView` & `quickinsights/QuickInsightInteractions`**: Renders the logs as conversational chat bubbles and provides a simple, sticky chat input box at the bottom of the screen. Follow-up questions are rendered natively as clickable chips.
+- **`notebook/NotebookView` & `notebook/NotebookInteractions`**: Renders the logs as Jupyter-style blocks (`In [*]`, `Out [*]`). Provides floating toolbars and a sticky footer bar for manually injecting Python, SQL, Chat, and Markdown cells.
 
 ### Entry Point
 `main.ts` observes the `currentView` and `activeId` from `store.ts`. When a user opens an analysis, it determines the type and mounts the `AnalysisShell` initialized with the appropriate specialized view.
