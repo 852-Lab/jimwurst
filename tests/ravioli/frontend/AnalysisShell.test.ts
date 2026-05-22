@@ -417,6 +417,10 @@ describe('AnalysisShell Component - Stability & Granular Updates', () => {
     const runNewBtn = notebook.querySelector('.btn-execute-new-cell') as HTMLElement;
     expect(runNewBtn).not.toBeNull();
     
+    // The event handler early-returns if the input is empty. Fill it first!
+    const textarea = newCellBlock.querySelector('textarea') as HTMLTextAreaElement;
+    textarea.value = 'print("hello")';
+    
     const { api } = await import('../../../src/ravioli/frontend/src/services/api');
     (api.executePython as any).mockResolvedValue(undefined);
     (api.listLogs as any).mockResolvedValue([]);
