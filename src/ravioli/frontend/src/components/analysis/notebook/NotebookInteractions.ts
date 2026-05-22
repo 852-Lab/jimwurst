@@ -321,9 +321,11 @@ export function bindNotebookInteractions(container: HTMLElement, updateNotebookU
              outGutter.classList.remove('flex', 'items-center', 'justify-end', 'gap-1');
           }
           
-          if (streamingContent) {
-             streamingContent.removeAttribute('id');
+          const currentStreamingContent = outBody?.querySelector(`#streaming-content-${idx}`);
+          if (currentStreamingContent) {
+             currentStreamingContent.removeAttribute('id');
           }
+
           
           const newLogs = await api.listLogs(activeId!);
           executingCells.delete(logId);
@@ -356,6 +358,13 @@ export function bindNotebookInteractions(container: HTMLElement, updateNotebookU
               streamingContent.innerHTML = renderMarkdown(fullText);
               streamingContent.classList.remove('animate-pulse');
               streamingContent.removeAttribute('id');
+            } else {
+              const currentStreamingContent = outBody?.querySelector(`#streaming-content-${idx}`);
+              if (currentStreamingContent) {
+                currentStreamingContent.innerHTML = renderMarkdown(fullText);
+                currentStreamingContent.classList.remove('animate-pulse');
+                currentStreamingContent.removeAttribute('id');
+              }
             }
             if (outGutter) {
               outGutter.textContent = `Out [${idx}]:`;
@@ -617,6 +626,11 @@ export function bindNotebookInteractions(container: HTMLElement, updateNotebookU
                 await api.executeSql(activeId, question, null, afterLogId);
              } else {
                 await api.executePython(activeId, question, null, afterLogId);
+             }
+
+             const currentStreamingContent = cellBody?.querySelector(`#streaming-content-${tempId}`);
+             if (currentStreamingContent) {
+                 currentStreamingContent.removeAttribute('id');
              }
 
              const newCellBlock = runNewBtn.closest('.new-cell-block');
