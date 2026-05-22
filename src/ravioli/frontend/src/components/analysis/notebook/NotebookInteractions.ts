@@ -321,6 +321,10 @@ export function bindNotebookInteractions(container: HTMLElement, updateNotebookU
              outGutter.classList.remove('flex', 'items-center', 'justify-end', 'gap-1');
           }
           
+          if (streamingContent) {
+             streamingContent.removeAttribute('id');
+          }
+          
           const newLogs = await api.listLogs(activeId!);
           executingCells.delete(logId);
           store.setLogs(newLogs);
@@ -351,6 +355,7 @@ export function bindNotebookInteractions(container: HTMLElement, updateNotebookU
             if (streamingContent) {
               streamingContent.innerHTML = renderMarkdown(fullText);
               streamingContent.classList.remove('animate-pulse');
+              streamingContent.removeAttribute('id');
             }
             if (outGutter) {
               outGutter.textContent = `Out [${idx}]:`;
