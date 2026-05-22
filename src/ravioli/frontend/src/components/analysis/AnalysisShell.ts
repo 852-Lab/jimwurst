@@ -184,6 +184,10 @@ export function updateAnalysisUI(container: HTMLElement, isInitial = false) {
   const contentContainer = container.querySelector('#analysis-content') as HTMLElement;
   const type = analysis.analysis_metadata?.type || 'quick_insight';
   
+  if (container.querySelector('[id^="streaming-content"]')) {
+    return; // Do not update views if there's an active stream, to preserve DOM state
+  }
+  
   if (type === 'quick_insight') {
     if (!contentContainer.querySelector('#quick-insight-view')) {
       contentContainer.innerHTML = '';

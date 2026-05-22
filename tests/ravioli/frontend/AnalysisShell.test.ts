@@ -29,9 +29,9 @@ describe('AnalysisShell Component - Stability & Granular Updates', () => {
   it('renders active analysis and logs', () => {
     const mockAnalysis = {
       id: 'a1',
-      title: 'Initial Analysis',
+      title: 'Deep Research',
       status: 'completed',
-      analysis_metadata: { type: 'notebook' }
+      analysis_metadata: { type: 'quick_insight' }
     };
     const mockLogs = [
       { id: 'l1', content: 'Step 1 complete', log_type: 'agent_response' }
@@ -48,7 +48,7 @@ describe('AnalysisShell Component - Stability & Granular Updates', () => {
   });
 
   it('mitigation: updates logs without replacing the main container', () => {
-    const mockAnalysis = { id: 'a1', title: 'Deep Research', status: 'completed', analysis_metadata: { type: 'notebook' } };
+    const mockAnalysis = { id: 'a1', title: 'Deep Research', status: 'completed', analysis_metadata: { type: 'quick_insight' } };
     store.setAnalyses([mockAnalysis] as any);
     store.setActiveAnalysisId('a1');
     store.setLogs([{ id: 'l1', content: 'Initial log', log_type: 'agent_response' }] as any);
@@ -267,7 +267,7 @@ describe('AnalysisShell Component - Stability & Granular Updates', () => {
     renderAnalysis();
     
     // Switch to another analysis also with NO logs
-    const mockAnalysis2 = { id: 'a2', title: 'Another Empty Analysis', status: 'completed' };
+    const mockAnalysis2 = { id: 'a2', title: 'Another Empty Analysis', status: 'completed', analysis_metadata: { type: 'notebook' } };
     store.setAnalyses([mockAnalysis, mockAnalysis2] as any);
     store.setActiveAnalysisId('a2');
     store.setLogs([]);
