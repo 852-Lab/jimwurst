@@ -4,6 +4,22 @@ This directory contains the UI components and modular architecture for the Ravio
 
 ## Architecture & Structure
 
+At a high level, the application distinguishes between the process of data exploration and the finalized output.
+
+```mermaid
+classDiagram
+    Analysis "1" --> "0..*" Insight : Produces
+    
+    class Analysis {
+        Workspace for Data Exploration
+        (e.g., QuickInsight, Notebook)
+    }
+    class Insight {
+        Distilled Output / Conclusion
+        Global Feed & Lineage
+    }
+```
+
 We follow a strict separation of concerns within each component to maximize maintainability, testability, and clarity. Each major feature area is divided into the following files:
 
 - \`[ComponentName].ts\`: The main entry point. Orchestrates the initial rendering of the UI and integrates with global state.
