@@ -1,6 +1,6 @@
-import { store } from '../../store';
-import { api } from '../../services/api';
-import { renderMarkdown } from './notebook/templates';
+import { store } from '../../../store';
+import { api } from '../../../services/api';
+import { renderMarkdown } from '../notebook/templates';
 
 export function bindQuickInsightInteractions(container: HTMLElement) {
   // Helper for Chatbox submissions (Quick Insights)

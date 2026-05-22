@@ -1,7 +1,7 @@
 import { store } from '../../store';
 import { format } from 'date-fns';
-import { renderNotebookView, updateNotebookView } from './NotebookView';
-import { renderQuickInsightView, updateQuickInsightView } from './QuickInsightView';
+import { renderNotebookView, updateNotebookView } from './notebook/NotebookView';
+import { renderQuickInsightView, updateQuickInsightView } from './quickinsights/QuickInsightView';
 
 export function renderAnalysis() {
   const container = document.createElement('main');
