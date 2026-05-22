@@ -104,6 +104,9 @@ export function renderQuick(isFetchingFiles: boolean, existingFiles: any[]) {
             <p class="text-xl font-headline-sm text-white animate-pulse">Syncing Neural Link...</p>
             <p class="text-xs text-on-surface-variant uppercase tracking-widest opacity-60">Generating Executive Summary</p>
           </div>
+          <div id="quick-insight-logs" class="mt-8 max-h-48 overflow-y-auto text-left bg-black/40 p-4 rounded-xl border border-white/5 font-mono text-[10px] text-primary/80 space-y-1 w-full max-w-md mx-auto custom-scrollbar hidden">
+            <!-- logs will be appended here -->
+          </div>
         </div>
 
         <div class="flex items-center justify-between pt-4">
