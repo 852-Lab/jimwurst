@@ -10,9 +10,8 @@ Key invariants verified:
   - The deprecated .connection shim is still accessible for MotherDuck ops.
   - reconnect() resets the MD-specific connection.
 """
-import contextlib
 import pytest
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 from ravioli.backend.data.olap.duckdb_manager import DuckDBManager
 
 
@@ -190,7 +189,6 @@ class TestMultipleEphemeralOperations:
             conn.execute.return_value.fetchone.return_value = (1,)
             conn.execute.return_value.fetchdf.return_value = MagicMock()
             # Track when this connection is closed
-            original_close = conn.close
             def on_close():
                 call_order.append("close")
             conn.close.side_effect = on_close
