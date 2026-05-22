@@ -124,7 +124,7 @@ function updateUI() {
     } else if (currentView === 'insights' && !activeId) {
       content = renderInsights();
     } else {
-      content = renderNotebook();
+      content = renderAnalysis();
     }
     
     contentContainer.appendChild(content);
@@ -134,9 +134,9 @@ function updateUI() {
     lastUserId = currentUser.id;
   } else {
     // Same view. If it's the dashboard, update logs/status granularly.
-    const notebookView = contentContainer.querySelector('#notebook-view') as HTMLElement;
-    if (notebookView && currentView === 'dashboard') {
-      updateNotebookUI(notebookView);
+    const analysisView = contentContainer.querySelector('#analysis-view') as HTMLElement;
+    if (analysisView && currentView === 'dashboard') {
+      updateAnalysisUI(analysisView);
     }
   }
 }
