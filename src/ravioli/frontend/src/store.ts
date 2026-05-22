@@ -12,6 +12,7 @@ class Store {
   private users: User[] = [];
   private groups: UserGroup[] = [];
   private currentView: 'insights' | 'dashboard' | 'create-analysis' | 'knowledge' | 'data' | 'settings' | 'governance' | 'auth' = 'insights';
+  private currentViewVersion = 0;
   private activeGovTab: string | null = null;
   private isInitializing: boolean = true;
   private listeners: Listener[] = [];
@@ -51,6 +52,7 @@ class Store {
 
   setCurrentView(view: 'insights' | 'dashboard' | 'create-analysis' | 'knowledge' | 'data' | 'settings' | 'governance' | 'auth') {
     this.currentView = view;
+    this.currentViewVersion += 1;
     if (view !== 'dashboard' && view !== 'auth') {
       this.activeAnalysisId = undefined;
     }
@@ -58,6 +60,8 @@ class Store {
   }
 
   getCurrentView() { return this.currentView; }
+
+  getCurrentViewVersion() { return this.currentViewVersion; }
 
   setCurrentUser(user: User | null) {
     this.currentUser = user;

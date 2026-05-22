@@ -19,21 +19,21 @@ export function renderNotebookView() {
     <!-- Add Cell Footer Bar -->
     <div class="shrink-0 flex items-center justify-center gap-3 py-4 px-12 border-t border-outline-variant/10 bg-surface-container-low/40 backdrop-blur-sm" id="add-cell-bar">
       <span class="text-[10px] text-outline uppercase tracking-widest font-label-sm opacity-60 mr-2">Add cell</span>
-      <button class="btn-add-cell flex items-center gap-1.5 px-4 py-1.5 bg-surface-container-highest border border-outline-variant/20 text-outline text-[11px] rounded-full hover:bg-emerald-500/10 hover:border-emerald-500/30 hover:text-emerald-400 transition-all duration-200 group/add" data-type="python">
-        <span class="material-symbols-outlined text-[14px] group-hover/add:text-emerald-400" data-icon="code">code</span>
-        Python
+      <button class="btn-add-cell flex items-center gap-1.5 px-4 py-1.5 bg-surface-container-highest border border-outline-variant/20 text-outline text-[11px] rounded-full hover:bg-secondary/10 hover:border-secondary/30 hover:text-secondary transition-all duration-200 group/add" data-type="chat">
+        <span class="material-symbols-outlined text-[14px] group-hover/add:text-secondary" data-icon="smart_toy">smart_toy</span>
+        AI Cell
       </button>
       <button class="btn-add-cell flex items-center gap-1.5 px-4 py-1.5 bg-surface-container-highest border border-outline-variant/20 text-outline text-[11px] rounded-full hover:bg-primary/10 hover:border-primary/30 hover:text-primary transition-all duration-200 group/add" data-type="sql">
         <span class="material-symbols-outlined text-[14px] group-hover/add:text-primary" data-icon="database">database</span>
-        SQL
+        SQL Cell
       </button>
-      <button class="btn-add-cell flex items-center gap-1.5 px-4 py-1.5 bg-surface-container-highest border border-outline-variant/20 text-outline text-[11px] rounded-full hover:bg-secondary/10 hover:border-secondary/30 hover:text-secondary transition-all duration-200 group/add" data-type="chat">
-        <span class="material-symbols-outlined text-[14px] group-hover/add:text-secondary" data-icon="smart_toy">smart_toy</span>
-        Chat AI
+      <button class="btn-add-cell flex items-center gap-1.5 px-4 py-1.5 bg-surface-container-highest border border-outline-variant/20 text-outline text-[11px] rounded-full hover:bg-emerald-500/10 hover:border-emerald-500/30 hover:text-emerald-400 transition-all duration-200 group/add" data-type="python">
+        <span class="material-symbols-outlined text-[14px] group-hover/add:text-emerald-400" data-icon="code">code</span>
+        Python Cell
       </button>
       <button class="btn-add-cell flex items-center gap-1.5 px-4 py-1.5 bg-surface-container-highest border border-outline-variant/20 text-outline text-[11px] rounded-full hover:bg-indigo-400/10 hover:border-indigo-400/30 hover:text-indigo-400 transition-all duration-200 group/add" data-type="markdown">
         <span class="material-symbols-outlined text-[14px] group-hover/add:text-indigo-400" data-icon="article">article</span>
-        Text / MD
+        Text / Markdown
       </button>
     </div>
   `;
@@ -193,16 +193,16 @@ export function updateNotebookView(container: HTMLElement) {
            <div class="relative group/toolbar py-2 -my-2 z-20 flex justify-center items-center opacity-0 hover:opacity-100 transition-opacity mt-4">
              <div class="absolute inset-x-0 top-1/2 h-px bg-primary/30 scale-x-0 group-hover/toolbar:scale-x-100 transition-transform duration-500 origin-center pointer-events-none"></div>
              <div class="flex items-center gap-1 bg-surface-container-highest px-3 py-1.5 rounded-full border border-primary/20 shadow-xl shadow-primary/5 relative z-10 translate-y-2 group-hover/toolbar:translate-y-0 transition-all duration-300">
-               <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-emerald-400 flex items-center gap-1 hover:bg-emerald-400/20 px-2 py-1 rounded-lg transition-colors" data-type="python" data-after="${cell.inputLogId}">
-                 <span class="material-symbols-outlined text-[14px]">code</span> Python
+               <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-secondary flex items-center gap-1 hover:bg-secondary/20 px-2 py-1 rounded-lg transition-colors" data-type="chat" data-after="${cell.inputLogId}">
+                 <span class="material-symbols-outlined text-[14px]">auto_awesome</span> AI
                </button>
                <div class="w-px h-3 bg-outline-variant/30 mx-1"></div>
                <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-primary flex items-center gap-1 hover:bg-primary/20 px-2 py-1 rounded-lg transition-colors" data-type="sql" data-after="${cell.inputLogId}">
                  <span class="material-symbols-outlined text-[14px]">database</span> SQL
                </button>
                <div class="w-px h-3 bg-outline-variant/30 mx-1"></div>
-               <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-secondary flex items-center gap-1 hover:bg-secondary/20 px-2 py-1 rounded-lg transition-colors" data-type="chat" data-after="${cell.inputLogId}">
-                 <span class="material-symbols-outlined text-[14px]">auto_awesome</span> Chat
+               <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-emerald-400 flex items-center gap-1 hover:bg-emerald-400/20 px-2 py-1 rounded-lg transition-colors" data-type="python" data-after="${cell.inputLogId}">
+                 <span class="material-symbols-outlined text-[14px]">code</span> Python
                </button>
                <div class="w-px h-3 bg-outline-variant/30 mx-1"></div>
                <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-indigo-400 flex items-center gap-1 hover:bg-indigo-400/20 px-2 py-1 rounded-lg transition-colors" data-type="markdown" data-after="${cell.inputLogId}">
@@ -337,16 +337,16 @@ export function updateNotebookView(container: HTMLElement) {
          <div class="relative group/toolbar py-2 -my-2 z-20 flex justify-center items-center opacity-0 hover:opacity-100 transition-opacity mt-4">
            <div class="absolute inset-x-0 top-1/2 h-px bg-primary/30 scale-x-0 group-hover/toolbar:scale-x-100 transition-transform duration-500 origin-center pointer-events-none"></div>
            <div class="flex items-center gap-1 bg-surface-container-highest px-3 py-1.5 rounded-full border border-primary/20 shadow-xl shadow-primary/5 relative z-10 translate-y-2 group-hover/toolbar:translate-y-0 transition-all duration-300">
-             <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-emerald-400 flex items-center gap-1 hover:bg-emerald-400/20 px-2 py-1 rounded-lg transition-colors" data-type="python" data-after="${cell.inputLogId}">
-               <span class="material-symbols-outlined text-[14px]">code</span> Python
+             <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-secondary flex items-center gap-1 hover:bg-secondary/20 px-2 py-1 rounded-lg transition-colors" data-type="chat" data-after="${cell.inputLogId}">
+               <span class="material-symbols-outlined text-[14px]">auto_awesome</span> AI
              </button>
              <div class="w-px h-3 bg-outline-variant/30 mx-1"></div>
              <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-primary flex items-center gap-1 hover:bg-primary/20 px-2 py-1 rounded-lg transition-colors" data-type="sql" data-after="${cell.inputLogId}">
                <span class="material-symbols-outlined text-[14px]">database</span> SQL
              </button>
              <div class="w-px h-3 bg-outline-variant/30 mx-1"></div>
-             <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-secondary flex items-center gap-1 hover:bg-secondary/20 px-2 py-1 rounded-lg transition-colors" data-type="chat" data-after="${cell.inputLogId}">
-               <span class="material-symbols-outlined text-[14px]">auto_awesome</span> Chat
+             <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-emerald-400 flex items-center gap-1 hover:bg-emerald-400/20 px-2 py-1 rounded-lg transition-colors" data-type="python" data-after="${cell.inputLogId}">
+               <span class="material-symbols-outlined text-[14px]">code</span> Python
              </button>
              <div class="w-px h-3 bg-outline-variant/30 mx-1"></div>
              <button class="btn-insert-cell text-[10px] uppercase font-bold tracking-widest text-indigo-400 flex items-center gap-1 hover:bg-indigo-400/20 px-2 py-1 rounded-lg transition-colors" data-type="markdown" data-after="${cell.inputLogId}">
@@ -368,16 +368,16 @@ export function updateNotebookView(container: HTMLElement) {
           <span class="material-symbols-outlined text-4xl text-primary">deployed_code</span>
         </div>
         <h3 class="text-2xl font-headline-sm text-white mb-2">Start your analysis</h3>
-        <p class="text-sm text-outline text-center max-w-sm mb-10 leading-relaxed">Choose a cell type to begin. You can mix Python, SQL, and AI chat freely — just like Jupyter.</p>
+        <p class="text-sm text-outline text-center max-w-sm mb-10 leading-relaxed">Choose a cell type to begin. You can mix AI, SQL, Python, and Markdown freely in the same notebook.</p>
 
         <div class="flex items-center gap-4">
-          <button class="btn-first-cell group flex flex-col items-center gap-3 px-8 py-6 rounded-3xl bg-surface-container-low border border-outline-variant/15 hover:border-emerald-400/40 hover:bg-emerald-400/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-400/10" data-type="python">
-            <div class="w-12 h-12 rounded-2xl bg-emerald-400/15 group-hover:bg-emerald-400/25 flex items-center justify-center transition-colors">
-              <span class="material-symbols-outlined text-2xl text-emerald-400" data-icon="code">code</span>
+          <button class="btn-first-cell group flex flex-col items-center gap-3 px-8 py-6 rounded-3xl bg-surface-container-low border border-outline-variant/15 hover:border-secondary/40 hover:bg-secondary/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-secondary/10" data-type="chat">
+            <div class="w-12 h-12 rounded-2xl bg-secondary/15 group-hover:bg-secondary/25 flex items-center justify-center transition-colors">
+              <span class="material-symbols-outlined text-2xl text-secondary" data-icon="smart_toy">smart_toy</span>
             </div>
             <div class="text-center">
-              <div class="text-sm font-bold text-emerald-400 tracking-wide">Python</div>
-              <div class="text-[11px] text-outline mt-0.5">Pandas, NumPy, Matplotlib</div>
+              <div class="text-sm font-bold text-secondary tracking-wide">AI Cell</div>
+              <div class="text-[11px] text-outline mt-0.5">Agentic Assistance</div>
             </div>
           </button>
 
@@ -386,18 +386,28 @@ export function updateNotebookView(container: HTMLElement) {
               <span class="material-symbols-outlined text-2xl text-primary" data-icon="database">database</span>
             </div>
             <div class="text-center">
-              <div class="text-sm font-bold text-primary tracking-wide">SQL</div>
+              <div class="text-sm font-bold text-primary tracking-wide">SQL Cell</div>
               <div class="text-[11px] text-outline mt-0.5">Query with DuckDB</div>
             </div>
           </button>
 
-          <button class="btn-first-cell group flex flex-col items-center gap-3 px-8 py-6 rounded-3xl bg-surface-container-low border border-outline-variant/15 hover:border-secondary/40 hover:bg-secondary/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-secondary/10" data-type="chat">
-            <div class="w-12 h-12 rounded-2xl bg-secondary/15 group-hover:bg-secondary/25 flex items-center justify-center transition-colors">
-              <span class="material-symbols-outlined text-2xl text-secondary" data-icon="smart_toy">smart_toy</span>
+          <button class="btn-first-cell group flex flex-col items-center gap-3 px-8 py-6 rounded-3xl bg-surface-container-low border border-outline-variant/15 hover:border-emerald-400/40 hover:bg-emerald-400/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-400/10" data-type="python">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-400/15 group-hover:bg-emerald-400/25 flex items-center justify-center transition-colors">
+              <span class="material-symbols-outlined text-2xl text-emerald-400" data-icon="code">code</span>
             </div>
             <div class="text-center">
-              <div class="text-sm font-bold text-secondary tracking-wide">Chat AI</div>
-              <div class="text-[11px] text-outline mt-0.5">Agentic Assistance</div>
+              <div class="text-sm font-bold text-emerald-400 tracking-wide">Python Cell</div>
+              <div class="text-[11px] text-outline mt-0.5">Pandas, NumPy, Matplotlib</div>
+            </div>
+          </button>
+
+          <button class="btn-first-cell group flex flex-col items-center gap-3 px-8 py-6 rounded-3xl bg-surface-container-low border border-outline-variant/15 hover:border-indigo-400/40 hover:bg-indigo-400/10 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-indigo-400/10" data-type="markdown">
+            <div class="w-12 h-12 rounded-2xl bg-indigo-400/15 group-hover:bg-indigo-400/25 flex items-center justify-center transition-colors">
+              <span class="material-symbols-outlined text-2xl text-indigo-400" data-icon="article">article</span>
+            </div>
+            <div class="text-center">
+              <div class="text-sm font-bold text-indigo-400 tracking-wide">Text / Markdown</div>
+              <div class="text-[11px] text-outline mt-0.5">Notes, context, findings</div>
             </div>
           </button>
         </div>

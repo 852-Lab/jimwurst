@@ -2,14 +2,14 @@ import { store } from '../../../store';
 
 export function renderSelection() {
     return `
-      <div class="grid grid-cols-2 gap-8">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
         <!-- Quick Insight Card -->
         <button id="mode-quick" class="glass-panel p-10 rounded-3xl space-y-6 text-left group hover:border-primary-fixed-dim/40 transition-all hover:-translate-y-1">
           <div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
             <span class="material-symbols-outlined text-3xl" data-icon="bolt">bolt</span>
           </div>
           <div class="space-y-2">
-            <h3 class="text-2xl font-headline-sm text-white">Quick Insight</h3>
+            <h3 class="text-2xl font-headline-sm text-white">Quick Insights</h3>
             <p class="text-on-surface-variant text-sm leading-relaxed opacity-70">
               Upload a Flat File (CSV/XLSX) and get an instant AI-powered executive summary. Perfect for vibe-checking new data streams.
             </p>
@@ -21,18 +21,38 @@ export function renderSelection() {
         </button>
 
         <!-- Deep Dive Card -->
-        <button id="mode-deep" class="glass-panel p-10 rounded-3xl space-y-6 text-left group hover:border-secondary-fixed-dim/40 transition-all hover:-translate-y-1">
-          <div class="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform">
+        <div
+          aria-disabled="true"
+          class="glass-panel p-10 rounded-3xl space-y-6 text-left border border-outline-variant/20 bg-surface-container-low/40 opacity-50 saturate-0 cursor-not-allowed"
+        >
+          <div class="w-12 h-12 rounded-2xl bg-surface-container-highest/80 flex items-center justify-center text-outline">
             <span class="material-symbols-outlined text-3xl" data-icon="biotech">biotech</span>
           </div>
           <div class="space-y-2">
             <h3 class="text-2xl font-headline-sm text-white">Deep Dive</h3>
             <p class="text-on-surface-variant text-sm leading-relaxed opacity-70">
-              Create a full analysis notebook. Query, transform, and visualize with the complete Ravioli toolset.
+              Upcoming AI-led data analytics that drafts a plan, explores the data, and builds out a notebook for you automatically.
             </p>
           </div>
-          <div class="flex items-center gap-2 text-secondary text-[10px] font-label-sm uppercase tracking-widest pt-4">
-            <span>Orchestration</span>
+          <div class="flex items-center gap-2 text-outline text-[10px] font-label-sm uppercase tracking-widest pt-4">
+            <span>Coming Soon</span>
+            <span class="material-symbols-outlined text-sm" data-icon="schedule">schedule</span>
+          </div>
+        </div>
+
+        <!-- Custom Notebook Card -->
+        <button id="mode-notebook" class="glass-panel p-10 rounded-3xl space-y-6 text-left group hover:border-tertiary-fixed-dim/40 transition-all hover:-translate-y-1">
+          <div class="w-12 h-12 rounded-2xl bg-tertiary/10 flex items-center justify-center text-tertiary group-hover:scale-110 transition-transform">
+            <span class="material-symbols-outlined text-3xl" data-icon="terminal">terminal</span>
+          </div>
+          <div class="space-y-2">
+            <h3 class="text-2xl font-headline-sm text-white">Custom Notebook</h3>
+            <p class="text-on-surface-variant text-sm leading-relaxed opacity-70">
+              For advanced users like analysts and data scientists. Work with SQL, Python, AI, and Markdown in an AI-enhanced notebook.
+            </p>
+          </div>
+          <div class="flex items-center gap-2 text-tertiary text-[10px] font-label-sm uppercase tracking-widest pt-4">
+            <span>Power User Mode</span>
             <span class="material-symbols-outlined text-sm" data-icon="arrow_forward">arrow_forward</span>
           </div>
         </button>
@@ -119,7 +139,7 @@ export function renderQuick(isFetchingFiles: boolean, existingFiles: any[]) {
     `;
   }
 
-export function renderDeep(selectedDataSourceIds: string[], selectedKnowledgePageIds: string[]) {
+export function renderNotebook(selectedDataSourceIds: string[], selectedKnowledgePageIds: string[]) {
     const dataSources = store.getDataSources().filter(ds => ds.status === 'completed');
     const knowledgePages = store.getKnowledgePages();
 
@@ -234,7 +254,7 @@ export function renderDeep(selectedDataSourceIds: string[], selectedKnowledgePag
             Back
           </button>
           <button id="confirm-create" class="btn-primary flex items-center gap-3 group cursor-pointer">
-            <span>Initialize Deep Dive</span>
+            <span>Launch Notebook</span>
             <span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform" data-icon="rocket_launch">rocket_launch</span>
           </button>
         </div>
