@@ -33,6 +33,7 @@ Enable direct querying of structured data assets attached to the analysis.
 
 ### Python Cells
 Provide the ability to run custom scripts, statistical calculations, and data formatting.
+- **Under the Hood**: Runs on a native **IPython kernel** managed via the **Jupyter** notebook framework package, ensuring persistent execution state and variable retention across cells.
 - **Environment**: Includes pre-installed data science packages (like `pandas`, `numpy`, and plotting libraries).
 - **Use Case**: Advanced data transformations, math modeling, and custom chart plotting that go beyond standard SQL capabilities.
 
