@@ -5,7 +5,7 @@ title: Insights
 
 # Insights
 
-**Insights** represent audited and verified facts extracted from your data analyses. Rather than sharing raw, unverified reports, Ravioli enforces a formal review lifecycle to extract verified facts and maintain the integrity of shared intelligence.
+**Insights** represent audited and verified facts extracted from your data analyses. In Ravioli, insights are the primary structured outputs generated from **[Analyses](./analyses.md)**. Rather than sharing raw, unverified reports, Ravioli enforces a formal review lifecycle to extract verified facts and maintain the integrity of shared intelligence.
 
 ```mermaid
 stateDiagram-v2
@@ -17,6 +17,16 @@ stateDiagram-v2
     Draft --> Verified : Steward/Admin Verification
     Verified --> Published : Marked is_published = True
 ```
+
+---
+
+## Insights Review Lifecycle
+
+Ravioli ensures the quality and accuracy of shared intelligence by routing findings through a governance workflow:
+
+1. **Draft State (Unverified)**: Created automatically when an analysis is approved, or manually drafted by an **[Editor](./governance/users.md#role-based-governance)**. The draft inherits its **ownership** (either individual or **[User Group](./governance/groups.md)**) from the parent analysis.
+2. **Verification**: Reviewed, audited, and approved exclusively by an authorized **[Steward](./governance/users.md#role-based-governance)** or **[Admin](./governance/users.md#role-based-governance)**. This step links the verifier's identity to the insight metadata to maintain strict accountability. Learn more about [Ownership & Approval Attribution](./governance/insights-review.md#insight-ownership--approval-attribution).
+3. **Publishing**: Once verified, the insight is marked as `is_published = True` and displayed on team feeds, dashboard aggregates, and synced to third-party tools like Notion.
 
 ---
 
