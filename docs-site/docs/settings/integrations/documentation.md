@@ -15,9 +15,15 @@ Ravioli integrates with external corporate knowledge bases and documentation pla
 
 ---
 
-## Notion (Default)
+## Default (Local Mirror)
 
-The primary documentation integration is **Notion**, which provides full bi-directional page synchronization.
+By default, Ravioli's local knowledge base is designed as a PostgreSQL-backed mirror table matching Notion's block-based data model. This enables the system to store and reference documents using Notion-compatible block trees natively within your local database without requiring any external cloud setup.
+
+---
+
+## Notion Sync
+
+For teams utilizing Notion for their documentation, Ravioli supports connecting to the official Notion API. This enables full bi-directional page synchronization between your local PostgreSQL database mirror and your live cloud Notion workspaces.
 
 * **Detailed Configuration**: For technical details, API endpoints, block tree structures, and sync sequences, see the **[Notion Setup Guide](./documentation/notion.md)**.
 
