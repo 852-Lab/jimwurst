@@ -37,9 +37,17 @@ module.exports = {
       },
       collapsed: false,
       items: [
-        'data/flat-files',
-        'data/api',
+        {
+          type: 'category',
+          label: 'Data Ingestion',
+          collapsed: false,
+          items: [
+            'data/flat-files',
+            'data/api',
+          ],
+        },
         'data/dlt-ingestion',
+        'data/transformation',
       ],
     },
     {
