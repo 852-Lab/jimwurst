@@ -14,33 +14,40 @@ module.exports = {
     'intro',
     {
       type: 'category',
-      label: 'Insights',
-      link: {
-        type: 'doc',
-        id: 'insights',
-      },
+      label: 'Vibe Analytics',
       collapsed: false,
       items: [
-        'insights/feed-summary',
-        'insights/lineage-map',
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Analyses',
-      link: {
-        type: 'doc',
-        id: 'analyses',
-      },
-      collapsed: false,
-      items: [
-        'analyses/quick-insights',
-        'analyses/custom-notebooks',
-        'analyses/deep-dives',
+        {
+          type: 'category',
+          label: 'Insights',
+          link: {
+            type: 'doc',
+            id: 'insights',
+          },
+          collapsed: false,
+          items: [
+            'insights/feed-summary',
+            'insights/lineage-map',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Analyses',
+          link: {
+            type: 'doc',
+            id: 'analyses',
+          },
+          collapsed: false,
+          items: [
+            'analyses/quick-insights',
+            'analyses/custom-notebooks',
+            'analyses/deep-dives',
+          ],
+        },
+        'kowalski',
       ],
     },
     'knowledge',
-    'kowalski',
     {
       type: 'category',
       label: 'Data',
