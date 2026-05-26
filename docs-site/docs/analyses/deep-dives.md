@@ -5,6 +5,10 @@ title: Deep Dives
 
 # Deep Dives
 
+:::info Upcoming Feature
+**Deep Dives** are currently on the upcoming roadmap. This page outlines the planned design and features.
+:::
+
 **Deep Dives** represent the AI-powered version of custom notebooks, where the SQL agent executes complex multi-step routines to solve advanced analytical problems.
 
 ---
