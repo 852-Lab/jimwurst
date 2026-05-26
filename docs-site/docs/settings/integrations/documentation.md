@@ -5,18 +5,24 @@ title: Documentation
 
 # Documentation Integrations
 
-Ravioli integrates with external knowledge bases and document tools to ground the analytical model in corporate context, standards, and manuals.
+Ravioli integrates with external corporate knowledge bases and documentation platforms to ground its AI models and notebook execution contexts in your organization's business definitions, calculation rules, and analytical guidelines.
 
 ---
 
 ## Notion (Default)
 
-Provides bi-directional page syncing.
-- **Sync Features**: Read, parse, and synchronize Notion block trees directly into local Knowledge Pages.
-- **Guides**: See the detailed **[Notion Sync Guide](./notion-sync.md)** for details on the technical import and export sync processes.
+The primary documentation integration is **Notion**, which provides full bi-directional page synchronization.
+
+- **Knowledge Sync**: Pages shared with the Notion integration token are parsed and stored as structured markdown block trees within Ravioli's Postgres database.
+- **AI Grounding**: These documents are indexed and served to **Kowalski** (the AI Agent) to provide context on business terminology, KPIs, and operational formulas.
+- **Detailed Configuration**: For technical details, API endpoints, and syncing limits, see the **[Notion Sync Guide](./notion-sync.md)**.
 
 ---
 
 ## Confluence (Upcoming)
 
-Integration is planned to import documentation spaces and enterprise knowledge pages from Atlassian Confluence, formatting them into local Knowledge Base documents to ground the AI.
+Integration is planned to support import and formatting of documentation spaces from **Atlassian Confluence**:
+
+- **Space Imports**: Admins will specify target Space Keys to import entire spaces or specific document trees.
+- **Format Normalization**: Confluence Storage Format (XHTML) will be parsed and normalized into the standard block-based format used by Ravioli's knowledge base.
+- **Scheduled Syncing**: Set cron schedules to periodically pull updates from Confluence and refresh the AI grounding model.
