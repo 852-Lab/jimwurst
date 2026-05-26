@@ -28,7 +28,7 @@ graph TD
 
 Ravioli adapts to different analytical needs and technical skill levels through three main workflows:
 
-### 1. Quick Insights (Basic Users & Ops Managers)
+### 1. Quick Insights (Basic Users)
 Designed for users who want immediate, hassle-free answers from a single file or data source.
 * **Target Persona**: Operations managers, product owners, and business users who need rapid insights without writing queries.
 * **Key Features**: Conversational analytics, automated statistical profiling, and instant data quality checks.
