@@ -7,6 +7,10 @@ title: LLM Providers
 
 Ravioli supports local, private, and cloud-hosted Large Language Models (LLMs) to drive query synthesis, schema inference, SQL code generation, and interactive AI notebook execution.
 
+:::tip Privacy & Cost Efficiency
+By default, Ravioli prioritizes local execution via **Ollama (Local)** to ensure absolute data privacy and zero inference costs. However, in many corporate environments where local hardware limitations or strict context size needs override these concerns, Ravioli offers native integrations with cloud-hosted alternatives like **Ollama Cloud** and upcoming integrations with **Google Gemini**.
+:::
+
 ---
 
 ## Ollama Local (Default)
