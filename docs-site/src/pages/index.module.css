@@ -1,0 +1,94 @@
+.heroSection {
+  padding: 6rem 0 4rem 0;
+  background: radial-gradient(circle at 50% 0%, rgba(255, 90, 54, 0.08) 0%, transparent 60%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+html[data-theme='dark'] .heroSection {
+  background: radial-gradient(circle at 50% 0%, rgba(255, 115, 84, 0.08) 0%, transparent 65%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.heroBadge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--ifm-color-primary);
+  background-color: rgba(255, 90, 54, 0.1);
+  border-radius: 9999px;
+  margin-bottom: 1.5rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.heroTitle {
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 1rem;
+}
+
+.heroHighlight {
+  color: var(--ifm-color-primary);
+}
+
+.heroSubtitle {
+  font-size: 1.25rem;
+  color: var(--ifm-color-emphasis-700);
+  max-width: 600px;
+  margin: 0 auto 1.5rem auto;
+}
+
+.searchPrompt {
+  font-size: 0.95rem;
+  color: var(--ifm-color-emphasis-600);
+}
+
+/* Card Styling */
+.docCard {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  text-decoration: none !important;
+  color: inherit !important;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.cardEmoji {
+  font-size: 1.75rem;
+  margin-right: 0.75rem;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ifm-color-emphasis-900);
+}
+
+.cardDescription {
+  font-size: 0.95rem;
+  color: var(--ifm-color-emphasis-700);
+  line-height: 1.5;
+  flex-grow: 1;
+  margin-bottom: 1rem;
+}
+
+.cardLinkText {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--ifm-color-primary);
+  display: flex;
+  align-items: center;
+  transition: transform 0.2s ease;
+}
+
+.docCard:hover .cardLinkText {
+  transform: translateX(4px);
+}
