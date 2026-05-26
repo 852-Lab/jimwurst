@@ -12,6 +12,7 @@
 module.exports = {
   tutorialSidebar: [
     'intro',
+    'insights',
     {
       type: 'category',
       label: 'Analyses',
@@ -26,7 +27,6 @@ module.exports = {
         'analyses/deep-dives',
       ],
     },
-    'insights',
     'knowledge',
     {
       type: 'category',

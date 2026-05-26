@@ -13,16 +13,16 @@ const CardList = [
     description: 'Learn the core concepts of Ravioli and build your first local data warehouse in minutes.',
   },
   {
-    title: 'Analyses',
-    link: '/docs/analyses',
-    emoji: '📊',
-    description: 'Dive into cell-based notebooks, real-time SQL execution, and autonomous agent queries.',
-  },
-  {
     title: 'Insights',
     link: '/docs/insights',
     emoji: '⚡',
     description: 'Generate automated statistical profiles and govern verified insights published to the team.',
+  },
+  {
+    title: 'Analyses',
+    link: '/docs/analyses',
+    emoji: '📊',
+    description: 'Dive into cell-based notebooks, real-time SQL execution, and autonomous agent queries.',
   },
   {
     title: 'Data',
