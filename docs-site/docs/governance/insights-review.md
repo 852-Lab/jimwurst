@@ -11,9 +11,9 @@ The **Insights Review** workflow ensures that AI-generated conclusions are audit
 
 ## Roles in Review
 
-Governance in Ravioli relies on two primary roles:
-1. **Admins (Central Data Team)**: Oversee the analytical ecosystem, manage database resources, connect new data warehouses, and verify system-wide compliance.
-2. **Stewards (Embedded Teams)**: Subject matter experts embedded in specific business functions (e.g., Marketing, Operations). They review functional analyses, verify that assumptions align with operational realities, and approve draft insights.
+Governance in Ravioli relies on two primary roles (defined in detail in the **[User Profiles & Roles](./users.md#role-based-governance)** section):
+1. **[Admins](./users.md#role-based-governance) (Central Data Team)**: Oversee the analytical ecosystem, manage database resources, connect new data warehouses, and verify system-wide compliance.
+2. **[Stewards](./users.md#role-based-governance) (Embedded Teams)**: Subject matter experts embedded in specific business functions (e.g., Marketing, Operations). They review functional analyses, verify that assumptions align with operational realities, and approve draft insights.
 
 ---
 
