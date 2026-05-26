@@ -6,6 +6,9 @@ title: Notion
 # Notion Sync
 
 Ravioli integrates natively with Notion to synchronize your team's knowledge base, documents, and reference manuals bi-directionally. This keeps your local data dictionaries in sync with live collaborative workspaces.
+:::caution Key Consideration: Deletion Guardrails
+Ravioli is a data warehouse and AI grounding platform, **not a knowledge management system**. Because the push sync mechanism deletes existing blocks on target Notion pages before appending the updated local layout, you must avoid deleting or purging knowledge pages from within Ravioli unless you explicitly intend to clear the remote Notion page. Always treat Notion as the source of truth for raw document creation and editing.
+:::
 
 ---
 
