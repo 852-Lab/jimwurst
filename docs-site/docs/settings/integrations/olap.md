@@ -5,17 +5,15 @@ title: OLAP
 
 # OLAP Database Integrations
 
-Ravioli is built for fast analytical query execution. It utilizes a hybrid approach, combining zero-latency local execution with cloud data warehouse synchronization.
-
----
-
-## DuckDB (Default Local DWH)
-
-Ravioli uses **DuckDB** as its default local Data Warehouse (DWH).
+Ravioli is built for fast analytical query execution. It utilizes a hybrid approach, combining zero-latency local execution using **DuckDB** as its default local Data Warehouse (DWH) with cloud data warehouse synchronization.
 
 - **In-process Analytics**: DuckDB executes directly inside the application process as a library, avoiding database server network latency and query parsing overhead.
 - **Embedded Storage**: All ingested assets (e.g. flat files, API extracts) are converted into DuckDB tables and written to a local `.db` file within the application directory.
 - **Query Engine**: Supports advanced SQL features including Window functions, CTEs, and direct reads of Parquet, CSV, and JSON files.
+
+:::info Data Schema & Performance
+For details regarding local DuckDB file structures, schema patterns, and query performance optimizations, see the **[OLAP Database Documentation](../../data/olap.md)**.
+:::
 
 ---
 
