@@ -9,6 +9,10 @@ Ravioli implements a decentralized, role-based data governance model that ensure
 
 By separating the generation of draft analytical findings from their official verification, Ravioli protects decision-making processes from unvetted AI hallucinations or incorrect manual assertions.
 
+:::tip Empowerment through Analytical Literacy
+While enterprise tools often gate governance behind rigid central teams, Ravioli's model is highly adaptive. Whether configured by a formal central data team or distributed among individuals with analytical literacy in smaller teams, these controls empower qualified team members to act as Stewards—maintaining data quality and alignment without introducing bottlenecks.
+:::
+
 ---
 
 ```mermaid
@@ -17,7 +21,7 @@ flowchart TD
     Draft -->|Review Request| Steward[Steward / Admin Audit]
     Steward -->|Approve & Verify| Extractor[LLM Extraction Pipeline]
     Extractor -->|Structured Fields| DB[(PostgreSQL OLTP)]
-    DB -->|Verified Insight| Published[Published Feed / Notion Sync]
+    DB -->|Verified Insight| Published[Published Feed]
 ```
 
 ---
