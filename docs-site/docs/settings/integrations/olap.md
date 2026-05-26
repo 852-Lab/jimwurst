@@ -17,6 +17,16 @@ For details regarding local DuckDB file structures, schema patterns, and query p
 
 ---
 
+## Data Versioning & Synchronization (Push/Pull)
+
+To facilitate collaborative workflows and database backups, Ravioli implements a versioned synchronization model to push and pull dataset states between local engines and cloud data warehouses:
+
+- **Push Sync**: Uploads local data assets, transformation schemas, and derived analytical tables to cloud data warehouses. It employs automated security rules to skip PII-flagged datasets.
+- **Pull Sync**: Restores or synchronizes cloud tables down to the local DuckDB instance, comparing differences to transfer only delta changes (new, updated, or deleted rows).
+- **Warehouse Support**: This functionality is natively supported using **MotherDuck**. The same push/pull sync architecture is actively planned for **Google BigQuery** and other cloud database providers in the future to offer a uniform data versioning interface.
+
+---
+
 ## MotherDuck Cloud Integration (Natively Supported)
 
 Ravioli integrates local DuckDB storage with MotherDuck's cloud data warehouse platform for central sharing and backup.
