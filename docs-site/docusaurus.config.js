@@ -4,7 +4,7 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Ravioli Docs',
-  tagline: 'Modern, high-performance Data Warehouse built with DuckDB',
+  tagline: 'AI-Native Vibe Analytics Platform.',
   url: 'https://AI-Passione.github.io',
   baseUrl: '/ravioli/',
   onBrokenLinks: 'throw',
@@ -12,6 +12,10 @@ const config = {
   favicon: 'img/favicon.svg',
   organizationName: 'AI-Passione',
   projectName: 'ravioli',
+  markdown: {
+    mermaid: true,
+  },
+  themes: ['@docusaurus/theme-mermaid'],
 
   presets: [
     [
@@ -29,10 +33,12 @@ const config = {
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
         },
-        gtag: {
-          trackingID: 'G-KPR3194X7W',
-          anonymizeIP: true,
-        },
+        ...(process.env.NODE_ENV === 'production' && {
+          gtag: {
+            trackingID: 'G-KPR3194X7W',
+            anonymizeIP: true,
+          },
+        }),
       }),
     ],
   ],
@@ -53,7 +59,7 @@ const config = {
             position: 'left',
             label: 'Documentation',
           },
-          {to: '/blog', label: 'Blog', position: 'left'},
+          { to: '/blog', label: 'Blog', position: 'left' },
           {
             href: 'https://github.com/AI-Passione/ravioli',
             label: 'GitHub',
