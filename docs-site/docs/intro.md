@@ -2,34 +2,50 @@
 sidebar_position: 1
 ---
 
-# Tutorial Intro
+# Introduction to Ravioli
 
-Let's discover **Docusaurus in less than 5 minutes**.
+Welcome to the **Ravioli** documentation! 
 
-## Getting Started
+Ravioli is a modern, high-performance local data warehouse tool powered by **DuckDB**. It helps data engineers build, test, and orchestrate SQL transformation pipelines on local files (Parquet, CSV, JSON) and remote databases seamlessly.
 
-Get started by **creating a new site**.
+## Key Features
 
-Or **try Docusaurus immediately** with **[docusaurus.new](https://docusaurus.new)**.
+- ⚡ **Lightning Fast Execution**: Built on top of DuckDB, giving you vectorized execution speeds.
+- 🥞 **Modular SQL Models**: Define models with standard SELECT queries and easily reference other models.
+- 🛡️ **Built-in Quality Controls**: Declare constraints and data tests alongside your models.
+- 🧩 **Zero Infrastructure Overhead**: Run everything locally on your machine with minimal config.
 
-## Generate a new site
+## Quick Start in 3 Steps
 
-Generate a new Docusaurus site using the **classic template**:
+### 1. Initialize your project
 
-```shell
-npx @docusaurus/init@latest init my-website classic
+Run the initializer script to bootstrap your directories and configure duckdb settings:
+
+```bash
+ravioli init my_dwh
+cd my_dwh
 ```
 
-## Start your site
+### 2. Create your first model
 
-Run the development server:
+Create a SQL model file `models/stg_users.sql`:
 
-```shell
-cd my-website
-
-npx docusaurus start
+```sql
+-- models/stg_users.sql
+SELECT 
+    id as user_id,
+    name as user_name,
+    email,
+    created_at
+FROM read_parquet('data/raw_users.parquet')
 ```
 
-Your site starts at `http://localhost:3000`.
+### 3. Run and compile
 
-Open `docs/intro.md` and edit some lines: the site **reloads automatically** and display your changes.
+Transform and materialize your models into DuckDB tables:
+
+```bash
+ravioli run
+```
+
+Ready to learn more? Check out the [Getting Started Tutorial](/docs/tutorial-basics/create-a-page).
