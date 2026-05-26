@@ -74,7 +74,27 @@ module.exports = {
             'data/olap/transformation',
           ],
         },
-        'data/oltp',
+        {
+          type: 'category',
+          label: 'OLTP (PostgreSQL)',
+          link: {
+            type: 'doc',
+            id: 'data/oltp',
+          },
+          collapsed: false,
+          items: [
+            'data/oltp/users',
+            'data/oltp/user-groups',
+            'data/oltp/user-group-members',
+            'data/oltp/data-sources',
+            'data/oltp/analyses',
+            'data/oltp/analysis-logs',
+            'data/oltp/insights',
+            'data/oltp/insight-links',
+            'data/oltp/knowledge-pages',
+            'data/oltp/system-settings',
+          ],
+        },
       ],
     },
     {

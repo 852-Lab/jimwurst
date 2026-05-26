@@ -32,36 +32,22 @@ Ravioli organizes its transactional tables as follows:
 
 | Table Name | Description | Focus Area |
 | :--- | :--- | :--- |
-| `app.users` | Stores user credentials, contact metadata, system roles (`Admin`, `Steward`, etc.), and active state. | Identity & Auth |
-| `app.user_groups` | Defines organizational spaces or team workspaces. | Identity & Auth |
-| `app.user_group_members` | Maps user membership status and roles within specific groups. | Identity & Auth |
-| `app.data_sources` | Registry of all uploaded files/APIs, hashes, row counts, status, and PII markers. | Ingestion Registry |
-| `app.analyses` | Tracks workspace goals, notebook configurations (`.ipynb`), statuses, and outcomes. | Agent Execution |
-| `app.analysis_logs` | Logs granular agent execution steps (thoughts, tool runs, observations, and exceptions). | Agent Execution |
-| `app.insights` | Distills approved analysis reports into verified, granular bullet-point facts. | Insights & Lineage |
-| `app.insight_links` | Maps self-referential parent-child relationships to construct derived insight lineages. | Insights & Lineage |
-| `app.knowledge_pages` | Notion-compatible pages structured as block lists for local AI prompting context. | Knowledge Base |
-| `app.system_settings` | Config key-value registry (holds credentials, tokens, and model setups). | System Config |
+| **[`app.users`](./oltp/users.md)** | Stores user credentials, contact metadata, system roles (`Admin`, `Steward`, etc.), and active state. | Identity & Auth |
+| **[`app.user_groups`](./oltp/user-groups.md)** | Defines organizational spaces or team workspaces. | Identity & Auth |
+| **[`app.user_group_members`](./oltp/user-group-members.md)** | Maps user membership status and roles within specific groups. | Identity & Auth |
+| **[`app.data_sources`](./oltp/data-sources.md)** | Registry of all uploaded files/APIs, hashes, row counts, status, and PII markers. | Ingestion Registry |
+| **[`app.analyses`](./oltp/analyses.md)** | Tracks workspace goals, notebook configurations (`.ipynb`), statuses, and outcomes. | Agent Execution |
+| **[`app.analysis_logs`](./oltp/analysis-logs.md)** | Logs granular agent execution steps (thoughts, tool runs, observations, and exceptions). | Agent Execution |
+| **[`app.insights`](./oltp/insights.md)** | Distills approved analysis reports into verified, granular bullet-point facts. | Insights & Lineage |
+| **[`app.insight_links`](./oltp/insight-links.md)** | Maps self-referential parent-child relationships to construct derived insight lineages. | Insights & Lineage |
+| **[`app.knowledge_pages`](./oltp/knowledge-pages.md)** | Notion-compatible pages structured as block lists for local AI prompting context. | Knowledge Base |
+| **[`app.system_settings`](./oltp/system-settings.md)** | Config key-value registry (holds credentials, tokens, and model setups). | System Config |
 
 ---
 
-### 1. User & Workspace Management
-*   **`app.users`**: Stores user credentials, active statuses, emails, and system roles (`Admin`, `Steward`, `Contributor`, `Viewer`).
-*   **`app.user_groups`** & **`app.user_group_members`**: Tracks collaboration spaces, grouping users into organizational units with specific group-level permissions.
+## Storage & Setup
 
-### 2. Ingestion Registry & Data Sources
-*   **`app.data_sources`**: The central registry tracking all active, pending, or failed raw ingestion files.
-    *   Logs filenames, sizes, hashes, and schemas.
-    *   Tracks source URL, type (`file`, `wfs`), and the **PII flag** status (`has_pii`).
-
-### 3. Agent Execution & Task Tracking
-*   **`app.analyses`**: Stores goals, parameters, notebooks (as `.ipynb` json objects), status flags (`pending`, `running`, `completed`, `failed`), and final generated outcomes.
-*   **`app.analysis_logs`**: Holds step-by-step logs of LLM agent thoughts, tool usages, observations, and runtime errors to provide complete transparency.
-
-### 4. Insight Generation & Lineage
-*   **`app.insights`**: Distills analytical outcomes into granular, individual bullet-point observations. Tracks publication states, steward verifications, and user attributions.
-*   **`app.insight_links`**: Traces the self-referential lineage of derived insights, tracking which parent insights contributed to forming a child insight.
-
-### 5. Knowledge Base & System Config
-*   **`app.knowledge_pages`**: Stores user-created documents or Notion synchronized data pages. Blocks are structured as list hierarchies (Notion-style API schemas) for prompting context grounding.
-*   **`app.system_settings`**: Key-value stores tracking workspace configurations (e.g., encrypted LLM keys or MotherDuck cloud credentials).
+For operational databases, PostgreSQL supports:
+*   **Foreign Keys**: Enforces constraints between ownership and attribution tags.
+*   **Encrypted Payloads**: Secures tokens and credentials inside system settings.
+*   **Lineage Relationships**: Maps self-referencing many-to-many DAG lines for insights.

@@ -41,5 +41,5 @@ To keep the data warehouse organized, prevent name collisions, and enforce secur
 
 Explore specific analytical capabilities:
 
-1.  **[Data Ingestion](./ingestion)**: Details the processes of extracting raw data, AI-based sheet validation, PII scanning, and streaming chunked data.
-2.  **[Data Transformation](./transformation)**: Describes the Extract, Contextualize, Load (ECL) process, semantic mapping, and LangChain integration.
+1.  **[Data Ingestion](./olap/ingestion.md)**: Details the processes of extracting raw data, AI-based sheet validation, PII scanning, and streaming chunked data.
+2.  **[Data Transformation](./olap/transformation.md)**: Describes the Extract, Contextualize, Load (ECL) process, semantic mapping, and LangChain integration.
