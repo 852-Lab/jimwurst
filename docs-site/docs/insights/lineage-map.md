@@ -5,6 +5,10 @@ title: Lineage Map
 
 # Lineage Map
 
+:::info Technical Database Schema
+For the transactional database fields and schema structures, refer to the **[`app.insight_links` Table Documentation](../data/oltp/insight-links.md)**.
+:::
+
 The **Lineage Map** tracks relationships and dependencies between different insights, showing how raw data observations lead to tactical business decisions.
 
 ```mermaid

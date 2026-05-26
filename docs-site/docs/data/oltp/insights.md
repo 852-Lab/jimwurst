@@ -5,6 +5,11 @@ sidebar_label: insights
 
 # `app.insights`
 
+:::info Business & Governance References
+*   For the insight review lifecycle and feed descriptions, refer to the **[Insights Business Definition](../../insights.md)**.
+*   For detailed auditing, verification flows, and permission roles, refer to the **[Insights Review Governance Page](../../governance/insights-review.md)**.
+:::
+
 The `app.insights` table tracks individual, granular bullet-point facts derived from approved agent analyses and reports.
 
 ---

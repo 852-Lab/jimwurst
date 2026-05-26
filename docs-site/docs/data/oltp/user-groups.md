@@ -5,6 +5,10 @@ sidebar_label: user_groups
 
 # `app.user_groups`
 
+:::info Business Definition Reference
+For details on group configurations and collective ownership concepts, refer to the **[Groups Business Definition](../../governance/groups.md)**.
+:::
+
 The `app.user_groups` table defines active workspaces or teams within Ravioli, enabling collaborative sharing and asset ownership.
 
 ---

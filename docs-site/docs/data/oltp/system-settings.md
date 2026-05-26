@@ -5,6 +5,10 @@ sidebar_label: system_settings
 
 # `app.system_settings`
 
+:::info Business Settings Reference
+For details on configuring LLM connections, Notion sync setups, or cloud warehouses (MotherDuck), refer to the **[Integrations Settings Overview](../../settings/integrations.md)**.
+:::
+
 The `app.system_settings` table acts as a transactional key-value store for app-wide settings, access keys, and external service credentials.
 
 ---

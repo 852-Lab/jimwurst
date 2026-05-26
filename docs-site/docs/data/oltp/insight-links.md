@@ -5,6 +5,10 @@ sidebar_label: insight_links
 
 # `app.insight_links`
 
+:::info Business Definition Reference
+For details on insight dependency graphs and downstream impact tracking, refer to the **[Lineage Map Business Definition](../../insights/lineage-map.md)**.
+:::
+
 The `app.insight_links` table maps self-referential lineage relationships between insights, showing how raw discoveries lead to tactical decisions.
 
 ---

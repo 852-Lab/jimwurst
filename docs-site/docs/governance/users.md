@@ -5,6 +5,10 @@ title: Users
 
 # Users
 
+:::info Technical Database Schema
+For the transactional database fields and schema structure, refer to the **[`app.users` Table Documentation](../data/oltp/users.md)**.
+:::
+
 Every activity in Ravioli—uploading an asset, defining a notebook query, or approving a draft report—is attributed to a specific **User**.
 
 ---

@@ -5,6 +5,10 @@ sidebar_label: user_group_members
 
 # `app.user_group_members`
 
+:::info Business Definition Reference
+For membership roles and collaborative settings associated with user groups, refer to the **[Groups Business Definition](../../governance/groups.md)**.
+:::
+
 The `app.user_group_members` table is an association (join) table representing a many-to-many relationship between system **Users** and **User Groups**.
 
 ---

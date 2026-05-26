@@ -5,6 +5,10 @@ sidebar_label: analyses
 
 # `app.analyses`
 
+:::info Business Definition Reference
+For details on triggering analyses, exploration workflows, and user personas, refer to the **[Analyses Business Definition](../../analyses.md)**.
+:::
+
 The `app.analyses` table tracks goals, status settings, parameters, and saved Jupyter/interactive notebook structures for AI-driven and manual analytical reports.
 
 ---

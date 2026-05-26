@@ -5,6 +5,10 @@ sidebar_label: data_sources
 
 # `app.data_sources`
 
+:::info Ingestion Workflow Reference
+For details on data ingestion methods, parsing flows, and PII security controls, refer to the **[Data Ingestion Overview](../olap/ingestion.md)**.
+:::
+
 The `app.data_sources` table is the central metadata registry tracking all data assets ingested into Ravioli.
 
 ---

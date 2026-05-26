@@ -5,6 +5,10 @@ title: Insights Review
 
 # Insights Review
 
+:::info Technical Database Schema
+For the transactional database fields and schema structures, refer to the **[`app.insights` Table Documentation](../data/oltp/insights.md)**.
+:::
+
 The **Insights Review** workflow ensures that AI-generated conclusions are audited by human stakeholders before they are made official or published to the team.
 
 ---

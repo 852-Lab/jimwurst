@@ -5,6 +5,10 @@ title: Data Ingestion Overview
 
 # Data Ingestion Overview
 
+:::info Technical Database Schema
+For the data source metadata registry schema, refer to the **[`app.data_sources` Table Documentation](../oltp/data-sources.md)**.
+:::
+
 ```mermaid
 graph TD
     %% Ingestion Sources

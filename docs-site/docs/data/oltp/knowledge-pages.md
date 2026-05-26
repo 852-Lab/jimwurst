@@ -5,6 +5,10 @@ sidebar_label: knowledge_pages
 
 # `app.knowledge_pages`
 
+:::info Business Definition Reference
+For details on Notion integration syncing, page metadata properties, and AI context grounding, refer to the **[Knowledge Base Business Definition](../../knowledge.md)**.
+:::
+
 The `app.knowledge_pages` table stores Notion-compatible block lists representing domain definitions, guidelines, and context pages to ground AI analyses.
 
 ---

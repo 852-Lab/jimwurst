@@ -5,6 +5,10 @@ sidebar_label: analysis_logs
 
 # `app.analysis_logs`
 
+:::info Business Definition Reference
+For details on triggering analyses, execution Playgrounds, and how logs are generated, refer to the **[Analyses Business Definition](../../analyses.md)**.
+:::
+
 The `app.analysis_logs` table logs the granular, step-by-step thinking traces and tool execution observations of Ravioli's AI agents.
 
 ---

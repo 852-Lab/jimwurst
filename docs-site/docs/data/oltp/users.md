@@ -5,6 +5,10 @@ sidebar_label: users
 
 # `app.users`
 
+:::info Business Definition Reference
+For the functional roles, lineage attribution, and access levels associated with users, refer to the **[Users Business Definition](../../governance/users.md)**.
+:::
+
 The `app.users` table stores system user records, credentials, permission roles, and account statuses.
 
 ---
