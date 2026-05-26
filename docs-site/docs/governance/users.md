@@ -13,25 +13,35 @@ Every activity in Ravioli—uploading an asset, defining a notebook query, or ap
 
 ---
 
-## User Metadata
-
-User profiles contain standard identifiers managed in PostgreSQL:
-- **Identifier**: A unique UUID.
-- **Name**: Display name (e.g., "Jimmy Pang").
-- **Email**: Corporate email address.
-- **Role**: Determines access level (e.g., `Admin`, `Viewer`, `Editor`, `Steward`). See [Role-Based Governance](#role-based-governance) for details on their permissions.
-- **Status**: Account state (e.g., `active`, `suspended`).
-
----
-
 ## Role-Based Governance
 
 Ravioli implements a role-based access control (RBAC) model to align with data governance policies, particularly concerning the **[Insights Review & Verification Workflow](./insights-review.md)**:
 
-- **Admin**: Oversees the entire analytical ecosystem, manages database resources, connects data warehouses, and holds universal approval privileges. Can verify any draft insights.
-- **Steward**: Subject matter experts embedded in business units (e.g., Marketing, Finance). Stewards are responsible for reviewing functional analyses and auditing/verifying draft facts before they are published. See [Insights Review](./insights-review.md) for details.
-- **Editor**: Analysts and developers who write notebooks, run queries, initiate analyses, and draft insights. Editors cannot self-approve; their draft insights must be verified by a Steward or Admin.
-- **Viewer**: Read-only access to published insights, dashboards, and lineage maps.
+- **Admin**: The central data team or platform administrators who take care of configuring and maintaining Ravioli for the organization.
+- **Steward**: Data analysts or data-literate business domain experts who understand the business logic enough to review, audit, and approve draft insights.
+- **Contributor**: Business users who have a basic level of analytical understanding (but may not be proficient in SQL or Python). They initiate analyses, upload files, and generate draft insights to be reviewed by Stewards.
+- **Viewer**: Executives, business leaders, and stakeholders who only care about consuming high-level verified insights and taking actions.
+
+### Role-Permissions Matrix
+
+| Feature / Action | Viewer | Contributor | Steward | Admin |
+| :--- | :---: | :---: | :---: | :---: |
+| **View Dashboard / Lineage / Feeds** | ✅ | ✅ | ✅ | ✅ |
+| **Run Queries / Write Custom Notebooks** | ❌ | ✅ | ✅ | ✅ |
+| **Upload Raw Data / Flat Files** | ❌ | ✅ | ✅ | ✅ |
+| **Initiate AI Analyses (Kowalski)** | ❌ | ✅ | ✅ | ✅ |
+| **Review / Verify Draft Insights** | ❌ | ❌ | ✅ | ✅ |
+| **Manage User / Groups Provisioning** | ❌ | ❌ | ❌ | ✅ |
+| **Configure System-wide Settings & Keys** | ❌ | ❌ | ❌ | ✅ |
+
+### Roles & Suggested Personas
+
+| Role | Suggested Persona | Primary Mission & Access Scope |
+| :--- | :--- | :--- |
+| **Viewer** | Business Executives & Stakeholders | Consume high-level verified insights and actions from dashboards/feeds without drill-down or editing access. |
+| **Contributor** | Business Users (basic analytical understanding, not proficient in SQL/Python) | Upload datasets, trigger AI analyses, and generate draft insights to be reviewed and published by Stewards. |
+| **Steward** | Data Analysts & Business Domain Experts | Audit assumptions, verify calculations, and review & approve generated draft insights for team-wide publishing. |
+| **Admin** | Central Data Team / Platform Administrator | Take care of Ravioli workspace administration, connect warehouses, provision groups/users, and manage system keys. |
 
 ---
 

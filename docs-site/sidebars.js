@@ -100,6 +100,10 @@ module.exports = {
     {
       type: 'category',
       label: 'Governance',
+      link: {
+        type: 'doc',
+        id: 'governance',
+      },
       collapsed: false,
       items: [
         'governance/insights-review',
