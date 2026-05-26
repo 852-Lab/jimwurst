@@ -12,6 +12,7 @@
 module.exports = {
   tutorialSidebar: [
     'intro',
+    'analyses',
     'insights',
     'knowledge',
     'data-assets',

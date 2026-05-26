@@ -13,22 +13,34 @@ const CardList = [
     description: 'Learn the core concepts of Ravioli and build your first local data warehouse in minutes.',
   },
   {
-    title: 'Insights & Analyses',
-    link: '/docs/insights',
+    title: 'Analyses',
+    link: '/docs/analyses',
     emoji: '📊',
-    description: 'Dive into interactive notebooks, quick insights, and custom SQL agent deep dives.',
+    description: 'Dive into cell-based notebooks, real-time SQL execution, and autonomous agent queries.',
   },
   {
-    title: 'Knowledge Base',
-    link: '/docs/knowledge',
-    emoji: '📓',
-    description: 'Manage domain knowledge pages, ground LLMs, and sync documents bi-directionally with Notion.',
+    title: 'Insights',
+    link: '/docs/insights',
+    emoji: '⚡',
+    description: 'Generate automated statistical profiles and govern verified insights published to the team.',
   },
   {
     title: 'Data',
     link: '/docs/data-assets',
     emoji: '💾',
-    description: 'Ingest structured files, connect geo-spatial sources, and manage local DuckDB storage.',
+    description: 'Ingest personal and corporate datasets, parse locations, and manage local DuckDB storage.',
+  },
+  {
+    title: 'Knowledge Base',
+    link: '/docs/knowledge',
+    emoji: '📓',
+    description: 'Ground LLMs in custom business domain knowledge and sync documents bi-directionally with Notion.',
+  },
+  {
+    title: 'Integrations',
+    link: '/docs/settings/integrations',
+    emoji: '🔌',
+    description: 'Connect local and cloud LLMs, link documentation engines like Notion/Confluence, and sync Motherduck warehouses.',
   },
 ];
 
