@@ -1,6 +1,6 @@
 [project]
 name = "ravioli"
-version = "0.1.0"
+version = "0.0.1"
 description = "AI-native, Notebook-style personal DWH for business-friendly vibe-analytics"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -66,3 +66,31 @@ filterwarnings = [
     "ignore::DeprecationWarning:matplotlib.*:",
     "ignore:.*PyparsingDeprecationWarning.*",
 ]
+
+# ---------------------------------------------------------------------------
+# Semantic Release
+# ---------------------------------------------------------------------------
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+assets = []
+commit_message = "chore(release): {version} [skip ci]"
+commit_parser = "angular"
+logging_use_colors = true
+# While version < 1.0 a breaking change will NOT bump to 1.x
+major_on_zero = false
+tag_format = "v{version}"
+
+[tool.semantic_release.branches.main]
+match = "main"
+prerelease = false
+
+[tool.semantic_release.changelog]
+changelog_file = "CHANGELOG.md"
+exclude_commit_patterns = []
+
+[tool.semantic_release.publish]
+# Attach build artefacts to the GitHub Release if they exist
+dist_glob_patterns = ["dist/*"]
+upload_to_vcs_release = true
+# Do NOT push to PyPI
+upload_to_pypi = false

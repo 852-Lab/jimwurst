@@ -1,0 +1,161 @@
+name: 🚀 Release
+
+# ── Trigger ──────────────────────────────────────────────────────────────────
+# Manually dispatched from the GitHub Actions UI.
+# Optionally the caller can pick the bump type; if left empty, semantic-release
+# will determine it from the commit messages automatically.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump override (leave empty to auto-detect from commits)"
+        required: false
+        default: ""
+        type: choice
+        options:
+          - ""
+          - patch
+          - minor
+          - major
+
+# ── Permissions ───────────────────────────────────────────────────────────────
+permissions:
+  contents: write   # push version-bump commit + git tag
+  packages: write   # push images to ghcr.io
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────
+  # 1. Semantic Release — bump version, write CHANGELOG, create GitHub Release
+  # ─────────────────────────────────────────────────────────────────────────
+  release:
+    name: Semantic Release
+    runs-on: ubuntu-latest
+
+    outputs:
+      version: ${{ steps.semver.outputs.version }}
+      tag:     ${{ steps.semver.outputs.tag }}
+
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # semantic-release needs the full git log
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install python-semantic-release
+        run: pip install python-semantic-release
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      # When a manual bump override is provided, pass it via --prerelease-token
+      # or the --bump flag; otherwise let the parser decide.
+      - name: Run semantic-release version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "${{ github.event.inputs.bump }}" ]; then
+            semantic-release version --${{ github.event.inputs.bump }}
+          else
+            semantic-release version
+          fi
+
+      - name: Publish GitHub Release (with changelog)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: semantic-release publish
+
+      # Export the bumped version so the docker job can use it
+      - name: Read new version
+        id: semver
+        run: |
+          VERSION=$(python -c "import tomllib; f=open('pyproject.toml','rb'); d=tomllib.load(f); print(d['project']['version'])")
+          echo "version=$VERSION"      >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION"         >> "$GITHUB_OUTPUT"
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 2. Docker — build & push backend + frontend images to GHCR
+  # ─────────────────────────────────────────────────────────────────────────
+  docker:
+    name: Build & Push Docker Images
+    runs-on: ubuntu-latest
+    needs: release
+
+    env:
+      REGISTRY: ghcr.io
+      OWNER: ${{ github.repository_owner }}
+      VERSION: ${{ needs.release.outputs.version }}
+      TAG:     ${{ needs.release.outputs.tag }}
+
+    steps:
+      - name: Checkout (at the new version tag)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.tag }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Backend ────────────────────────────────────────────────────────────
+      - name: Build & push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          # Tag with both the exact version and `latest`
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/ravioli-backend:${{ env.TAG }}
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/ravioli-backend:latest
+          labels: |
+            org.opencontainers.image.title=ravioli-backend
+            org.opencontainers.image.version=${{ env.VERSION }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
+
+      # ── Frontend ───────────────────────────────────────────────────────────
+      - name: Build & push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./src/ravioli/frontend
+          file:    ./src/ravioli/frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/ravioli-frontend:${{ env.TAG }}
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/ravioli-frontend:latest
+          labels: |
+            org.opencontainers.image.title=ravioli-frontend
+            org.opencontainers.image.version=${{ env.VERSION }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha
+          cache-to:   type=gha,mode=max
+
+      - name: Summary
+        run: |
+          echo "## 🐳 Docker images published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Image | Tag |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-----|" >> $GITHUB_STEP_SUMMARY
+          echo "| \`ghcr.io/${{ env.OWNER }}/ravioli-backend\` | \`${{ env.TAG }}\` / \`latest\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| \`ghcr.io/${{ env.OWNER }}/ravioli-frontend\` | \`${{ env.TAG }}\` / \`latest\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pull commands" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ env.OWNER }}/ravioli-backend:${{ env.TAG }}" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ env.OWNER }}/ravioli-frontend:${{ env.TAG }}" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
