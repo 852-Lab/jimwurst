@@ -48,4 +48,4 @@ Transform and materialize your models into DuckDB tables:
 ravioli run
 ```
 
-Ready to learn more? Check out the [Getting Started Tutorial](/docs/tutorial-basics/create-a-page).
+Ready to learn more? Start customizing your own documentation by adding markdown files directly in the `docs/` folder!
