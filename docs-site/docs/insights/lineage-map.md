@@ -43,7 +43,7 @@ graph RL
 To trace where the numbers behind an insight originated:
 * **Source Analysis**: Find the parent **[Analysis](../analyses.md)** that generated the insight.
 * **DuckDB Table/Schema**: Inside the analysis, check the targeted DuckDB schema (e.g., `s_spotify`, `s_google_sheet`). Data is isolated cleanly to prevent catalog collisions.
-* **Ingestion Method**: Check how the data entered the system by linking back to **[Data Ingestion](../data/ingestion.md)**:
+* **Ingestion Method**: Check how the data entered the system by linking back to **[Data Ingestion](../data/olap/ingestion.md)**:
   * **Flat Files**: Trace to the staged files (CSV, Parquet, JSON, GPX) and verify their upload hash.
   * **API Ingestion**: Trace to the remote Web Feature Service (WFS) or REST endpoint and review the relational flattening logs.
   * **DLT Pipelines**: Trace to the specific connector (Spotify, Apple Health, LinkedIn, Substack) and inspect the schema evolution rules.

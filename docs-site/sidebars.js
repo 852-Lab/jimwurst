@@ -51,18 +51,30 @@ module.exports = {
       items: [
         {
           type: 'category',
-          label: 'Data Ingestion',
+          label: 'OLAP Storage (DuckDB)',
           link: {
             type: 'doc',
-            id: 'data/ingestion',
+            id: 'data/olap',
           },
           collapsed: false,
           items: [
-            'data/ingestion/flat-files',
-            'data/ingestion/api',
+            {
+              type: 'category',
+              label: 'Data Ingestion',
+              link: {
+                type: 'doc',
+                id: 'data/olap/ingestion',
+              },
+              collapsed: false,
+              items: [
+                'data/olap/ingestion/flat-files',
+                'data/olap/ingestion/api',
+              ],
+            },
+            'data/olap/transformation',
           ],
         },
-        'data/transformation',
+        'data/oltp',
       ],
     },
     {
