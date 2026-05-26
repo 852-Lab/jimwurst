@@ -5,9 +5,9 @@ title: AI Analyst (Kowalski)
 
 # AI Analyst: Kowalski
 
-<div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+<p align="center">
   <img 
-    src="/img/kowalski.png" 
+    src={require('@site/static/img/kowalski.png').default} 
     alt="Kowalski the AI Analyst" 
     style={{ 
       maxWidth: '300px', 
@@ -16,7 +16,7 @@ title: AI Analyst (Kowalski)
       border: '1px solid var(--ifm-color-emphasis-200)'
     }} 
   />
-</div>
+</p>
 
 **Kowalski** is Ravioli's primary AI Data Analyst agent. Operating as a clinical, surgical intelligence engine, Kowalski is designed to transform raw and messy organizational data into precise, high-fidelity insights and statistical profiles. 
 
