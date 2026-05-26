@@ -139,7 +139,19 @@ module.exports = {
                 'settings/integrations/llm-providers/gemini',
               ],
             },
-            'settings/integrations/olap',
+            {
+              type: 'category',
+              label: 'OLAP Databases',
+              link: {
+                type: 'doc',
+                id: 'settings/integrations/olap',
+              },
+              collapsed: false,
+              items: [
+                'settings/integrations/olap/motherduck',
+                'settings/integrations/olap/bigquery',
+              ],
+            },
             {
               type: 'category',
               label: 'Documentation',
