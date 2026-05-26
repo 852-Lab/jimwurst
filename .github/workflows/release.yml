@@ -22,6 +22,8 @@ on:
 permissions:
   contents: write   # push version-bump commit + git tag
   packages: write   # push images to ghcr.io
+  pages: write      # deploy to GitHub Pages
+  id-token: write   # OIDC token required by deploy-pages action
 
 jobs:
   # ─────────────────────────────────────────────────────────────────────────
@@ -159,3 +161,12 @@ jobs:
           echo "docker pull ghcr.io/${{ env.OWNER }}/ravioli-backend:${{ env.TAG }}" >> $GITHUB_STEP_SUMMARY
           echo "docker pull ghcr.io/${{ env.OWNER }}/ravioli-frontend:${{ env.TAG }}" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # 3. Deploy Docs — publish the Docusaurus site to GitHub Pages
+  # ─────────────────────────────────────────────────────────────────────────
+  deploy-docs:
+    name: Deploy Docs to GitHub Pages
+    needs: [release, docker]   # run only after a successful release + docker push
+    uses: ./.github/workflows/deploy-docs.yml
+    secrets: inherit
