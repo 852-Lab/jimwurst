@@ -1,6 +1,6 @@
 [project]
 name = "ravioli"
-version = "0.0.1"
+version = "1.0.0"
 description = "AI-native, Notebook-style personal DWH for business-friendly vibe-analytics"
 readme = "README.md"
 requires-python = ">=3.10"
