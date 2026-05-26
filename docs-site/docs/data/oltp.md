@@ -26,6 +26,25 @@ erDiagram
     INSIGHTS ||--o{ INSIGHT-LINKS : "lineage"
 ```
 
+### Table Registry Overview
+
+Ravioli organizes its transactional tables as follows:
+
+| Table Name | Description | Focus Area |
+| :--- | :--- | :--- |
+| `app.users` | Stores user credentials, contact metadata, system roles (`Admin`, `Steward`, etc.), and active state. | Identity & Auth |
+| `app.user_groups` | Defines organizational spaces or team workspaces. | Identity & Auth |
+| `app.user_group_members` | Maps user membership status and roles within specific groups. | Identity & Auth |
+| `app.data_sources` | Registry of all uploaded files/APIs, hashes, row counts, status, and PII markers. | Ingestion Registry |
+| `app.analyses` | Tracks workspace goals, notebook configurations (`.ipynb`), statuses, and outcomes. | Agent Execution |
+| `app.analysis_logs` | Logs granular agent execution steps (thoughts, tool runs, observations, and exceptions). | Agent Execution |
+| `app.insights` | Distills approved analysis reports into verified, granular bullet-point facts. | Insights & Lineage |
+| `app.insight_links` | Maps self-referential parent-child relationships to construct derived insight lineages. | Insights & Lineage |
+| `app.knowledge_pages` | Notion-compatible pages structured as block lists for local AI prompting context. | Knowledge Base |
+| `app.system_settings` | Config key-value registry (holds credentials, tokens, and model setups). | System Config |
+
+---
+
 ### 1. User & Workspace Management
 *   **`app.users`**: Stores user credentials, active statuses, emails, and system roles (`Admin`, `Steward`, `Contributor`, `Viewer`).
 *   **`app.user_groups`** & **`app.user_group_members`**: Tracks collaboration spaces, grouping users into organizational units with specific group-level permissions.
@@ -43,5 +62,6 @@ erDiagram
 *   **`app.insights`**: Distills analytical outcomes into granular, individual bullet-point observations. Tracks publication states, steward verifications, and user attributions.
 *   **`app.insight_links`**: Traces the self-referential lineage of derived insights, tracking which parent insights contributed to forming a child insight.
 
-### 5. System Config
+### 5. Knowledge Base & System Config
+*   **`app.knowledge_pages`**: Stores user-created documents or Notion synchronized data pages. Blocks are structured as list hierarchies (Notion-style API schemas) for prompting context grounding.
 *   **`app.system_settings`**: Key-value stores tracking workspace configurations (e.g., encrypted LLM keys or MotherDuck cloud credentials).

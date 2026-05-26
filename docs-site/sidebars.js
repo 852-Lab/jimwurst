@@ -51,7 +51,7 @@ module.exports = {
       items: [
         {
           type: 'category',
-          label: 'OLAP Storage (DuckDB)',
+          label: 'OLAP (DuckDB)',
           link: {
             type: 'doc',
             id: 'data/olap',
