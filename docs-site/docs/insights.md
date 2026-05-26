@@ -5,7 +5,7 @@ title: Insights
 
 # Insights
 
-**Insights** represent audited and verified facts extracted from your data analyses. Rather than sharing raw, unverified reports, Ravioli enforces a formal review lifecycle to maintain the integrity of shared intelligence.
+**Insights** represent the structured and audited outcome of your **[Analyses](./analyses.md)**. Rather than sharing raw, unverified reports, Ravioli enforces a formal review lifecycle to extract verified facts and maintain the integrity of shared intelligence.
 
 ```mermaid
 stateDiagram-v2
