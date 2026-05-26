@@ -33,10 +33,11 @@ Ravioli implements a role-based access control (RBAC) model to align with data g
 
 ## Lineage Attribution
 
-Ravioli maintains strict data stewardship by logging ownership and attribution tags:
+Ravioli maintains strict data stewardship by logging ownership and attribution tags across all resources, including analyses and insights:
 - **`created_by`**: The user ID who initiated the resource (e.g., uploaded the file, created the analysis).
 - **`updated_by`**: The user ID who performed the most recent edit.
-- **`owner_id`**: The individual user ID who owns the asset.
-- **`owner_type`**: Reflects ownership level (e.g., `'user'` for individual ownership or `'group'` for shared team ownership).
+- **`owner_id`**: The individual user or group ID who owns the asset.
+- **`owner_type`**: Reflects ownership level (e.g., `'user'` for individual ownership or `'group'` for shared team ownership via a **[User Group](./groups.md)**).
+- **`verified_by_id` / `approved_by_id`**: (Specific to Insights) The user ID of the **Steward** or **Admin** who verified the draft insight.
 
-This detailed log allows teams to trace data lineage from raw CSV files up to final published report pages.
+This detailed audit log allows teams to trace data lineage from raw source files up to final published report pages, maintaining clear accountability for who owns and who approved every shared fact.

@@ -24,8 +24,8 @@ stateDiagram-v2
 
 Ravioli ensures the quality and accuracy of shared intelligence by routing findings through a governance workflow:
 
-1. **Draft State (Unverified)**: Created automatically when an analysis is approved, or manually drafted by an **[Editor](./governance/users.md#role-based-governance)**.
-2. **Verification**: Reviewed by a **[Steward](./governance/users.md#role-based-governance)** or **[Admin](./governance/users.md#role-based-governance)** who inspects the markdown report and references the underlying raw data. Read more about this verification process in the **[Insights Review Guide](./governance/insights-review.md)**.
+1. **Draft State (Unverified)**: Created automatically when an analysis is approved, or manually drafted by an **[Editor](./governance/users.md#role-based-governance)**. The draft inherits its **ownership** (either individual or **[User Group](./governance/groups.md)**) from the parent analysis.
+2. **Verification**: Reviewed, audited, and approved exclusively by an authorized **[Steward](./governance/users.md#role-based-governance)** or **[Admin](./governance/users.md#role-based-governance)**. This step links the verifier's identity to the insight metadata to maintain strict accountability. Learn more about [Ownership & Approval Attribution](./governance/insights-review.md#insight-ownership--approval-attribution).
 3. **Publishing**: Once verified, the insight is marked as `is_published = True` and displayed on team feeds, dashboard aggregates, and synced to third-party tools like Notion.
 
 ---
