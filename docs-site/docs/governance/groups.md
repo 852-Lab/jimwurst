@@ -19,6 +19,12 @@ When raw files, notebooks, or analyses are created, ownership can be assigned to
 - **Shared Access**: All members of a group inherit permissions to view, run, and update the group's assets.
 - **`owner_type = 'group'`**: Identifies that a collective entity owns the resource, switching access controls from individual checks to group membership lookups.
 
+:::warning Resilience against Asset Orphanage
+In many data platforms, assets like custom SQL notebooks, registered data sources, and business knowledge pages are tied to individual user accounts. When a team member departs the company or changes teams, these assets often become "orphaned" and inaccessible, leading to dead links and lost institutional knowledge.
+
+Ravioli's group-based ownership solves this struggle. By default, assigning assets to a User Group ensures that ownership is bound to the team context rather than the individual. The assets remain fully active and maintainable by the remaining group members, creating a much more resilient data architecture.
+:::
+
 ### Database & API Access Verification
 When a user attempts to retrieve, modify, or run a query against a protected asset:
 1. The backend inspects the asset's `owner_type`.
@@ -61,6 +67,7 @@ To maintain clean data boundaries, organizations generally structure their Ravio
 | :--- | :--- | :--- |
 | **Finance Team** | Financial Analysts, CFO, Stewards | Protect sensitive revenue and expense datasets. Ensure all reports are verified by a Finance Steward before presenting. |
 | **Marketing Ops** | Campaign Managers, Marketing Analysts, CMO | Collaborate on campaign performance metrics. Enable quick iteration on Google Analytics and Ad spend data. |
+| **Operations Team** | Ops Managers, Supply Chain Analysts, Logistics Stewards | Monitor fulfillment metrics, warehouse yields, and delivery datasets. Allow local Ops Stewards to verify operational insights. |
 | **Core Platform** | Analytics Engineers, Admins | Manage system-wide transformations, oversee raw warehouse ingests, and maintain Docusaurus/Notion sync keys. |
 
 ---
