@@ -15,6 +15,10 @@ module.exports = {
     {
       type: 'category',
       label: 'Vibe Analytics',
+      link: {
+        type: 'doc',
+        id: 'vibe-analytics',
+      },
       collapsed: false,
       items: [
         {
