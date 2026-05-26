@@ -20,5 +20,6 @@ Ravioli plans native integration with Google Gemini via **Google AI Studio** to 
 ## Setup
 
 When launched, configuring Google Gemini will involve:
-1. Generating an API key from Google AI Studio.
+1. Generating an API key from [Google AI Studio](https://aistudio.google.com/) (detailed guidance can be found in the [Google API Key Documentation](https://ai.google.dev/gemini-api/docs/api-key)).
 2. Saving it under the `gemini` settings key in the platform Settings menu.
+
