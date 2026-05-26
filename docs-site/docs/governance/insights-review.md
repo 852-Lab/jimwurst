@@ -21,15 +21,16 @@ Governance in Ravioli relies on two primary roles (defined in detail in the **[U
 
 ---
 
-## Approval Workflow
+## Approval & LLM Extraction Workflow
 
 When the AI analyst Kowalski completes an analysis report:
 1. **Draft State**: The report is generated in markdown and remains unapproved. The analysis metadata reflects `is_approved = false`.
 2. **Review**: Admins or Stewards inspect the markdown, verifying the findings against the attached data sources and assumptions.
 3. **Approval Trigger**: Clicking **Approve** triggers a background extraction task:
-   - The markdown is parsed by the LLM into individual, structured key insights.
-   - Separate `Insight` records are created in the database.
-   - Insights inherit the owner, creator, and reviewer metadata from the analysis.
+   - The platform passes the markdown content to the LLM extraction pipeline (utilizing structured JSON schemas).
+   - The LLM parses the unstructured markdown into individual, atomic, structured facts (containing the insight content, metadata tags, and severity/confidence classifications).
+   - Separate `Insight` records are created in the database for each extracted fact.
+   - Insights inherit the owner (`owner_id`), creator (`created_by`), and reviewer (`verified_by_id`) metadata from the parent analysis.
 4. **Publishing**: Verified insights (`is_verified = true`) can be marked as published (`is_published = true`), making them visible on team dashboards and eligible to sync to Notion.
 
 ---
@@ -41,7 +42,7 @@ To ensure accountability and trace origin lines, every insight in Ravioli record
 ### 1. Who Owns the Insight?
 * **Asset Owner**: The `owner_id` of the insight matches the owner of the source analysis. 
 * **Ownership Type (`owner_type`)**:
-  * **Individual Ownership (`'user'`)**: The individual analyst or Editor who authored the notebook/analysis owns the resulting insight.
+  * **Individual Ownership (`'user'`)**: The individual analyst or **Contributor** who authored the notebook/analysis owns the resulting insight.
   * **Collective Ownership (`'group'`)**: When an analysis is created on behalf of a team (e.g., "Marketing Analytics Group"), the ownership is assigned to that **[User Group](./groups.md)**, allowing all group members to view or edit.
 
 ### 2. Who Reviews & Approves the Insight?
