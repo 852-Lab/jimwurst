@@ -9,7 +9,7 @@ const config = {
   baseUrl: '/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
-  favicon: 'img/favicon.ico',
+  favicon: 'img/favicon.svg',
   organizationName: 'AI-Passione',
   projectName: 'ravioli',
 
@@ -40,7 +40,7 @@ const config = {
         title: 'Ravioli Docs',
         logo: {
           alt: 'Ravioli Logo',
-          src: 'img/logo.svg',
+          src: 'img/logo.png',
         },
         items: [
           {

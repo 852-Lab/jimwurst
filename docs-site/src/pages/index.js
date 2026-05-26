@@ -32,7 +32,7 @@ const CardList = [
   },
 ];
 
-function Card({title, link, emoji, description}) {
+function Card({ title, link, emoji, description }) {
   return (
     <div className="col col--6 margin-bottom--lg">
       <Link className={clsx('card', styles.docCard)} to={link}>
@@ -52,15 +52,15 @@ function Card({title, link, emoji, description}) {
 }
 
 export default function Home() {
-  const {siteConfig} = useDocusaurusContext();
+  const { siteConfig } = useDocusaurusContext();
   return (
     <Layout
       title={siteConfig.title}
       description={siteConfig.tagline}>
-      
+
       <header className={styles.heroSection}>
         <div className="container text--center">
-          <div className={styles.heroBadge}>Ravioli v1.0.0</div>
+          <div className={styles.heroBadge}>Ravioli v0.1.0</div>
           <h1 className={styles.heroTitle}>
             Ravioli <span className={styles.heroHighlight}>Documentation</span>
           </h1>
