@@ -78,7 +78,20 @@ module.exports = {
           },
           collapsed: false,
           items: [
-            'settings/notion-sync',
+            'settings/integrations/llm-providers',
+            'settings/integrations/olap',
+            {
+              type: 'category',
+              label: 'Documentation',
+              link: {
+                type: 'doc',
+                id: 'settings/integrations/documentation',
+              },
+              collapsed: false,
+              items: [
+                'settings/integrations/notion-sync',
+              ],
+            },
           ],
         },
       ],

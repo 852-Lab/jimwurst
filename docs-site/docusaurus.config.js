@@ -33,12 +33,10 @@ const config = {
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
         },
-        ...(process.env.NODE_ENV === 'production' && {
-          gtag: {
-            trackingID: 'G-KPR3194X7W',
-            anonymizeIP: true,
-          },
-        }),
+        gtag: {
+          trackingID: 'G-KPR3194X7W',
+          anonymizeIP: true,
+        },
       }),
     ],
   ],
