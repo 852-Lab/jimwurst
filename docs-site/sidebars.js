@@ -126,7 +126,18 @@ module.exports = {
           },
           collapsed: false,
           items: [
-            'settings/integrations/llm-providers',
+            {
+              type: 'category',
+              label: 'LLM Providers',
+              link: {
+                type: 'doc',
+                id: 'settings/integrations/llm-providers',
+              },
+              collapsed: false,
+              items: [
+                'settings/integrations/llm-providers/ollama',
+              ],
+            },
             'settings/integrations/olap',
             {
               type: 'category',
