@@ -126,8 +126,32 @@ module.exports = {
           },
           collapsed: false,
           items: [
-            'settings/integrations/llm-providers',
-            'settings/integrations/olap',
+            {
+              type: 'category',
+              label: 'LLM Providers',
+              link: {
+                type: 'doc',
+                id: 'settings/integrations/llm-providers',
+              },
+              collapsed: false,
+              items: [
+                'settings/integrations/llm-providers/ollama',
+                'settings/integrations/llm-providers/gemini',
+              ],
+            },
+            {
+              type: 'category',
+              label: 'OLAP Databases',
+              link: {
+                type: 'doc',
+                id: 'settings/integrations/olap',
+              },
+              collapsed: false,
+              items: [
+                'settings/integrations/olap/motherduck',
+                'settings/integrations/olap/bigquery',
+              ],
+            },
             {
               type: 'category',
               label: 'Documentation',
@@ -137,7 +161,8 @@ module.exports = {
               },
               collapsed: false,
               items: [
-                'settings/integrations/notion-sync',
+                'settings/integrations/documentation/notion',
+                'settings/integrations/documentation/confluence',
               ],
             },
           ],

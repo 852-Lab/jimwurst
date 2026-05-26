@@ -43,7 +43,7 @@ Knowledge Pages are not anonymous prompts. They are governed assets with clear s
 
 ## Notion Integration
 
-Bi-directional synchronization is supported to keep local Knowledge Pages in sync with external Notion workspaces. See the dedicated **[Notion Sync Guide](./settings/integrations/notion-sync.md)** under Settings for setup and workflow details, or browse the broader **[Integrations](./settings/integrations.md)** overview for related documentation connectors.
+Bi-directional synchronization is supported to keep local Knowledge Pages in sync with external Notion workspaces. See the dedicated **[Notion Sync Guide](./settings/integrations/documentation/notion.md)** under Settings for setup and workflow details, or browse the broader **[Integrations](./settings/integrations.md)** overview for related documentation connectors.
 
 ---
 
@@ -54,4 +54,4 @@ Bi-directional synchronization is supported to keep local Knowledge Pages in syn
 - **[Insights](./insights.md)**: Follow how grounded analysis results become reviewed, publishable facts.
 - **[Data](./data.md)**: Understand how source datasets enter Ravioli before they are analyzed with knowledge context.
 - **[Integrations](./settings/integrations.md)**: Review external systems that extend Ravioli's AI and documentation capabilities.
-- **[Notion Sync Guide](./settings/integrations/notion-sync.md)**: Learn the technical details of syncing Knowledge Pages with Notion.
+- **[Notion Sync Guide](./settings/integrations/documentation/notion.md)**: Learn the technical details of syncing Knowledge Pages with Notion.
