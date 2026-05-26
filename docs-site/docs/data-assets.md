@@ -1,9 +1,9 @@
 ---
 sidebar_position: 4
-title: Data (Assets)
+title: Data
 ---
 
-# Data (Assets)
+# Data
 
 The **Data Assets** module handles ingestion, schema orchestration, and storage in the local OLAP database.
 

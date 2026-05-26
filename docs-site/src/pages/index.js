@@ -25,7 +25,7 @@ const CardList = [
     description: 'Manage domain knowledge pages, ground LLMs, and sync documents bi-directionally with Notion.',
   },
   {
-    title: 'Data (Assets)',
+    title: 'Data',
     link: '/docs/data-assets',
     emoji: '💾',
     description: 'Ingest structured files, connect geo-spatial sources, and manage local DuckDB storage.',
