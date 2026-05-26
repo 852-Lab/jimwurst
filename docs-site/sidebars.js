@@ -12,7 +12,20 @@
 module.exports = {
   tutorialSidebar: [
     'intro',
-    'analyses',
+    {
+      type: 'category',
+      label: 'Analyses',
+      link: {
+        type: 'doc',
+        id: 'analyses',
+      },
+      collapsed: false,
+      items: [
+        'analyses/quick-insights',
+        'analyses/custom-notebooks',
+        'analyses/deep-dives',
+      ],
+    },
     'insights',
     'knowledge',
     'data-assets',
