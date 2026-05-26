@@ -5,7 +5,7 @@ title: Analyses
 
 # Analyses
 
-In Ravioli, **Analyses** are interactive projects designed to explore and query datasets. They represent the primary **Contributor** activity, enabling users to transform raw data assets into actionable knowledge.
+In Ravioli, **Analyses** are interactive projects designed to explore and query datasets. They represent the primary **[Contributor](./governance/users.md)** activity, enabling users to transform raw data assets into actionable knowledge.
 
 ## Triggering an Analysis
 
