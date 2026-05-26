@@ -52,4 +52,4 @@ Maintain absolute integrity over analytical outputs. Read about data ownership, 
 Configure user profiles, manage personal prompts, and link external systems:
 - **[Basic Settings](./settings/basic-settings.md)**: Contact metadata and customized persona rules.
 - **[Integrations](./settings/integrations.md)**: Local/cloud LLMs (Ollama, Gemini), Knowledge tools (Notion, Confluence), and Cloud Warehouses (MotherDuck, BigQuery).
-- **[Notion Sync Guide](./settings/integrations/notion-sync.md)**: Deep dive into Notion's API block structures and sync intervals.
+- **[Notion Sync Guide](./settings/integrations/documentation/notion.md)**: Deep dive into Notion's API block structures and sync intervals.

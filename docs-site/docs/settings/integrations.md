@@ -36,4 +36,4 @@ Explore the detailed setup and technical specs for each category:
 
 * **[LLM Providers](./integrations/llm-providers.md)**: Connect Ravioli's agent **Kowalski** to local Ollama nodes, Ollama Cloud deployments, or Google Gemini APIs.
 * **[OLAP Databases](./integrations/olap.md)**: Configure the default in-process DuckDB engine, link cloud analytics with MotherDuck, or prepare for BigQuery.
-* **[Documentation](./integrations/documentation.md)**: Ground your AI analyst in existing corporate manuals by importing Confluence pages or syncing **[Notion Pages](./integrations/notion-sync.md)**.
+* **[Documentation](./integrations/documentation.md)**: Ground your AI analyst in existing corporate manuals by importing Confluence pages or syncing **[Notion Pages](./integrations/documentation/notion.md)**.

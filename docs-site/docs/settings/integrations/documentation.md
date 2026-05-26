@@ -7,6 +7,11 @@ title: Documentation
 
 Ravioli integrates with external corporate knowledge bases and documentation platforms to ground its AI models and notebook execution contexts in your organization's business definitions, calculation rules, and analytical guidelines.
 
+:::info Grounding & Storage
+- **Knowledge Base**: For details on how imported pages are parsed, managed, and attached to analyses, see the **[Knowledge Base Documentation](../../knowledge.md)**.
+- **System Settings**: Integration tokens and configuration details are stored securely as encrypted JSON payloads inside the **[`app.system_settings` Table](../../data/oltp/system-settings.md)**.
+:::
+
 ---
 
 ## Notion (Default)

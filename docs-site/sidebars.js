@@ -161,7 +161,8 @@ module.exports = {
               },
               collapsed: false,
               items: [
-                'settings/integrations/notion-sync',
+                'settings/integrations/documentation/notion',
+                'settings/integrations/documentation/confluence',
               ],
             },
           ],
