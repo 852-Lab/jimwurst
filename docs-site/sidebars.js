@@ -136,6 +136,7 @@ module.exports = {
               collapsed: false,
               items: [
                 'settings/integrations/llm-providers/ollama',
+                'settings/integrations/llm-providers/gemini',
               ],
             },
             'settings/integrations/olap',

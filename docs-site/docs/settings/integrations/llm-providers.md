@@ -25,10 +25,9 @@ Ravioli supports local execution and cloud-hosted setups for Ollama.
 
 ## Google Gemini (Upcoming)
 
-Ravioli plans native integration with Google Gemini via **Google AI Studio**:
-- **Massive Context Windows**: Allows teams to utilize Gemini 1.5 Pro and Flash with context windows up to 2 million tokens.
-- **Directory and Code Analysis**: This context window is big enough to feed complete database schemas, metadata tables, and entire directories of Notion knowledge bases into a single prompt.
-- **Setup**: Users will paste their Google AI Studio API key into the Settings menu, which will be encrypted and saved under the `gemini` settings key.
+Google AI Studio integration is planned to support Gemini models.
+
+* **Capabilities**: See the **[Gemini Setup Guide](./llm-providers/gemini.md)** for features like massive context windows and database schema/code analysis.
 
 ---
 
