@@ -12,6 +12,10 @@ const config = {
   favicon: 'img/favicon.svg',
   organizationName: 'AI-Passione',
   projectName: 'ravioli',
+  markdown: {
+    mermaid: true,
+  },
+  themes: ['@docusaurus/theme-mermaid'],
 
   presets: [
     [
