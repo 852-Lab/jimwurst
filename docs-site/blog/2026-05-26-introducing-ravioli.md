@@ -7,7 +7,7 @@ tags: [ravioli, vibe-analytics, duckdb, semantic-layer]
 
 We are wasting six figures a year on dashboard maintenance. In the average data team, 30% to 40% of analyst time is spent fixing broken SQL, adjusting dashboard filters, and maintaining "dashboard graveyards" that nobody looks at after two weeks. 
 
-We need to talk more about **Vibe Analytics**—and how Ravioli was built to serve it.
+We need to talk more about [Vibe Analytics](https://jimmypang.substack.com/p/we-need-to-talk-more-about-vibe-analytics)—and how Ravioli was built to serve it.
 
 <!-- truncate -->
 
