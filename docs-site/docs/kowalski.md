@@ -18,9 +18,9 @@ title: AI Analyst (Kowalski)
   />
 </p>
 
-**Kowalski** is Ravioli's primary AI Data Analyst agent. Operating as a clinical, surgical intelligence engine, Kowalski is designed to transform raw and messy organizational data into precise, high-fidelity insights and statistical profiles. 
+**Kowalski** is Ravioli's primary AI Data Analyst agent. Powered by the **[LangChain](https://www.langchain.com/)** framework, Kowalski operates as a clinical, surgical intelligence engine designed to transform raw and messy organizational data into precise, high-fidelity insights and statistical profiles. 
 
-Whether generating complex analytical queries, detecting data quality anomalies, or choosing the perfect chart representation, Kowalski processes your business questions with evidence-driven methodology and absolute objectivity.
+Whether generating complex analytical queries, coordinating multi-step execution chains, detecting data quality anomalies, or choosing the perfect chart representation, Kowalski processes your business questions with evidence-driven methodology and absolute objectivity.
 
 ---
 
