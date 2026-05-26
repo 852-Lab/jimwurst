@@ -28,7 +28,7 @@ Used for documenting analytical methodologies, capturing business goals, and fra
 
 ### SQL Cells
 Enable direct querying of structured data assets attached to the analysis.
-- **Execution Engine**: Runs directly against the local **DuckDB** file or remote **MotherDuck** warehouse.
+- **Execution Engine**: Runs directly against the local **[DuckDB](../settings/integrations/olap.md)** file or remote **[MotherDuck](../settings/integrations/olap.md)** warehouse.
 - **Outputs**: Displays up to the first 15 query results in a live, formatted tabular view for immediate feedback.
 
 ### Python Cells
@@ -39,7 +39,7 @@ Provide the ability to run custom scripts, statistical calculations, and data fo
 
 ### AI Cells
 Leverage LLM integration directly within the notebook flow.
-- **Functionality**: Accepts natural language prompts to either generate code/SQL, analyze data tables, or summarize previous cell execution histories.
+- **Functionality**: Integrates with the configured **[LLM Providers](../settings/integrations/llm-providers.md)** to accept natural language prompts to either generate code/SQL, analyze data tables, or summarize previous cell execution histories.
 - **Use Case**: Translating plain English requirements into executable SQL or synthesizing visual patterns into text summaries.
 
 ---
