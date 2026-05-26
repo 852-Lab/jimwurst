@@ -29,5 +29,6 @@ To mitigate this, the backend Ollama client implements active RAM recovery:
 ## Ollama Cloud
 
 For teams that prefer offloading inference to dedicated remote machines:
-- **API Bearer Tokens**: You can point the Ollama connection to a cloud endpoint (such as a shared Kubernetes cluster or cloud GPU service) and configure a bearer token.
+- **API Bearer Tokens**: You can point the Ollama connection to a cloud endpoint (such as a shared Kubernetes cluster or cloud GPU service) and configure a bearer token. For official details on obtaining your API key, check your account settings on [ollama.com](https://ollama.com) or refer to the [Ollama Blog](https://ollama.com/blog/security-keys) / [GitHub repository](https://github.com/ollama/ollama) documentation.
 - **Header Injection**: The backend client automatically injects the encrypted `Authorization: Bearer <token>` header into all outbound requests.
+
