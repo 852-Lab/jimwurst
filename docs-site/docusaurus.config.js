@@ -29,10 +29,12 @@ const config = {
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
         },
-        gtag: {
-          trackingID: 'G-KPR3194X7W',
-          anonymizeIP: true,
-        },
+        ...(process.env.NODE_ENV === 'production' && {
+          gtag: {
+            trackingID: 'G-KPR3194X7W',
+            anonymizeIP: true,
+          },
+        }),
       }),
     ],
   ],
@@ -53,7 +55,7 @@ const config = {
             position: 'left',
             label: 'Documentation',
           },
-          {to: '/blog', label: 'Blog', position: 'left'},
+          { to: '/blog', label: 'Blog', position: 'left' },
           {
             href: 'https://github.com/AI-Passione/ravioli',
             label: 'GitHub',
