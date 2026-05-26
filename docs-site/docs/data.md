@@ -25,9 +25,8 @@ While operational metadata (user profiles, settings, analysis histories) is stor
 
 ---
 
-## Ingestion Sub-modules
+## Sub-modules
 
-Explore specific ingestion capabilities:
-1. **[Flat Files](./data/flat-files.md)**: Upload and validation pipelines for tabular CSV, Parquet, JSON, and GPS GPX files.
-2. **[API Ingestion](./data/api.md)**: Ingesting Web Feature Service (WFS) geometry layers.
-3. **[DLT Ingestion](./data/dlt-ingestion.md)** *(Upcoming)*: Dedicated pipelines for Spotify, Apple Health, LinkedIn, and Substack exports.
+Explore specific data capabilities:
+1. **[Data Ingestion](./data/ingestion.md)**: Details flat file parsing (CSV, Parquet, JSON, GPX), API/WFS integrations, and upcoming DLT connectors.
+2. **[Data Transformation](./data/transformation.md)**: Covers the semantic ECL (Extract, Contextualize, Load) by AI philosophy.
