@@ -5,8 +5,8 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 const config = {
   title: 'Ravioli Docs',
   tagline: 'Modern, high-performance Data Warehouse built with DuckDB',
-  url: 'https://docs.ravioli.dev',
-  baseUrl: '/',
+  url: 'https://AI-Passione.github.io',
+  baseUrl: '/ravioli/',
   onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
   favicon: 'img/favicon.svg',
