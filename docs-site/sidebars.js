@@ -49,7 +49,19 @@ module.exports = {
       },
       collapsed: false,
       items: [
-        'data/ingestion',
+        {
+          type: 'category',
+          label: 'Data Ingestion',
+          link: {
+            type: 'doc',
+            id: 'data/ingestion',
+          },
+          collapsed: false,
+          items: [
+            'data/ingestion/flat-files',
+            'data/ingestion/api',
+          ],
+        },
         'data/transformation',
       ],
     },

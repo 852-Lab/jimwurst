@@ -1,49 +1,35 @@
 ---
 sidebar_position: 1
-title: Data Ingestion
+title: Data Ingestion Overview
 ---
 
-# Data Ingestion
+# Data Ingestion Overview
 
-The **Data Ingestion** module is responsible for importing flat files, querying external APIs, and routing raw data safely into the OLAP database.
+The **Data Ingestion** module is responsible for importing external datasets, querying APIs, and loading raw data safely into Ravioli's OLAP database (DuckDB) and transactional database (PostgreSQL).
 
----
-
-## 1. Flat Files
-
-Ravioli supports uploading and parsing standard flat files:
-- **CSV / TSV**: Standard tabular data.
-- **Parquet**: Highly compressed, columnar files optimized for large datasets and fast querying.
-- **JSON / JSONL**: Semi-structured document and event logs.
-- **GPX (GPS Exchange Format)**: Location logs from athletic runs, walks, or cycling tracks. The parser automatically structures coordinates, elevation, and timestamps.
-
-### Upload and Verification Flow
-1. **Hashing**: Uploaded files are hashed to check for duplicate datasets.
-2. **Buffering**: Files are temporarily written to a local staging directory.
-3. **Pipeline Ingestion**: Tabular data is written into DuckDB tables, and ownership tags (`created_by`, `owner_id`) are logged in PostgreSQL.
+Ravioli splits data ingestion into two primary strategies:
 
 ---
 
-## 2. API Ingestion
+## Ingestion Categories
 
-For dynamic datasets, Ravioli queries remote APIs directly:
-- **Web Feature Service (WFS)**: Connects to geospatial servers to fetch point, line, or polygon geometries.
-- **Relational Mapping**: Automatically flattens XML/JSON spatial feature lists into tabular records and loads them into DuckDB.
+### 📄 [Flat Files Ingestion](./ingestion/flat-files.md)
+Learn how Ravioli processes and validates uploaded spreadsheets and files:
+*   **Supported Formats**: CSV, TSV, Parquet, JSON, GPX, XML, and XLSX (Excel).
+*   **AI Sheet Analysis**: Uses LLM agents to detect structures and validate spreadsheet structures before loading them.
+*   **Parallel Streaming**: Splitting large XML files into chunks for concurrent loading using `dlt`.
+
+### 🌐 [API Ingestion](./ingestion/api.md)
+Learn how Ravioli connects to online APIs and geospatial layers:
+*   **WFS Integration**: Pulls geo-features and geometries from Web Feature Services.
+*   **Personal Data Connectors**: Connects to Apple Health, Spotify, LinkedIn, and Substack (planned).
+*   **Namespace Isolation**: Keeps incoming schemas isolated to prevent database catalog pollution.
 
 ---
 
-## 3. DLT Ingestion
+## Core Ingestion Flow
 
-:::info Upcoming Feature
-Additional personal and corporate connectors are currently on the upcoming roadmap. This section outlines the planned pipeline architectures.
-:::
-
-Ravioli plans to leverage the **dlt** (data load tool) library to support schema-evolution-resilient pipelines for personal data exports:
-- **Apple Health**: Fitness workouts, energy expenditure, and heart rate logs.
-- **Spotify**: Stream histories, playlist catalogs, and listening durations.
-- **LinkedIn**: Connection lists, message stats, and profile views.
-- **Substack**: Subscriber growth lists and email open/click statistics.
-
-### Schema Orchestration
-- **Namespace Isolation**: Each connector will load data into isolated schemas (e.g. `s_spotify`) to avoid database catalog collisions.
-- **Progress SSE**: Long-running API extractions will stream progress steps using Server-Sent Events (SSE).
+1.  **Duplicate Detection**: Hashing files to prevent reloading identical data.
+2.  **Staging Buffer**: Writing raw uploads to temporary storage.
+3.  **Parsing & Mapping**: Running specialized parsers or AI helpers.
+4.  **Database Storage**: Creating schemas and storing tables in DuckDB while logging dataset ownership and metadata in PostgreSQL.
