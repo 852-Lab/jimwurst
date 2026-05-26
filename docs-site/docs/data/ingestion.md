@@ -52,3 +52,31 @@ Learn how Ravioli connects to online APIs and geospatial layers:
 2.  **Staging Buffer**: Writing raw uploads to temporary storage.
 3.  **Parsing & Mapping**: Running specialized parsers or AI helpers.
 4.  **Database Storage**: Creating schemas and storing tables in DuckDB while logging dataset ownership and metadata in PostgreSQL.
+
+---
+
+## PII Detection & Privacy Protection
+
+To safeguard sensitive user data, Ravioli integrates a rule-based **PII (Personally Identifiable Information) Scanner** directly into the ingestion pipeline.
+
+```mermaid
+graph LR
+    Upload[Ingested Data] --> Scan{PII Scanner}
+    Scan -->|Match Found| Badge[Tag with PII]
+    Scan -->|Clear| Safe[Unrestricted]
+    Badge -->|Block| Cloud[Excludes from MotherDuck Sync]
+```
+
+### 1. Ingestion Scanning
+Every tabular dataset is sampled during ingestion. The engine checks column contents against standard patterns to detect:
+*   **Emails**: standard email address patterns.
+*   **Phone Numbers**: multi-format international telephone numbers.
+*   **Credit Cards**: 13 to 16 digit card sequences.
+*   **Social Security Numbers (SSN)**: standard SSN patterns.
+*   **IP Addresses**: IPv4 addresses.
+
+### 2. Privacy Constraints & Sync Policies
+If any matching pattern is found in the sample:
+*   **PII Tagging**: The dataset is tagged as `has_pii = True` in PostgreSQL and flagged with a `PII` warning badge in the user interface.
+*   **Cloud Block**: PII-tagged data sources are **restricted to Local storage only**. They are automatically ignored and filtered out of any cloud synchronization or MotherDuck bulk push operations.
+*   **Override & Dismissal**: If a detection is verified as a false positive, users can manually dismiss the tag inside the frontend interface, which updates the flag to `False` and restores sync capabilities.
