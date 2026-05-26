@@ -21,6 +21,7 @@ module.exports = {
       },
       collapsed: false,
       items: [
+        'kowalski',
         {
           type: 'category',
           label: 'Insights',
@@ -48,7 +49,6 @@ module.exports = {
             'analyses/deep-dives',
           ],
         },
-        'kowalski',
       ],
     },
     'knowledge',
