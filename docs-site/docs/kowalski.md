@@ -18,9 +18,11 @@ title: AI Analyst - Kowalski
   />
 </p>
 
-**Kowalski** is Ravioli's primary AI Data Analyst agent. Powered by the **[LangChain](https://www.langchain.com/)** framework, the underlying engine (implemented in [`Kowalski.py`](file:///Users/jimmypang/AIPassioneProjects/ravioli/src/ravioli/ai/Kowalski.py)) operates as a clinical, surgical intelligence engine designed to transform raw and messy organizational data into precise, high-fidelity insights and statistical profiles. The reasoning capability driving the agent is powered by models configured via the **[LLM Providers](./settings/integrations/llm-providers.md)** integrations page. As an active analyst, Kowalski primarily contributes directly within the core workflows of **[Analyses](./analyses.md)** and the resulting signals published in **[Insights](./insights.md)**.
+**Kowalski** is Ravioli's primary AI Data Analyst agent. Powered by **[LangChain](https://www.langchain.com/)** and implemented in [`Kowalski.py`](file:///Users/jimmypang/AIPassioneProjects/ravioli/src/ravioli/ai/Kowalski.py), Kowalski executes analytical workflows using models configured via the **[LLM Providers](./settings/integrations/llm-providers.md)** integrations page.
 
-Whether generating complex analytical queries, coordinating multi-step execution chains, detecting data quality anomalies, or choosing the perfect chart representation, Kowalski processes your business questions with evidence-driven methodology and absolute objectivity.
+Kowalski contributes directly to two core activities:
+* **[Analyses](./analyses.md)**: Autonomously drafts execution plans, writes optimized DuckDB SQL queries, self-corrects runtime errors, and synthesizes visual charts.
+* **[Insights](./insights.md)**: Summarizes query results into clinical, high-impact bulleted signals ready for organization-wide publication.
 
 ---
 
