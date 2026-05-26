@@ -7,28 +7,28 @@ import styles from './index.module.css';
 
 const CardList = [
   {
-    title: 'Analyses & Insights',
-    link: '/docs/analyses',
+    title: 'Getting Started',
+    link: '/docs/intro',
+    emoji: '🚀',
+    description: 'Learn the core concepts of Ravioli and build your first local data warehouse in minutes.',
+  },
+  {
+    title: 'Insights & Analyses',
+    link: '/docs/insights',
     emoji: '📊',
-    description: 'Understand the core analyses model, the Kowalski AI analyst, and the human-in-the-loop verification workflow.',
+    description: 'Dive into interactive notebooks, quick insights, and custom SQL agent deep dives.',
   },
   {
-    title: 'Quick Insights',
-    link: '/docs/quick-insights',
-    emoji: '⚡',
-    description: 'Generate automatic statistical profiles, data cleaning reports, skewness alerts, and suggested query prompts.',
-  },
-  {
-    title: 'Custom Notebooks',
-    link: '/docs/custom-notebook',
+    title: 'Knowledge Base',
+    link: '/docs/knowledge',
     emoji: '📓',
-    description: 'Explore data interactively using cell-based conversations, live execution tables, and in-place notebook cell updates.',
+    description: 'Manage domain knowledge pages, ground LLMs, and sync documents bi-directionally with Notion.',
   },
   {
-    title: 'Custom Deep Dives',
-    link: '/docs/custom-deep-dives',
-    emoji: '🧠',
-    description: 'Engage the SQL agent for multi-step data exploration, self-correcting query loops, and dynamic visualization charts.',
+    title: 'Data (Assets)',
+    link: '/docs/data-assets',
+    emoji: '💾',
+    description: 'Ingest structured files, connect geo-spatial sources, and manage local DuckDB storage.',
   },
 ];
 

@@ -12,22 +12,27 @@
 module.exports = {
   tutorialSidebar: [
     'intro',
+    'insights',
+    'knowledge',
+    'data-assets',
     {
       type: 'category',
-      label: 'Analyses & Insights',
-      link: {
-        type: 'doc',
-        id: 'analyses',
-      },
+      label: 'Governance',
       collapsed: false,
       items: [
-        'quick-insights',
-        'custom-notebook',
-        'custom-deep-dives',
+        'governance/insights-review',
+        'governance/users',
+        'governance/groups',
       ],
     },
-    'data-ingestion',
-    'duckdb-motherduck',
-    'ai-integrations',
+    {
+      type: 'category',
+      label: 'Settings',
+      collapsed: false,
+      items: [
+        'settings/basic-settings',
+        'settings/integrations',
+      ],
+    },
   ],
 };
