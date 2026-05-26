@@ -20,8 +20,19 @@ graph TD
 ## Storage: DuckDB OLAP
 
 While operational metadata (user profiles, settings, analysis histories) is stored in PostgreSQL, the analytical core runs entirely in **DuckDB**:
-- ** ephemeral Connections**: Connections are opened, queries executed, and closed immediately (`duckdb_manager.connect()`) to release locks and prevent multi-process database collisions.
-- **Namespace Isolation**: Datasets are isolated into unique schemas (e.g. `s_google_sheet`) to keep the warehouse organized.
+- **Ephemeral Connections**: Connections are opened, queries executed, and closed immediately (`duckdb_manager.connect()`) to release locks and prevent multi-process database collisions.
+- **Namespace Isolation**: Datasets are isolated into unique schemas to keep the warehouse organized and prevent table catalog collisions.
+
+### Database Schemas & Conventions
+
+Ravioli organizes analytical tables across several pre-defined schemas in DuckDB:
+
+| Schema Name | Purpose | Example Datasets |
+| :--- | :--- | :--- |
+| `main` | Default workspace schema for standard, user-uploaded datasets. | CSV, TSV, and standard XLSX worksheets. |
+| `s_manual` | Fallback schema for structured or special manual uploads that require complex custom parsing. | GPX routes, XML documents without matched strategies. |
+| `s_<connector>` | Isolated schemas created dynamically for any upcoming API integration. | LinkedIn, Substack growth analytics. |
+| `information_schema` | Standard system tables mapping database catalogs, tables, and columns. | System catalogs. |
 
 ---
 
