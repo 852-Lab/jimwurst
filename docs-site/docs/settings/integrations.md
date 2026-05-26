@@ -5,6 +5,10 @@ title: Integrations
 
 # Integrations
 
+:::info Technical Database Schema
+For the transactional database fields and schema configurations, refer to the **[`app.system_settings` Table Documentation](../data/oltp/system-settings.md)**.
+:::
+
 Ravioli integrates with external tools and cloud systems to expand its analytical power, synchronize knowledge bases, and connect cloud warehouses.
 
 Select an integration category to learn more:

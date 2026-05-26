@@ -5,6 +5,10 @@ title: Insights
 
 # Insights
 
+:::info Technical Database Schema
+For the transactional database fields and schema structures, refer to the **[`app.insights` Table Documentation](./data/oltp/insights.md)** and the **[`app.insight_links` Table Documentation](./data/oltp/insight-links.md)**.
+:::
+
 **Insights** represent audited and verified facts extracted from your data analyses. In Ravioli, insights are the primary structured outputs generated from **[Analyses](./analyses.md)**. Rather than sharing raw, unverified reports, Ravioli enforces a formal review lifecycle to extract verified facts and maintain the integrity of shared intelligence.
 
 ```mermaid

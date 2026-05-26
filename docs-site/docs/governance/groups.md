@@ -5,6 +5,10 @@ title: Groups
 
 # Groups
 
+:::info Technical Database Schema
+For the transactional database fields and schema structures, refer to the **[`app.user_groups` Table Documentation](../data/oltp/user-groups.md)** and the **[`app.user_group_members` Table Documentation](../data/oltp/user-group-members.md)**.
+:::
+
 To support collaborative and decentralized team management, Ravioli features **User Groups**. Groups act as collective owners of data assets, analyses, and knowledge entries.
 
 ---

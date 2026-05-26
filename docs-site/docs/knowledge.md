@@ -5,6 +5,10 @@ title: Knowledge Base
 
 # Knowledge Base
 
+:::info Technical Database Schema
+For the transactional database fields and schema structures, refer to the **[`app.knowledge_pages` Table Documentation](./data/oltp/knowledge-pages.md)**.
+:::
+
 Barr Moses, CEO and co-founder of Monte Carlo, recently wrote that **"Powerful models are a simple API call away and available to all"** in [2026 Will Be The Year of Data + AI Observability](https://montecarlo.ai/blog-2026-will-be-the-year-of-data-ai-observability/). The implication for Ravioli is clear: the durable advantage is not access to LLMs alone, **but the unique context your organization captures, curates, and governs through its Knowledge Base.**
 
 Ravioli lets teams manage domain-specific contexts to ground AI responses in reality. Your business terminology, calculations, operating logic, and decision history represent your competitive advantage, and keeping your AI agent aligned with this knowledge is crucial. Knowledge Pages work closely with **[Analyses](./analyses.md)**, where they can be attached as supporting context, and with **[Insights](./insights.md)**, where grounded conclusions are later reviewed and shared.

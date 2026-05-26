@@ -5,6 +5,10 @@ title: Analyses
 
 # Analyses
 
+:::info Technical Database Schema
+For the transactional database fields and schema structures, refer to the **[`app.analyses` Table Documentation](./data/oltp/analyses.md)** and the **[`app.analysis_logs` Table Documentation](./data/oltp/analysis-logs.md)**.
+:::
+
 In Ravioli, **Analyses** are interactive projects designed to explore and query datasets. They represent the primary **[Contributor](./governance/users.md)** activity, enabling users to transform raw data assets into actionable knowledge.
 
 ## Triggering an Analysis

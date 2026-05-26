@@ -40,8 +40,8 @@ Manage company-specific context definitions to ground AI analysts and prevent ha
 
 ### 💾 [Data](./data.md)
 Understand how raw observations are brought into the local warehouse and structured:
-- **[Data Ingestion](./data/ingestion.md)**: Pipelines for flat files (CSV, Parquet, JSON, GPX), API endpoints (WFS geospatial layers), and upcoming DLT connectors.
-- **[Data Transformation (ECL)](./data/transformation.md)**: The AI-powered Extract, Contextualize, and Load pipeline featuring PII masking and semantic schema inferences.
+- **[Data Ingestion](./data/olap/ingestion.md)**: Pipelines for flat files (CSV, Parquet, JSON, GPX), API endpoints (WFS geospatial layers), and upcoming DLT connectors.
+- **[Data Transformation (ECL)](./data/olap/transformation.md)**: The AI-powered Extract, Contextualize, and Load pipeline featuring PII masking and semantic schema inferences.
 
 ### 🛡️ [Governance](./governance/insights-review.md)
 Maintain absolute integrity over analytical outputs. Read about data ownership, stewardship workflows, and access control models:

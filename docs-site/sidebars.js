@@ -49,8 +49,52 @@ module.exports = {
       },
       collapsed: false,
       items: [
-        'data/ingestion',
-        'data/transformation',
+        {
+          type: 'category',
+          label: 'OLAP (DuckDB)',
+          link: {
+            type: 'doc',
+            id: 'data/olap',
+          },
+          collapsed: false,
+          items: [
+            {
+              type: 'category',
+              label: 'Data Ingestion',
+              link: {
+                type: 'doc',
+                id: 'data/olap/ingestion',
+              },
+              collapsed: false,
+              items: [
+                'data/olap/ingestion/flat-files',
+                'data/olap/ingestion/api',
+              ],
+            },
+            'data/olap/transformation',
+          ],
+        },
+        {
+          type: 'category',
+          label: 'OLTP (PostgreSQL)',
+          link: {
+            type: 'doc',
+            id: 'data/oltp',
+          },
+          collapsed: false,
+          items: [
+            'data/oltp/users',
+            'data/oltp/user-groups',
+            'data/oltp/user-group-members',
+            'data/oltp/data-sources',
+            'data/oltp/analyses',
+            'data/oltp/analysis-logs',
+            'data/oltp/insights',
+            'data/oltp/insight-links',
+            'data/oltp/knowledge-pages',
+            'data/oltp/system-settings',
+          ],
+        },
       ],
     },
     {
