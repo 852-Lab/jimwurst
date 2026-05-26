@@ -22,4 +22,4 @@ When an analysis is executed, attached Knowledge Pages are read, parsed into raw
 
 ## Notion Integration
 
-Bi-directional synchronization is supported to keep local Knowledge Pages in sync with external Notion workspaces. See the dedicated **[Notion Sync Guide](./settings/notion-sync.md)** under Settings for setup and workflow details.
+Bi-directional synchronization is supported to keep local Knowledge Pages in sync with external Notion workspaces. See the dedicated **[Notion Sync Guide](./settings/integrations/notion-sync.md)** under Settings for setup and workflow details.
