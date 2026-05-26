@@ -7,28 +7,28 @@ import styles from './index.module.css';
 
 const CardList = [
   {
-    title: 'Getting Started',
-    link: '/docs/intro',
-    emoji: '🚀',
-    description: 'Learn the core concepts of Ravioli and build your first local data warehouse in minutes.',
+    title: 'Analyses & Insights',
+    link: '/docs/analyses',
+    emoji: '📊',
+    description: 'Understand the core analyses model, the Kowalski AI analyst, and the human-in-the-loop verification workflow.',
   },
   {
-    title: 'Models & Transformations',
-    link: '/docs/intro', // We will direct to intro for now, or custom docs
-    emoji: '🥞',
-    description: 'Define SQL models, organize modular layers, and configure materialization strategies.',
-  },
-  {
-    title: 'Testing & Quality',
-    link: '/docs/intro',
-    emoji: '🛡️',
-    description: 'Write assertions, check constraints, and ensure high-integrity pipelines automatically.',
-  },
-  {
-    title: 'Deployment & Operations',
-    link: '/docs/intro',
+    title: 'Quick Insights',
+    link: '/docs/quick-insights',
     emoji: '⚡',
-    description: 'Deploy Ravioli pipelines with DuckDB, schedule execution, and orchestrate workflows.',
+    description: 'Generate automatic statistical profiles, data cleaning reports, skewness alerts, and suggested query prompts.',
+  },
+  {
+    title: 'Custom Notebooks',
+    link: '/docs/custom-notebook',
+    emoji: '📓',
+    description: 'Explore data interactively using cell-based conversations, live execution tables, and in-place notebook cell updates.',
+  },
+  {
+    title: 'Custom Deep Dives',
+    link: '/docs/custom-deep-dives',
+    emoji: '🧠',
+    description: 'Engage the SQL agent for multi-step data exploration, self-correcting query loops, and dynamic visualization charts.',
   },
 ];
 
