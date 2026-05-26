@@ -28,7 +28,20 @@ module.exports = {
     },
     'insights',
     'knowledge',
-    'data-assets',
+    {
+      type: 'category',
+      label: 'Data',
+      link: {
+        type: 'doc',
+        id: 'data',
+      },
+      collapsed: false,
+      items: [
+        'data/flat-files',
+        'data/api',
+        'data/dlt-ingestion',
+      ],
+    },
     {
       type: 'category',
       label: 'Governance',

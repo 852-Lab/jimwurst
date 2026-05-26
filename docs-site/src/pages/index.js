@@ -26,7 +26,7 @@ const CardList = [
   },
   {
     title: 'Data',
-    link: '/docs/data-assets',
+    link: '/docs/data',
     emoji: '💾',
     description: 'Ingest personal and corporate datasets, parse locations, and manage local DuckDB storage.',
   },
