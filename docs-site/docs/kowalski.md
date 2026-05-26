@@ -1,6 +1,6 @@
 ---
 sidebar_position: 4
-title: AI Analyst (Kowalski)
+title: AI Analyst - Kowalski
 ---
 
 # AI Analyst: Kowalski

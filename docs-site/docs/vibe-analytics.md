@@ -54,13 +54,13 @@ graph TD
 ```
 
 1. **[Analyses](./analyses.md)**: The execution environment where users interact with raw data via cells or guided queries.
-2. **[AI Analyst (Kowalski)](./kowalski.md)**: The clinical execution engine that autonomously drafts analysis plans, writes DuckDB SQL, parses intent, and selects optimal visualizations.
+2. **[AI Analyst - Kowalski](./kowalski.md)**: The clinical execution engine that autonomously drafts analysis plans, writes DuckDB SQL, parses intent, and selects optimal visualizations.
 3. **[Insights](./insights.md)**: The destination feed where reviewed and approved analytical signals are stored and syndicated.
 
 ---
 
 ## Related Guides
 
-* **[AI Analyst (Kowalski)](./kowalski.md)**: Deep dive into the agent's skills, tools, and persona.
+* **[AI Analyst - Kowalski](./kowalski.md)**: Deep dive into the agent's skills, tools, and persona.
 * **[Analyses](./analyses.md)**: Explore the notebooks and workflows where analyses run.
 * **[Insights](./insights.md)**: Learn about the curated feed of approved data signals.
