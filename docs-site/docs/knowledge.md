@@ -16,7 +16,20 @@ Knowledge Pages are saved in the PostgreSQL schema under `app.knowledge_pages`. 
 - Parent-child hierarchical relationships.
 - Rich-text blocks containing plain text, paragraph layouts, and formatted tables.
 
+Ownership matters just as much as structure. Each Knowledge Page should remain attributable to the responsible **[User](./governance/users.md)** so teams know which contributor defined a term, updated a policy, or changed a business rule. That lineage becomes especially important when pages are shared across teams through **[Groups](./governance/groups.md)** or used to guide downstream analyses.
+
 When an analysis is executed, attached Knowledge Pages are read, parsed into raw text strings, and injected directly into the LLM's system instructions to prevent the model from hallucinating. To understand where those runs happen, see **[Analyses](./analyses.md)** and the workflow details in **[Custom Notebooks](./analyses/custom-notebooks.md)** and **[Quick Insights](./analyses/quick-insights.md)**.
+
+---
+
+## Ownership & Contributors
+
+Knowledge Pages are not anonymous prompts. They are governed assets with clear stewardship:
+
+- The contributing **[User](./governance/users.md)** is responsible for creating and maintaining the page content that guides AI behavior.
+- Ownership metadata such as `created_by`, `updated_by`, `owner_id`, and `owner_type` preserves accountability for every page revision.
+- Ownership can remain with an individual contributor or be assigned to a shared **[Group](./governance/groups.md)** when the page represents team-managed knowledge.
+- This governance model helps reviewers understand whose terminology, assumptions, and operating logic were used to ground an analysis.
 
 ---
 
