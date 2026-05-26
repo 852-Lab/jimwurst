@@ -45,7 +45,18 @@ module.exports = {
       collapsed: false,
       items: [
         'settings/basic-settings',
-        'settings/integrations',
+        {
+          type: 'category',
+          label: 'Integrations',
+          link: {
+            type: 'doc',
+            id: 'settings/integrations',
+          },
+          collapsed: false,
+          items: [
+            'settings/notion-sync',
+          ],
+        },
       ],
     },
   ],

@@ -20,17 +20,6 @@ When an analysis is executed, attached Knowledge Pages are read, parsed into raw
 
 ---
 
-## Notion Sync Integration
+## Notion Integration
 
-Ravioli integrates natively with Notion via the `NotionSyncService` to sync documents bi-directionally:
-
-### 1. Import Sync (`Notion -> Ravioli`)
-The service queries the Notion API to retrieve pages shared with the integration.
-- **Timestamp Caching**: The system records the remote `last_edited_time` property. If the local version is already up-to-date, the sync process skips the page to minimize API calls.
-- **Block Parsing**: The rich text elements and nested block structures of Notion are parsed recursively and saved in Ravioli's local database.
-
-### 2. Export Push (`Ravioli -> Notion`)
-When a local Knowledge Page is updated or generated from an approved analysis insight:
-- **Overwrite Append**: Since the Notion API does not support full-document overwrites, Ravioli deletes the page's existing block tree and appends the new structure recursively.
-- **Batch Processing**: Requests are batched into chunks of 100 blocks to comply with Notion API rate limits.
-- **Conflict Management**: Pushes update the remote timestamp cached locally, preserving version alignment.
+Bi-directional synchronization is supported to keep local Knowledge Pages in sync with external Notion workspaces. See the dedicated **[Notion Sync Guide](./settings/notion-sync.md)** under Settings for setup and workflow details.

@@ -29,7 +29,7 @@ Google AI Studio integration is planned to support Gemini models. This will allo
 ## 2. Documentations (Knowledge Bases)
 
 ### Notion (Default)
-Provides bi-directional page syncing. Pages from Notion are imported recursively, parsed into layout blocks, and local updates are pushed back using page overwrite methods.
+Provides bi-directional page syncing. See the dedicated **[Notion Sync Guide](./notion-sync.md)** for details on the technical import and export sync processes.
 
 ### Confluence (Upcoming)
 Integration is planned to import documentation spaces and enterprise knowledge pages from Atlassian Confluence, formatting them into local Knowledge Base documents to ground the AI.
