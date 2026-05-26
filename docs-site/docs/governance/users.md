@@ -13,17 +13,6 @@ Every activity in Ravioli—uploading an asset, defining a notebook query, or ap
 
 ---
 
-## User Metadata
-
-User profiles contain standard identifiers managed in PostgreSQL:
-- **Identifier**: A unique UUID.
-- **Name**: Display name (e.g., "Jimmy Pang").
-- **Email**: Corporate email address.
-- **Role**: Determines access level (e.g., `Admin`, `Viewer`, `Contributor`, `Steward`). See [Role-Based Governance](#role-based-governance) for details on their permissions.
-- **Status**: Account state (e.g., `active`, `suspended`).
-
----
-
 ## Role-Based Governance
 
 Ravioli implements a role-based access control (RBAC) model to align with data governance policies, particularly concerning the **[Insights Review & Verification Workflow](./insights-review.md)**:
@@ -44,6 +33,15 @@ Ravioli implements a role-based access control (RBAC) model to align with data g
 | **Review / Verify Draft Insights** | ✅ | ✅ | ❌ | ❌ |
 | **Manage User / Groups Provisioning** | ✅ | ❌ | ❌ | ❌ |
 | **Configure System-wide Settings & Keys** | ✅ | ❌ | ❌ | ❌ |
+
+### Roles & Suggested Personas
+
+| Role | Suggested Persona | Primary Mission & Access Scope |
+| :--- | :--- | :--- |
+| **Admin** | Central Data Team Lead, Analytics Engineering Lead, System Administrator | Infrastructure management, data connection configurations, API keys setups, group creation, and universal review access. |
+| **Steward** | Functional Lead, Analytics Literate Domain Expert, Product Lead | Quality control, business logic auditing, fact verification, and reviewing drafts to publish insights for the wider team. |
+| **Contributor** | Analytics Engineer, Data Analyst, Software Engineer, Active Creator | Query building, data exploration via notebooks, raw data uploads, and drafting insights (require Steward approval to publish). |
+| **Viewer** | Business Executive, Operational Stakeholder, General Team Member | Data consumption, viewing published feeds/lineage maps, and referencing verified facts to make data-driven decisions. |
 
 ---
 
