@@ -5,7 +5,7 @@ title: Insights
 
 # Insights
 
-**Insights** represent the structured and audited outcome of your **[Analyses](./analyses.md)**. Rather than sharing raw, unverified reports, Ravioli enforces a formal review lifecycle to extract verified facts and maintain the integrity of shared intelligence.
+**Insights** represent audited and verified facts extracted from your data analyses. Rather than sharing raw, unverified reports, Ravioli enforces a formal review lifecycle to extract verified facts and maintain the integrity of shared intelligence.
 
 ```mermaid
 stateDiagram-v2
@@ -20,18 +20,10 @@ stateDiagram-v2
 
 ---
 
-## The Lifecycle of an Insight
+## Outcomes of Analyses
 
-When an analysis is completed, the resulting conclusions undergo a governance workflow:
+Insights are the structured results of your completed **[Analyses](./analyses.md)**. When a report is approved by an Admin or Steward, the backend runs a background task to extract individual bullet points, log audit lineages, and create dependencies.
 
-### 1. Verification
-When an Admin or Steward reviews a draft analysis report, clicking **Approve** triggers a background extraction task (`extract_and_store_insights`). The LLM parses the report into distinct key insight bullets, assumptions, and limitations.
-
-### 2. Lineage and Relations
-Each insight is saved in the `app.insights` table and carries metadata showing:
-- Which analysis it originated from.
-- Who created and approved it.
-- **Insight Links**: Relations (`InsightLink`) showing how insights connect (e.g. supporting or contradicting other team insights).
-
-### 3. Publishing and Notion Sync
-Once verified, insights are flagged as `is_verified = true`. Users can toggle `is_published = true` to publish them to team dashboards or export them to external Notion workspaces.
+Explore the modules:
+1. **[Feed & Summary](./insights/feed-summary.md)**: Review published insights feed logs and high-level platform statistics.
+2. **[Lineage Map](./insights/lineage-map.md)**: Explore the directed graph of insight dependencies showing how facts lead to business actions.

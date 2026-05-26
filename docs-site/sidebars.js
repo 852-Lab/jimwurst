@@ -12,7 +12,19 @@
 module.exports = {
   tutorialSidebar: [
     'intro',
-    'insights',
+    {
+      type: 'category',
+      label: 'Insights',
+      link: {
+        type: 'doc',
+        id: 'insights',
+      },
+      collapsed: false,
+      items: [
+        'insights/feed-summary',
+        'insights/lineage-map',
+      ],
+    },
     {
       type: 'category',
       label: 'Analyses',
