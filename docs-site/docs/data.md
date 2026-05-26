@@ -20,13 +20,13 @@ flowchart TD
 
 ---
 
-## ⚡ [OLAP Storage (DuckDB)](./data/olap.md)
+## ⚡ [OLAP Storage (DuckDB)](./data/olap)
 The analytical core runs entirely in local **DuckDB** instances:
 *   **High-Speed Aggregations**: Optimized columnar processing for massive tabular datasets.
 *   **Ingestion Pipeline**: Uploading and parsing Flat Files (CSV, Parquet, JSON, GPX, XML, XLSX) and API layers (WFS, DLT connectors).
 *   **Transformation (ECL)**: Contextualizing datasets with business semantics and local Knowledge Base grounding before execution.
 
-## 💾 [OLTP Storage (PostgreSQL)](./data/oltp.md)
+## 💾 [OLTP Storage (PostgreSQL)](./data/oltp)
 The application workspace and transactional state reside in **PostgreSQL**:
 *   **Workspace Management**: Active user directories, user groups, and settings.
 *   **Audit Logging**: Step-by-step trace tables detailing LLM agent thought logs and tool executions.

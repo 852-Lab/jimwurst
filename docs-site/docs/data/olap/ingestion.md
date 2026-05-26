@@ -32,13 +32,13 @@ Ravioli splits data ingestion into two primary strategies:
 
 ## Ingestion Categories
 
-### 📄 [Flat Files Ingestion](./ingestion/flat-files.md)
+### 📄 [Flat Files Ingestion](./flat-files)
 Learn how Ravioli processes and validates uploaded spreadsheets and files:
 *   **Supported Formats**: CSV, TSV, Parquet, JSON, GPX, XML, and XLSX (Excel).
 *   **AI Sheet Analysis**: Uses LLM agents to detect structures and validate spreadsheet structures before loading them.
 *   **Parallel Streaming**: Splitting large XML files into chunks for concurrent loading using `dlt`.
 
-### 🌐 [API Ingestion](./ingestion/api.md)
+### 🌐 [API Ingestion](./api)
 Learn how Ravioli connects to online APIs and geospatial layers:
 *   **WFS Integration**: Pulls geo-features and geometries from Web Feature Services.
 *   **Personal Data Connectors**: Connects to Apple Health, Spotify, LinkedIn, and Substack (planned).
