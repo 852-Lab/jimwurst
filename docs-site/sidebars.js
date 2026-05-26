@@ -40,6 +40,7 @@ module.exports = {
       ],
     },
     'knowledge',
+    'kowalski',
     {
       type: 'category',
       label: 'Data',
